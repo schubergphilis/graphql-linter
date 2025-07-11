@@ -24,6 +24,7 @@ linters:
             - "!**/*_a _file.go"
           allow:
             - $gostd
+            - github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application
             - github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/presentation
             - github.com/sirupsen/logrus
           deny:
