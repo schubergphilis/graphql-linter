@@ -4,26 +4,11 @@
 
 suppressions:
   # Suppress suspicious enum value warnings for specific cases
-  - file: "apps/measurements/internal/api/graphql/definitions/measurements.graphqls"
+  - file: some/path.graphqls"
     line: 24
     rule: "suspicious_enum_value"
-    value: "CO2_VOLUME"
-    reason: "CO2_VOLUME is a valid domain-specific enum value representing carbon dioxide volume measurements"
-  - file: "apps/measurements/internal/api/graphql/definitions/measurements.graphqls"
-    line: 24
-    rule: "suspicious_enum_value"
-    value: "O2_VOLUME"
-    reason: "O2_VOLUME is a valid domain-specific enum value representing oxygen volume measurements"
-  - file: "apps/hierarchy/internal/api/graphql-internal/definitions/dataprovider.graphqls"
-    line: 5
-    rule: "suspicious_enum_value"
-    value: "O2I"
-    reason: "O2I is a valid domain-specific enum value representing a data provider identifier"
-  - file: "apps/hierarchy/internal/api/graphql/definitions/hierarchy.graphqls"
-    line: 234
-    rule: "suspicious_enum_value"
-    value: "O2I_U_ID"
-    reason: "O2I_U_ID is a valid domain-specific enum value representing an entity property identifier"
+    value: "O_VOLUME"
+    reason: "O_VOLUME is a valid domain-specific enum value representing oxygen volume"
 
 # Example suppressions for other rule types:
 # - file: "path/to/schema.graphqls"
@@ -41,10 +26,10 @@ suppressions:
 # Global settings
 settings:
   # Whether to treat warnings as errors (default: false)
-  strict_mode: false
+  strictMode: false
 
   # Whether to validate federation directives (default: true)
-  validate_federation: true
+  validateFederation: true
 
   # Whether to check for missing descriptions (default: true)
-  check_descriptions: true
+  checkDescriptions: true

@@ -25,8 +25,13 @@ linters:
           allow:
             - $gostd
             - github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application
+            - github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data
             - github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/presentation
+            - github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot
             - github.com/sirupsen/logrus
+            - github.com/stretchr/testify/assert
+            - github.com/stretchr/testify/require
+            - gopkg.in/yaml.v3
           deny:
             - pkg: log
               desc: Use 'log "github.com/sirupsen/logrus"' instead

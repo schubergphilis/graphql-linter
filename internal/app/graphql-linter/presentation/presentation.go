@@ -27,13 +27,13 @@ func NewCLI() (CLI, error) {
 }
 
 func (c CLI) Run() error {
-	e, err := application.NewExecute(c.verboseFlag)
+	applicationExecute, err := application.NewExecute(c.verboseFlag)
 	if err != nil {
 		return fmt.Errorf("unable to load new execute: %w", err)
 	}
 
 	if c.versionFlag {
-		log.Info(e.Version())
+		log.Info(applicationExecute.Version())
 
 		return nil
 	}
@@ -43,7 +43,8 @@ func (c CLI) Run() error {
 	}
 
 	log.Info("Running main logic...")
-	if err := e.Run(); err != nil {
+
+	if err := applicationExecute.Run(); err != nil {
 		return fmt.Errorf("unable to run execute: %w", err)
 	}
 
