@@ -2,13 +2,14 @@ package presentation
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application"
 	log "github.com/sirupsen/logrus"
 )
 
 type Presenter interface {
-	Run()
+	Run() error
 }
 
 type CLI struct {
@@ -26,8 +27,13 @@ func NewCLI() (CLI, error) {
 }
 
 func (c CLI) Run() error {
+	e, err := application.NewExecute(c.verboseFlag)
+	if err != nil {
+		return fmt.Errorf("unable to load new execute: %w", err)
+	}
+
 	if c.versionFlag {
-		log.Info(application.VersionString())
+		log.Info(e.Version())
 
 		return nil
 	}
@@ -37,6 +43,9 @@ func (c CLI) Run() error {
 	}
 
 	log.Info("Running main logic...")
+	if err := e.Run(); err != nil {
+		return fmt.Errorf("unable to run execute: %w", err)
+	}
 
 	return nil
 }
