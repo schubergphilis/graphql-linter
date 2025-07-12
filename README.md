@@ -1,5 +1,17 @@
 # GraphQL Linter
 
+An opinionated linter for GraphQL SDL (Schema Definition Language) files,
+focused on federation and schema quality.
+
+## Features
+
+- Validates GraphQL SDL files for syntax and best practices.
+- Checks for Apollo Federation directive usage and typos.
+- Ensures all types, enums, and fields have descriptions.
+- Detects undefined types and invalid enum values.
+- Reports errors with line numbers and context.
+- Supports error suppression via comments.
+
 ## Installation
 
 ### Binary
