@@ -483,9 +483,6 @@ func (s Store) validateDataTypes(
 ) (bool, []int) {
 	log.Info("Validating data types...")
 
-	var errorLines []int
-
-	// Built-in GraphQL scalar types
 	builtInScalars := map[string]bool{
 		"String":  true,
 		"Int":     true,
@@ -493,70 +490,121 @@ func (s Store) validateDataTypes(
 		"Boolean": true,
 		"ID":      true,
 	}
+	definedTypes := collectDefinedTypes(doc)
+	hasErrors := false
 
-	// Collect all defined types from the schema
+	var errorLines []int
+
+	fieldErrors, fieldErrorLines := validateFieldTypes(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+	)
+	if len(fieldErrors) > 0 {
+		hasErrors = true
+
+		errorLines = append(errorLines, fieldErrorLines...)
+	}
+
+	inputErrors, inputErrorLines := validateInputFieldTypes(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+	)
+	if len(inputErrors) > 0 {
+		hasErrors = true
+
+		errorLines = append(errorLines, inputErrorLines...)
+	}
+
+	enumErrors, enumErrorLines := s.validateEnumTypes(doc, schemaContent, schemaPath)
+	if len(enumErrors) > 0 {
+		hasErrors = true
+
+		errorLines = append(errorLines, enumErrorLines...)
+	}
+
+	if hasErrors {
+		log.Error("Data type validation FAILED - schema contains invalid type references")
+
+		return false, errorLines
+	}
+
+	log.Info("Data type validation PASSED")
+
+	return true, errorLines
+}
+
+func collectDefinedTypes(doc *ast.Document) map[string]bool {
 	definedTypes := make(map[string]bool)
 
-	// Add object types
 	for _, obj := range doc.ObjectTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(obj.Name)
 		definedTypes[typeName] = true
 	}
 
-	// Add enum types
 	for _, enum := range doc.EnumTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(enum.Name)
 		definedTypes[typeName] = true
 	}
 
-	// Add input types
 	for _, input := range doc.InputObjectTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(input.Name)
 		definedTypes[typeName] = true
 	}
 
-	// Add interface types
 	for _, iface := range doc.InterfaceTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(iface.Name)
 		definedTypes[typeName] = true
 	}
 
-	// Add union types
 	for _, union := range doc.UnionTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(union.Name)
 		definedTypes[typeName] = true
 	}
 
-	// Add scalar types
 	for _, scalar := range doc.ScalarTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(scalar.Name)
 		definedTypes[typeName] = true
 	}
 
-	hasErrors := false // Validate field types
+	return definedTypes
+}
 
-	for _, fieldDef := range doc.FieldDefinitions {
-		fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+func validateTypeReferences(
+	doc *ast.Document,
+	schemaContent string,
+	builtInScalars, definedTypes map[string]bool,
+	typeRefs []int,
+	getName func(int) string,
+	getType func(int) ast.Type,
+	errorPrefix string,
+) ([]string, []int) {
+	var (
+		errors     []string
+		errorLines []int
+	)
 
-		// Get the base type (unwrap lists and non-nulls)
-		fieldType := doc.Types[fieldDef.Type]
+	for _, ref := range typeRefs {
+		fieldName := getName(ref)
+		fieldType := getType(ref)
+
 		baseType := getBaseTypeName(doc, fieldType)
-
 		if !builtInScalars[baseType] && !definedTypes[baseType] {
-			// Find the line number in the original schema (with comments)
 			lineNum := findFieldDefinitionLine(schemaContent, fieldName, baseType)
 			if lineNum == 0 {
-				// More specific fallback: look for "fieldName: baseType" pattern
 				lineNum = findLineNumberByText(schemaContent, fieldName+": "+baseType)
 			}
 
 			if lineNum == 0 {
-				// Generic fallback
 				lineNum = findLineNumberByText(schemaContent, fieldName+":")
 			}
 
 			log.Errorf(
-				"ERROR: Field '%s' references undefined type '%s' (line %d)\n",
+				"%s '%s' references undefined type '%s' (line %d)\n",
+				errorPrefix,
 				fieldName,
 				baseType,
 				lineNum,
@@ -567,55 +615,73 @@ func (s Store) validateDataTypes(
 				errorLines = append(errorLines, lineNum)
 			}
 
-			hasErrors = true
+			errors = append(errors, fieldName)
 		}
 	}
 
-	// Validate input field types
-	for _, inputFieldDef := range doc.InputValueDefinitions {
-		fieldName := doc.Input.ByteSliceString(inputFieldDef.Name)
+	return errors, errorLines
+}
 
-		// Get the base type (unwrap lists and non-nulls)
-		inputFieldType := doc.Types[inputFieldDef.Type]
-		baseType := getBaseTypeName(doc, inputFieldType)
+func validateFieldTypes(
+	doc *ast.Document,
+	schemaContent string,
+	builtInScalars, definedTypes map[string]bool,
+) ([]string, []int) {
+	return validateTypeReferences(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+		indexSlice(len(doc.FieldDefinitions)),
+		func(i int) string { return doc.Input.ByteSliceString(doc.FieldDefinitions[i].Name) },
+		func(i int) ast.Type { return doc.Types[doc.FieldDefinitions[i].Type] },
+		"ERROR: Field",
+	)
+}
 
-		if !builtInScalars[baseType] && !definedTypes[baseType] {
-			// Find the line number in the original schema (with comments)
-			lineNum := findFieldDefinitionLine(schemaContent, fieldName, baseType)
-			if lineNum == 0 {
-				// More specific fallback: look for "fieldName: baseType" pattern
-				lineNum = findLineNumberByText(schemaContent, fieldName+": "+baseType)
-			}
+func validateInputFieldTypes(
+	doc *ast.Document,
+	schemaContent string,
+	builtInScalars, definedTypes map[string]bool,
+) ([]string, []int) {
+	return validateTypeReferences(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+		indexSlice(len(doc.InputValueDefinitions)),
+		func(i int) string { return doc.Input.ByteSliceString(doc.InputValueDefinitions[i].Name) },
+		func(i int) ast.Type { return doc.Types[doc.InputValueDefinitions[i].Type] },
+		"ERROR: Input field",
+	)
+}
 
-			if lineNum == 0 {
-				// Generic fallback
-				lineNum = findLineNumberByText(schemaContent, fieldName+":")
-			}
-
-			log.Errorf(
-				"ERROR: Input field '%s' references undefined type '%s' (line %d)\n",
-				fieldName,
-				baseType,
-				lineNum,
-			)
-			log.Errorf("  Available types: %v\n", getAvailableTypes(builtInScalars, definedTypes))
-
-			if lineNum > 0 {
-				errorLines = append(errorLines, lineNum)
-			}
-
-			hasErrors = true
-		}
+func indexSlice(n int) []int {
+	indices := make([]int, n)
+	for i := range indices {
+		indices[i] = i
 	}
+
+	return indices
+}
+
+func (s Store) validateEnumTypes(
+	doc *ast.Document,
+	schemaContent string,
+	schemaPath string,
+) ([]string, []int) {
+	var (
+		errors     []string
+		errorLines []int
+	)
 
 	for _, enumDef := range doc.EnumTypeDefinitions {
 		enumName := doc.Input.ByteSliceString(enumDef.Name)
 
 		for _, valueRef := range enumDef.EnumValuesDefinition.Refs {
 			valueDef := doc.EnumValueDefinitions[valueRef]
-			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
 
-			// Check for invalid enum value names (ending with numbers, etc.)
+			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
 			if !isValidEnumValue(valueName) {
 				lineNum := findLineNumberByText(schemaContent, valueName)
 				log.Infof(
@@ -632,15 +698,13 @@ func (s Store) validateDataTypes(
 					errorLines = append(errorLines, lineNum)
 				}
 
-				hasErrors = true
+				errors = append(errors, valueName)
 			}
 
 			if hasSuspiciousEnumValue(valueName) || hasEmbeddedDigits(valueName) {
 				lineNum := findLineNumberByText(schemaContent, valueName)
-
-				// Check if this error is suppressed
 				if s.isSuppressed(schemaPath, lineNum, "suspicious_enum_value", valueName) {
-					continue // Skip this error as it's suppressed
+					continue
 				}
 
 				log.Infof(
@@ -650,11 +714,9 @@ func (s Store) validateDataTypes(
 					lineNum,
 				)
 
-				// Suggest common fixes for standard GraphQL scalar types
 				if suggestion := suggestCorrectEnumValue(valueName); suggestion != "" {
 					log.Infof("  Did you mean '%s'?\n", suggestion)
 				} else {
-					// Generic suggestion for values ending with digits
 					suggestedValue := removeSuffixDigits(valueName)
 					log.Errorf("  Did you mean '%s'? Enum values typically don't contain numbers.\n", suggestedValue)
 				}
@@ -663,20 +725,12 @@ func (s Store) validateDataTypes(
 					errorLines = append(errorLines, lineNum)
 				}
 
-				hasErrors = true
+				errors = append(errors, valueName)
 			}
 		}
 	}
 
-	if hasErrors {
-		log.Error("Data type validation FAILED - schema contains invalid type references")
-
-		return false, errorLines
-	}
-
-	log.Info("Data type validation PASSED")
-
-	return true, errorLines
+	return errors, errorLines
 }
 
 func printReport(schemaFiles []string, totalErrors int) {
