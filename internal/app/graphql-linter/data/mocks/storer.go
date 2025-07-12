@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -35,10 +36,77 @@ func (_m *Storer) EXPECT() *Storer_Expecter {
 	return &Storer_Expecter{mock: &_m.Mock}
 }
 
+// LoadConfig provides a mock function for the type Storer
+func (_mock *Storer) LoadConfig(configPath string) (*data.LinterConfig, error) {
+	ret := _mock.Called(configPath)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LoadConfig")
+	}
+
+	var r0 *data.LinterConfig
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) (*data.LinterConfig, error)); ok {
+		return returnFunc(configPath)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) *data.LinterConfig); ok {
+		r0 = returnFunc(configPath)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*data.LinterConfig)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(configPath)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// Storer_LoadConfig_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadConfig'
+type Storer_LoadConfig_Call struct {
+	*mock.Call
+}
+
+// LoadConfig is a helper method to define mock.On call
+//   - configPath
+func (_e *Storer_Expecter) LoadConfig(configPath interface{}) *Storer_LoadConfig_Call {
+	return &Storer_LoadConfig_Call{Call: _e.mock.On("LoadConfig", configPath)}
+}
+
+func (_c *Storer_LoadConfig_Call) Run(run func(configPath string)) *Storer_LoadConfig_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *Storer_LoadConfig_Call) Return(linterConfig *data.LinterConfig, err error) *Storer_LoadConfig_Call {
+	_c.Call.Return(linterConfig, err)
+	return _c
+}
+
+func (_c *Storer_LoadConfig_Call) RunAndReturn(run func(configPath string) (*data.LinterConfig, error)) *Storer_LoadConfig_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Run provides a mock function for the type Storer
-func (_mock *Storer) Run() {
-	_mock.Called()
-	return
+func (_mock *Storer) Run() error {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Run")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func() error); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
 }
 
 // Storer_Run_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Run'
@@ -58,12 +126,12 @@ func (_c *Storer_Run_Call) Run(run func()) *Storer_Run_Call {
 	return _c
 }
 
-func (_c *Storer_Run_Call) Return() *Storer_Run_Call {
-	_c.Call.Return()
+func (_c *Storer_Run_Call) Return(err error) *Storer_Run_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *Storer_Run_Call) RunAndReturn(run func()) *Storer_Run_Call {
-	_c.Run(run)
+func (_c *Storer_Run_Call) RunAndReturn(run func() error) *Storer_Run_Call {
+	_c.Call.Return(run)
 	return _c
 }

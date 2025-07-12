@@ -36,9 +36,20 @@ func (_m *Executor) EXPECT() *Executor_Expecter {
 }
 
 // Run provides a mock function for the type Executor
-func (_mock *Executor) Run() {
-	_mock.Called()
-	return
+func (_mock *Executor) Run() error {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Run")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func() error); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
 }
 
 // Executor_Run_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Run'
@@ -58,12 +69,45 @@ func (_c *Executor_Run_Call) Run(run func()) *Executor_Run_Call {
 	return _c
 }
 
-func (_c *Executor_Run_Call) Return() *Executor_Run_Call {
+func (_c *Executor_Run_Call) Return(err error) *Executor_Run_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *Executor_Run_Call) RunAndReturn(run func() error) *Executor_Run_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Version provides a mock function for the type Executor
+func (_mock *Executor) Version() {
+	_mock.Called()
+	return
+}
+
+// Executor_Version_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Version'
+type Executor_Version_Call struct {
+	*mock.Call
+}
+
+// Version is a helper method to define mock.On call
+func (_e *Executor_Expecter) Version() *Executor_Version_Call {
+	return &Executor_Version_Call{Call: _e.mock.On("Version")}
+}
+
+func (_c *Executor_Version_Call) Run(run func()) *Executor_Version_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Executor_Version_Call) Return() *Executor_Version_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *Executor_Run_Call) RunAndReturn(run func()) *Executor_Run_Call {
+func (_c *Executor_Version_Call) RunAndReturn(run func()) *Executor_Version_Call {
 	_c.Run(run)
 	return _c
 }

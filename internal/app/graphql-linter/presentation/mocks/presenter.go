@@ -36,9 +36,20 @@ func (_m *Presenter) EXPECT() *Presenter_Expecter {
 }
 
 // Run provides a mock function for the type Presenter
-func (_mock *Presenter) Run() {
-	_mock.Called()
-	return
+func (_mock *Presenter) Run() error {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Run")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func() error); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
 }
 
 // Presenter_Run_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Run'
@@ -58,12 +69,12 @@ func (_c *Presenter_Run_Call) Run(run func()) *Presenter_Run_Call {
 	return _c
 }
 
-func (_c *Presenter_Run_Call) Return() *Presenter_Run_Call {
-	_c.Call.Return()
+func (_c *Presenter_Run_Call) Return(err error) *Presenter_Run_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *Presenter_Run_Call) RunAndReturn(run func()) *Presenter_Run_Call {
-	_c.Run(run)
+func (_c *Presenter_Run_Call) RunAndReturn(run func() error) *Presenter_Run_Call {
+	_c.Call.Return(run)
 	return _c
 }
