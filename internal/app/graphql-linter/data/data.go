@@ -5,13 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 	log "github.com/sirupsen/logrus"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/federation"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/lexer/position"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"gopkg.in/yaml.v3"
 )
@@ -147,52 +147,7 @@ func (s Store) lintSchemaFile(schemaPath string) bool {
 	// Parse the document using the original schema (with comments) to preserve line numbers
 	doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
 
-	if parseReport.HasErrors() {
-		log.Errorf("Failed to parse schema - found %d errors:\n",
-			len(parseReport.InternalErrors)+len(parseReport.ExternalErrors))
-
-		// Show internal parser errors
-		for i, internalErr := range parseReport.InternalErrors {
-			log.Errorf("Internal Error %d: %v\n", i+1, internalErr)
-		}
-
-		// Show external parser errors with more details
-		for index, externalErr := range parseReport.ExternalErrors {
-			log.Errorf("External Error %d:\n", index+1)
-			log.Errorf("  Message: %s\n", externalErr.Message)
-			log.Errorf("  Path: %s\n", externalErr.Path)
-
-			if externalErr.Locations != nil {
-				for _, location := range externalErr.Locations {
-					log.Infof("  Location: Line %d, Column %d\n", location.Line, location.Column)
-
-					// Show the problematic line
-					lines := strings.Split(schemaString, "\n")
-					if int(location.Line) <= len(lines) && location.Line > 0 {
-						errorLineIdx := int(location.Line) - 1
-						log.Infof("  Problematic line: %s\n", lines[errorLineIdx])
-
-						// Show context around the error
-						startIdx := max(0, errorLineIdx-linesBeforeContext)
-						endIdx := min(len(lines), errorLineIdx+linesAfterContext)
-
-						log.Infof("  Context:\n")
-
-						for contextIdx := startIdx; contextIdx < endIdx; contextIdx++ {
-							marker := "  "
-							if contextIdx == errorLineIdx {
-								marker = ">>>"
-							}
-
-							log.Infof("  %s Line %d: %s\n", marker, contextIdx+1, lines[contextIdx])
-						}
-					}
-				}
-			}
-		}
-
-		return false
-	}
+	LogSchemaParseErrors(schemaString, &parseReport)
 
 	log.Debug("Schema parsed successfully!")
 
@@ -308,7 +263,6 @@ func (s Store) lintSchemaFile(schemaPath string) bool {
 	for _, enum := range doc.EnumTypeDefinitions {
 		if !enum.Description.IsDefined {
 			name := doc.Input.ByteSliceString(enum.Name)
-			// Find the line number for this enum definition
 			lineNum := findLineNumberByText(schemaString, "enum "+name)
 			lineContent := getLineContent(schemaString, lineNum)
 			message := fmt.Sprintf("ERROR: Enum '%s' is missing a description", name)
@@ -326,7 +280,6 @@ func (s Store) lintSchemaFile(schemaPath string) bool {
 		}
 	}
 
-	// Sort errors by line number and display them
 	if len(descriptionErrors) > 0 {
 		for i := range len(descriptionErrors) - 1 {
 			for j := range len(descriptionErrors) - i - 1 {
@@ -336,7 +289,6 @@ func (s Store) lintSchemaFile(schemaPath string) bool {
 			}
 		}
 
-		// Display sorted errors
 		for _, err := range descriptionErrors {
 			log.Infof("%s %s:%d\n", err.Message, schemaPath, err.LineNum)
 			log.Infof("  %d: %s\n", err.LineNum, err.LineContent)
@@ -344,20 +296,95 @@ func (s Store) lintSchemaFile(schemaPath string) bool {
 	}
 
 	if hasValidationErrors {
-		// Show schema path with line numbers if we have specific errors
 		if len(errorLines) > 0 {
-			// Use the first error line for the main error message
 			log.Infof("Schema linting FAILED: %s:%d\n", schemaPath, errorLines[0])
 		} else {
 			log.Infof("Schema linting FAILED: %s\n", schemaPath)
 		}
 
 		return false
-	} else {
+	}
 
-		log.Debugf("Schema linting PASSED: %s\n", schemaPath)
+	log.Debugf("Schema linting PASSED: %s", schemaPath)
 
-		return true
+	return true
+}
+
+func LogSchemaParseErrors(
+	schemaString string,
+	parseReport *operationreport.Report,
+) {
+	if !parseReport.HasErrors() {
+		return
+	}
+
+	log.Errorf("Failed to parse schema - found %d errors:\n",
+		len(parseReport.InternalErrors)+len(parseReport.ExternalErrors))
+
+	reportInternalErrors(parseReport)
+	reportExternalErrors(schemaString, parseReport, linesBeforeContext, linesAfterContext)
+}
+
+func reportInternalErrors(parseReport *operationreport.Report) {
+	for i, internalErr := range parseReport.InternalErrors {
+		log.Errorf("Internal Error %d: %v\n", i+1, internalErr)
+	}
+}
+
+func reportExternalErrors(
+	schemaString string,
+	parseReport *operationreport.Report,
+	linesBeforeContext, linesAfterContext int,
+) {
+	lines := strings.Split(schemaString, "\n")
+
+	for index, externalErr := range parseReport.ExternalErrors {
+		log.Errorf("External Error %d:\n", index+1)
+		log.Errorf("  Message: %s\n", externalErr.Message)
+		log.Errorf("  Path: %s\n", externalErr.Path)
+		reportExternalErrorLocations(lines, externalErr, linesBeforeContext, linesAfterContext)
+	}
+}
+
+func reportExternalErrorLocations(
+	lines []string,
+	externalErr operationreport.ExternalError,
+	linesBeforeContext, linesAfterContext int,
+) {
+	if externalErr.Locations == nil {
+		return
+	}
+
+	for _, location := range externalErr.Locations {
+		log.Infof("  Location: Line %d, Column %d\n", location.Line, location.Column)
+		reportContextLines(lines, int(location.Line), linesBeforeContext, linesAfterContext)
+	}
+}
+
+func reportContextLines(
+	lines []string,
+	lineNumber int,
+	linesBeforeContext, linesAfterContext int,
+) {
+	errorLineIdx := lineNumber - 1
+	if errorLineIdx < 0 || errorLineIdx >= len(lines) {
+		return
+	}
+
+	log.Infof("  Problematic line: %s\n", lines[errorLineIdx])
+
+	startIdx := max(0, errorLineIdx-linesBeforeContext)
+	endIdx := min(len(lines), errorLineIdx+linesAfterContext+1)
+
+	log.Infof("  Context:")
+
+	for contextIdx := startIdx; contextIdx < endIdx; contextIdx++ {
+		marker := "  "
+		if contextIdx == errorLineIdx {
+			marker = ">>>"
+		}
+
+		log.Infof("  %s Line %d: %s\n", marker, contextIdx+1, lines[contextIdx])
 	}
 }
 
@@ -644,20 +671,6 @@ func isGraphQLFile(info os.FileInfo) bool {
 	return ext == ".graphql" || ext == ".graphqls"
 }
 
-func printFailedLintMessage(schemaPath string, errorLines []int) {
-	if len(errorLines) == 0 {
-		log.Errorf("schema linting failed: %s", schemaPath)
-
-		return
-	}
-
-	log.Errorf("schema linting failed: %s:%d", schemaPath, errorLines[0])
-}
-
-func getLineNumber(pos position.Position) int {
-	return int(pos.LineStart)
-}
-
 func removeSuffixDigits(value string) string {
 	result := value
 	for len(result) > 0 {
@@ -781,22 +794,22 @@ func levenshteinDistance(source, target string) int {
 	return matrix[len(source)][len(target)]
 }
 
+func isAlphaUnderOrDigit(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
+}
+
 func isValidEnumValue(value string) bool {
 	if len(value) == 0 {
 		return false
 	}
 
-	ch := value[0]
-	if (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z') && ch != '_' {
+	r := rune(value[0])
+	if !unicode.IsLetter(r) && r != '_' {
 		return false
 	}
 
-	for idx := 1; idx < len(value); idx++ {
-		c := value[idx]
-		if (c < 'A' || c > 'Z') &&
-			(c < 'a' || c > 'z') &&
-			(c < '0' || c > '9') &&
-			c != '_' {
+	for _, r := range value[1:] {
+		if !isAlphaUnderOrDigit(r) {
 			return false
 		}
 	}
@@ -860,41 +873,6 @@ func getLineContent(schemaContent string, lineNum int) string {
 	return strings.TrimSpace(lines[lineNum-1])
 }
 
-func mapFilteredLineToOriginal(originalSchema, filteredSchema string, filteredLineNum int) int {
-	originalLines := strings.Split(originalSchema, "\n")
-	filteredLines := strings.Split(filteredSchema, "\n")
-
-	if filteredLineNum <= 0 || filteredLineNum > len(filteredLines) {
-		return 0
-	}
-
-	filteredLine := strings.TrimSpace(filteredLines[filteredLineNum-1])
-	if filteredLine == "" {
-		return 0
-	}
-
-	for i, originalLine := range originalLines {
-		if strings.TrimSpace(originalLine) == filteredLine {
-			return i + 1 // Line numbers are 1-based
-		}
-	}
-
-	return findLineNumberByText(originalSchema, filteredLine)
-}
-
-func isEntityType(obj ast.ObjectTypeDefinition, doc *ast.Document) bool {
-	for _, field := range obj.FieldsDefinition.Refs {
-		fieldDef := doc.FieldDefinitions[field]
-		fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-
-		if fieldName == "id" || fieldName == "legacyID" {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (sup Suppression) Matches(filePath string, line int, rule string, value string) bool {
 	normalizedSuppressionFile := strings.ReplaceAll(sup.File, "\\", "/")
 	fileMatches := sup.File == "" || strings.HasSuffix(filePath, normalizedSuppressionFile)
@@ -942,8 +920,81 @@ func findFieldDefinitionLine(schemaContent string, fieldName string, typeName st
 	return 0
 }
 
+// func validateDirectiveNames(doc *ast.Document) bool {
+// 	validFederationDirectives := map[string]bool{
+// 		"key":              true,
+// 		"external":         true,
+// 		"requires":         true,
+// 		"provides":         true,
+// 		"extends":          true,
+// 		"shareable":        true,
+// 		"inaccessible":     true,
+// 		"override":         true,
+// 		"composeDirective": true,
+// 		"interfaceObject":  true,
+// 		"tag":              true,
+// 		"deprecated":       true, // Standard GraphQL directive
+// 		"specifiedBy":      true, // Standard GraphQL directive
+// 		"oneOf":            true, // Standard GraphQL directive
+// 	}
+
+// 	log.Debug("Validating federation directive names...")
+
+// 	hasErrors := false
+
+// 	for _, obj := range doc.ObjectTypeDefinitions {
+// 		typeName := doc.Input.ByteSliceString(obj.Name)
+
+// 		for _, directiveRef := range obj.Directives.Refs {
+// 			directive := doc.Directives[directiveRef]
+// 			directiveName := doc.Input.ByteSliceString(directive.Name)
+
+// 			if !validFederationDirectives[directiveName] {
+// 				log.Errorf("ERROR: Invalid federation directive '@%s' on type '%s'\n", directiveName, typeName)
+// 				log.Errorf(`  Federation only allows these directives: @key, @external, @requires, @provides, @extends,
+// 				  @shareable, @inaccessible, @override, @composeDirective, @interfaceObject, @tag, @deprecated, @specifiedBy,
+// 				  @oneOf`)
+
+// 				if strings.Contains(directiveName, "key") || levenshteinDistance(directiveName, "key") <= levenshteinThreshold {
+// 					log.Errorf("  Did you mean '@key'?\n")
+// 				} else if strings.Contains(directiveName, "external") ||
+// 					levenshteinDistance(directiveName, "external") <= levenshteinThreshold {
+// 					log.Errorf("  Did you mean '@external'?\n")
+// 				}
+
+// 				hasErrors = true
+// 			}
+// 		}
+// 	}
+
+// 	for _, fieldDef := range doc.FieldDefinitions {
+// 		for _, directiveRef := range fieldDef.Directives.Refs {
+// 			directive := doc.Directives[directiveRef]
+// 			directiveName := doc.Input.ByteSliceString(directive.Name)
+
+// 			if !validFederationDirectives[directiveName] {
+// 				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+// 				log.Errorf("ERROR: Invalid federation directive '@%s' on field '%s'\n", directiveName, fieldName)
+// 				log.Errorf(`  Federation only allows these directives on fields: @external, @requires, @provides, @shareable,
+// 				  @inaccessible, @override, @tag, @deprecated`)
+
+// 				hasErrors = true
+// 			}
+// 		}
+// 	}
+
+// 	if hasErrors {
+// 		log.Error("Federation directive validation FAILED - schema contains invalid directives")
+
+// 		return false
+// 	}
+
+// 	log.Debug("federation directive validation PASSED")
+
+// 	return true
+// }
+
 func validateDirectiveNames(doc *ast.Document) bool {
-	// Official federation directives as per federation spec
 	validFederationDirectives := map[string]bool{
 		"key":              true,
 		"external":         true,
@@ -967,42 +1018,15 @@ func validateDirectiveNames(doc *ast.Document) bool {
 
 	for _, obj := range doc.ObjectTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(obj.Name)
-
-		for _, directiveRef := range obj.Directives.Refs {
-			directive := doc.Directives[directiveRef]
-			directiveName := doc.Input.ByteSliceString(directive.Name)
-
-			if !validFederationDirectives[directiveName] {
-				log.Errorf("ERROR: Invalid federation directive '@%s' on type '%s'\n", directiveName, typeName)
-				log.Errorf(`  Federation only allows these directives: @key, @external, @requires, @provides, @extends,
-				  @shareable, @inaccessible, @override, @composeDirective, @interfaceObject, @tag, @deprecated, @specifiedBy,
-				  @oneOf`)
-
-				if strings.Contains(directiveName, "key") || levenshteinDistance(directiveName, "key") <= levenshteinThreshold {
-					log.Errorf("  Did you mean '@key'?\n")
-				} else if strings.Contains(directiveName, "external") ||
-					levenshteinDistance(directiveName, "external") <= levenshteinThreshold {
-					log.Errorf("  Did you mean '@external'?\n")
-				}
-
-				hasErrors = true
-			}
+		if !validateDirectives(doc, obj.Directives.Refs, validFederationDirectives, typeName, "type") {
+			hasErrors = true
 		}
 	}
 
 	for _, fieldDef := range doc.FieldDefinitions {
-		for _, directiveRef := range fieldDef.Directives.Refs {
-			directive := doc.Directives[directiveRef]
-			directiveName := doc.Input.ByteSliceString(directive.Name)
-
-			if !validFederationDirectives[directiveName] {
-				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-				log.Errorf("ERROR: Invalid federation directive '@%s' on field '%s'\n", directiveName, fieldName)
-				log.Errorf(`  Federation only allows these directives on fields: @external, @requires, @provides, @shareable,
-				  @inaccessible, @override, @tag, @deprecated`)
-
-				hasErrors = true
-			}
+		fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+		if !validateDirectives(doc, fieldDef.Directives.Refs, validFederationDirectives, fieldName, "field") {
+			hasErrors = true
 		}
 	}
 
@@ -1017,93 +1041,47 @@ func validateDirectiveNames(doc *ast.Document) bool {
 	return true
 }
 
-func validateFederationSchema(doc *ast.Document) {
-	log.Info("Validating federation schema...")
-
-	federationDirectives := []string{"key", "external", "requires", "provides", "extends"}
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(obj.Name)
-		validateObjectDirectives(obj, doc, typeName, federationDirectives)
-		checkEntityKey(obj, doc, typeName)
-	}
-
-	log.Info("Federation validation completed")
-}
-
-func validateObjectDirectives(
-	obj ast.ObjectTypeDefinition,
+func validateDirectives(
 	doc *ast.Document,
-	typeName string,
-	federationDirectives []string,
-) {
-	for _, directiveRef := range obj.Directives.Refs {
-		directive := doc.Directives[directiveRef]
-		directiveName := doc.Input.ByteSliceString(directive.Name)
+	directiveRefs []int,
+	validDirectives map[string]bool,
+	parentName, parentKind string,
+) bool {
+	hasErrors := false
 
-		if directiveName == "key" {
-			validateKeyDirective(directive, doc, typeName)
-		}
-
-		reportFederationDirectiveUsage(directiveName, typeName, federationDirectives)
-	}
-}
-
-func validateKeyDirective(
-	directive ast.Directive,
-	doc *ast.Document,
-	typeName string,
-) {
-	hasFieldsArg := false
-
-	for _, argRef := range directive.Arguments.Refs {
-		arg := doc.Arguments[argRef]
-		argName := doc.Input.ByteSliceString(arg.Name)
-
-		if argName == "fields" {
-			hasFieldsArg = true
-
-			break
-		}
-	}
-
-	if !hasFieldsArg {
-		log.Errorf("Error: @key directive on type '%s' is missing 'fields' argument", typeName)
-	}
-}
-
-func reportFederationDirectiveUsage(
-	directiveName, typeName string,
-	federationDirectives []string,
-) {
-	for _, fedDirective := range federationDirectives {
-		if directiveName == fedDirective {
-			log.Infof("Info: Type '%s' uses federation directive @%s", typeName, fedDirective)
-		}
-	}
-}
-
-func checkEntityKey(obj ast.ObjectTypeDefinition, doc *ast.Document, typeName string) {
-	if typeName == "Query" || typeName == "Mutation" || typeName == "Subscription" {
-		return
-	}
-
-	if !hasKeyDirective(obj, doc) && isEntityType(obj, doc) {
-		log.Warnf(`Warning: Type '%s' has ID fields but no @key directive - consider adding @key if this is a federated
-		  entity`, typeName)
-	}
-}
-
-func hasKeyDirective(obj ast.ObjectTypeDefinition, doc *ast.Document) bool {
-	for _, directiveRef := range obj.Directives.Refs {
+	for _, directiveRef := range directiveRefs {
 		directive := doc.Directives[directiveRef]
 
 		directiveName := doc.Input.ByteSliceString(directive.Name)
+		if !validDirectives[directiveName] {
+			reportDirectiveError(directiveName, parentName, parentKind)
 
-		if directiveName == "key" {
-			return true
+			hasErrors = true
 		}
 	}
 
-	return false
+	return !hasErrors
+}
+
+func reportDirectiveError(directiveName, parentName, parentKind string) {
+	log.Errorf("ERROR: Invalid federation directive '@%s' on %s '%s'", directiveName, parentKind, parentName)
+
+	switch parentKind {
+	case "type":
+		log.Errorf(`  Federation only allows these directives: @key, @external, @requires, @provides, @extends,
+          @shareable, @inaccessible, @override, @composeDirective, @interfaceObject, @tag, @deprecated, @specifiedBy,
+          @oneOf`)
+		suggestDirective(directiveName, "key")
+		suggestDirective(directiveName, "external")
+	case "field":
+		log.Errorf(`  Federation only allows these directives on fields: @external, @requires, @provides, @shareable,
+          @inaccessible, @override, @tag, @deprecated`)
+	}
+}
+
+func suggestDirective(directiveName, validName string) {
+	if strings.Contains(directiveName, validName) ||
+		levenshteinDistance(directiveName, validName) <= levenshteinThreshold {
+		log.Errorf("  Did you mean '@%s'?", validName)
+	}
 }
