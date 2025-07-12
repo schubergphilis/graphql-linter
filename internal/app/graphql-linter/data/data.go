@@ -680,57 +680,73 @@ func (s Store) validateEnumTypes(
 
 		for _, valueRef := range enumDef.EnumValuesDefinition.Refs {
 			valueDef := doc.EnumValueDefinitions[valueRef]
-
 			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
-			if !isValidEnumValue(valueName) {
-				lineNum := findLineNumberByText(schemaContent, valueName)
-				log.Infof(
-					"ERROR: Enum '%s' has invalid value '%s' (line %d)\n",
-					enumName,
-					valueName,
-					lineNum,
-				)
-				log.Infof(
-					"  Enum values should be valid GraphQL identifiers (letters, digits, underscores, no leading digits)\n",
-				)
 
-				if lineNum > 0 {
-					errorLines = append(errorLines, lineNum)
-				}
-
+			if err, line := checkInvalidEnumValue(enumName, valueName, schemaContent); err != "" {
 				errors = append(errors, valueName)
+
+				if line > 0 {
+					errorLines = append(errorLines, line)
+				}
 			}
 
-			if hasSuspiciousEnumValue(valueName) || hasEmbeddedDigits(valueName) {
-				lineNum := findLineNumberByText(schemaContent, valueName)
-				if s.isSuppressed(schemaPath, lineNum, "suspicious_enum_value", valueName) {
-					continue
-				}
-
-				log.Infof(
-					"ERROR: Enum '%s' has suspicious value '%s' (line %d)\n",
-					enumName,
-					valueName,
-					lineNum,
-				)
-
-				if suggestion := suggestCorrectEnumValue(valueName); suggestion != "" {
-					log.Infof("  Did you mean '%s'?\n", suggestion)
-				} else {
-					suggestedValue := removeSuffixDigits(valueName)
-					log.Errorf("  Did you mean '%s'? Enum values typically don't contain numbers.\n", suggestedValue)
-				}
-
-				if lineNum > 0 {
-					errorLines = append(errorLines, lineNum)
-				}
-
+			if err, line := s.checkSuspiciousEnumValue(enumName, valueName, schemaContent, schemaPath); err != "" {
 				errors = append(errors, valueName)
+
+				if line > 0 {
+					errorLines = append(errorLines, line)
+				}
 			}
 		}
 	}
 
 	return errors, errorLines
+}
+
+func checkInvalidEnumValue(enumName, valueName, schemaContent string) (string, int) {
+	if isValidEnumValue(valueName) {
+		return "", 0
+	}
+
+	lineNum := findLineNumberByText(schemaContent, valueName)
+	log.Infof(
+		"ERROR: Enum '%s' has invalid value '%s' (line %d)\n",
+		enumName,
+		valueName,
+		lineNum,
+	)
+	log.Infof(
+		"  Enum values should be valid GraphQL identifiers (letters, digits, underscores, no leading digits)\n",
+	)
+
+	return valueName, lineNum
+}
+
+func (s Store) checkSuspiciousEnumValue(enumName, valueName, schemaContent, schemaPath string) (string, int) {
+	if !hasSuspiciousEnumValue(valueName) && !hasEmbeddedDigits(valueName) {
+		return "", 0
+	}
+
+	lineNum := findLineNumberByText(schemaContent, valueName)
+	if s.isSuppressed(schemaPath, lineNum, "suspicious_enum_value", valueName) {
+		return "", 0
+	}
+
+	log.Infof(
+		"ERROR: Enum '%s' has suspicious value '%s' (line %d)\n",
+		enumName,
+		valueName,
+		lineNum,
+	)
+
+	if suggestion := suggestCorrectEnumValue(valueName); suggestion != "" {
+		log.Infof("  Did you mean '%s'?\n", suggestion)
+	} else {
+		suggestedValue := removeSuffixDigits(valueName)
+		log.Errorf("  Did you mean '%s'? Enum values typically don't contain numbers.\n", suggestedValue)
+	}
+
+	return valueName, lineNum
 }
 
 func printReport(schemaFiles []string, totalErrors int) {
