@@ -116,183 +116,75 @@ func (s Store) Run() error {
 	return nil
 }
 
-func (s Store) lintSchemaFile(schemaPath string) bool {
-	schemaBytes, err := os.ReadFile(schemaPath)
-	if err != nil {
-		log.WithError(err).Error("failed to read schema file")
+func (s Store) LoadConfig(configPath string) (*LinterConfig, error) {
+	config := &LinterConfig{
+		Settings: Settings{
+			StrictMode:         true,
+			ValidateFederation: true,
+			CheckDescriptions:  true,
+		},
+	}
 
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		log.Debugf("no config file found at %s. Using defaults", configPath)
+
+		return config, nil
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	err = yaml.Unmarshal(data, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	if s.Verbose {
+		log.Infof("loaded config with %d suppressions", len(config.Suppressions))
+	}
+
+	return config, nil
+}
+
+func (s Store) lintSchemaFile(schemaPath string) bool {
+	schemaString, ok := readSchemaFile(schemaPath)
+	if !ok {
 		return false
 	}
 
-	// Don't filter out federation directives - parse as federation schema
-	schemaString := string(schemaBytes)
-
-	// Create filtered version only for federation validation (remove comments)
-	lines := strings.Split(schemaString, "\n")
-
-	var filteredLines []string
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if !strings.HasPrefix(trimmed, "//") {
-			filteredLines = append(filteredLines, line)
-		}
-	}
-
-	filteredSchema := strings.Join(filteredLines, "\n")
+	filteredSchema := filterSchemaComments(schemaString)
 
 	log.Debugf("Parsing federation schema from: %s\n", schemaPath)
 	log.Debugf("Schema content length: %d bytes\n", len(schemaString))
 
-	// Parse the document using the original schema (with comments) to preserve line numbers
 	doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
-
 	LogSchemaParseErrors(schemaString, &parseReport)
-
 	log.Debug("Schema parsed successfully!")
 
-	// Track if any validation fails
 	var hasValidationErrors bool
 
-	// Validate directive names for typos
 	if !validateDirectiveNames(&doc) {
 		hasValidationErrors = true
 	}
 
-	// Validate data types and type references (use original schema with comments)
 	dataTypesValid, errorLines := s.validateDataTypes(&doc, schemaString, schemaPath)
 	if !dataTypesValid {
 		hasValidationErrors = true
 	}
 
-	// Use federation package to build and validate the schema
-	var report operationreport.Report
-
-	// Build federation schema from the filtered schema string
-	federationSchema, federationErr := federation.BuildFederationSchema(filteredSchema, filteredSchema)
-	if federationErr != nil {
-		log.Infof("Federation schema build failed: %v\n", federationErr)
-
+	if !validateFederationSchema(filteredSchema) {
 		hasValidationErrors = true
 	}
 
-	// Check for federation validation errors in the report
-	if report.HasErrors() {
-		log.Error("Federation validation errors:")
-
-		for _, internalErr := range report.InternalErrors {
-			log.Errorf("  - %v\n", internalErr)
-		}
-
-		for _, externalErr := range report.ExternalErrors {
-			log.Errorf("  - %s\n", externalErr.Message)
-		}
-
-		hasValidationErrors = true
-	} else {
-		log.Debug("Federation schema validation passed")
-	}
-
-	_ = federationSchema // Use the federation schema
-
-	// Collect all description errors first, then sort and display them
-	type DescriptionError struct {
-		LineNum     int
-		Message     string
-		LineContent string
-	}
-
-	var descriptionErrors []DescriptionError
-
-	// Linter: Check that all type and enum definitions have a description
-	for _, obj := range doc.ObjectTypeDefinitions {
-		if !obj.Description.IsDefined {
-			name := doc.Input.ByteSliceString(obj.Name)
-			// Find the line number for this type definition
-			lineNum := findLineNumberByText(schemaString, "type "+name)
-			lineContent := getLineContent(schemaString, lineNum)
-			message := fmt.Sprintf("ERROR: Object type '%s' is missing a description", name)
-			descriptionErrors = append(descriptionErrors, DescriptionError{
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			})
-
-			if lineNum > 0 {
-				errorLines = append(errorLines, lineNum)
-			}
-
-			hasValidationErrors = true
-		}
-
-		// Check that all fields have descriptions
-		for _, fieldRef := range obj.FieldsDefinition.Refs {
-			fieldDef := doc.FieldDefinitions[fieldRef]
-			if !fieldDef.Description.IsDefined {
-				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-				typeName := doc.Input.ByteSliceString(obj.Name)
-
-				// Get the field type to make the search more specific
-				fieldType := doc.Types[fieldDef.Type]
-				baseType := getBaseTypeName(&doc, fieldType)
-
-				// Find the line number for this specific field definition
-				lineNum := findFieldDefinitionLine(schemaString, fieldName, baseType)
-				if lineNum == 0 {
-					// Fallback: look for the field name with colon
-					lineNum = findLineNumberByText(schemaString, fieldName+":")
-				}
-
-				lineContent := getLineContent(schemaString, lineNum)
-				message := fmt.Sprintf("ERROR: Field '%s' in type '%s' is missing a description", fieldName, typeName)
-				descriptionErrors = append(descriptionErrors, DescriptionError{
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
-
-				if lineNum > 0 {
-					errorLines = append(errorLines, lineNum)
-				}
-
-				hasValidationErrors = true
-			}
-		}
-	}
-
-	for _, enum := range doc.EnumTypeDefinitions {
-		if !enum.Description.IsDefined {
-			name := doc.Input.ByteSliceString(enum.Name)
-			lineNum := findLineNumberByText(schemaString, "enum "+name)
-			lineContent := getLineContent(schemaString, lineNum)
-			message := fmt.Sprintf("ERROR: Enum '%s' is missing a description", name)
-			descriptionErrors = append(descriptionErrors, DescriptionError{
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			})
-
-			if lineNum > 0 {
-				errorLines = append(errorLines, lineNum)
-			}
-
-			hasValidationErrors = true
-		}
-	}
-
+	descriptionErrors, errorLines2 := lintDescriptions(&doc, schemaString)
 	if len(descriptionErrors) > 0 {
-		for i := range len(descriptionErrors) - 1 {
-			for j := range len(descriptionErrors) - i - 1 {
-				if descriptionErrors[j].LineNum > descriptionErrors[j+1].LineNum {
-					descriptionErrors[j], descriptionErrors[j+1] = descriptionErrors[j+1], descriptionErrors[j]
-				}
-			}
-		}
+		printDescriptionErrors(descriptionErrors, schemaPath)
 
-		for _, err := range descriptionErrors {
-			log.Infof("%s %s:%d\n", err.Message, schemaPath, err.LineNum)
-			log.Infof("  %d: %s\n", err.LineNum, err.LineContent)
-		}
+		hasValidationErrors = true
+
+		errorLines = append(errorLines, errorLines2...)
 	}
 
 	if hasValidationErrors {
@@ -308,6 +200,202 @@ func (s Store) lintSchemaFile(schemaPath string) bool {
 	log.Debugf("Schema linting PASSED: %s", schemaPath)
 
 	return true
+}
+
+func readSchemaFile(schemaPath string) (string, bool) {
+	schemaBytes, err := os.ReadFile(schemaPath)
+	if err != nil {
+		log.WithError(err).Error("failed to read schema file")
+
+		return "", false
+	}
+
+	return string(schemaBytes), true
+}
+
+func filterSchemaComments(schemaString string) string {
+	lines := strings.Split(schemaString, "\n")
+
+	var filteredLines []string
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "//") {
+			filteredLines = append(filteredLines, line)
+		}
+	}
+
+	return strings.Join(filteredLines, "\n")
+}
+
+func validateFederationSchema(filteredSchema string) bool {
+	var report operationreport.Report
+
+	federationSchema, federationErr := federation.BuildFederationSchema(
+		filteredSchema,
+		filteredSchema,
+	)
+	if federationErr != nil {
+		log.Infof("Federation schema build failed: %v\n", federationErr)
+
+		return false
+	}
+
+	_ = federationSchema
+
+	if report.HasErrors() {
+		log.Error("Federation validation errors:")
+
+		for _, internalErr := range report.InternalErrors {
+			log.Errorf("  - %v\n", internalErr)
+		}
+
+		for _, externalErr := range report.ExternalErrors {
+			log.Errorf("  - %s\n", externalErr.Message)
+		}
+
+		return false
+	}
+
+	log.Debug("Federation schema validation passed")
+
+	return true
+}
+
+func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int) {
+	var (
+		descriptionErrors []DescriptionError
+		errorLines        []int
+	)
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		if err, line := checkTypeDescription(doc, schemaString, obj); err != nil {
+			descriptionErrors = append(descriptionErrors, *err)
+
+			if line > 0 {
+				errorLines = append(errorLines, line)
+			}
+		}
+
+		for _, fieldRef := range obj.FieldsDefinition.Refs {
+			if err, line := checkFieldDescription(doc, schemaString, obj, fieldRef); err != nil {
+				descriptionErrors = append(descriptionErrors, *err)
+
+				if line > 0 {
+					errorLines = append(errorLines, line)
+				}
+			}
+		}
+	}
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		if err, line := checkEnumDescription(doc, schemaString, enum); err != nil {
+			descriptionErrors = append(descriptionErrors, *err)
+
+			if line > 0 {
+				errorLines = append(errorLines, line)
+			}
+		}
+	}
+
+	return sortDescriptionErrors(descriptionErrors), errorLines
+}
+
+func checkTypeDescription(
+	doc *ast.Document,
+	schemaString string,
+	obj ast.ObjectTypeDefinition,
+) (*DescriptionError, int) {
+	if obj.Description.IsDefined {
+		return nil, 0
+	}
+
+	name := doc.Input.ByteSliceString(obj.Name)
+	lineNum := findLineNumberByText(schemaString, "type "+name)
+	lineContent := getLineContent(schemaString, lineNum)
+	message := fmt.Sprintf("ERROR: Object type '%s' is missing a description", name)
+
+	return &DescriptionError{
+		LineNum:     lineNum,
+		Message:     message,
+		LineContent: lineContent,
+	}, lineNum
+}
+
+func checkFieldDescription(
+	doc *ast.Document,
+	schemaString string,
+	obj ast.ObjectTypeDefinition,
+	fieldRef int,
+) (*DescriptionError, int) {
+	fieldDef := doc.FieldDefinitions[fieldRef]
+	if fieldDef.Description.IsDefined {
+		return nil, 0
+	}
+
+	fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+	typeName := doc.Input.ByteSliceString(obj.Name)
+	fieldType := doc.Types[fieldDef.Type]
+	baseType := getBaseTypeName(doc, fieldType)
+
+	lineNum := findFieldDefinitionLine(schemaString, fieldName, baseType)
+	if lineNum == 0 {
+		lineNum = findLineNumberByText(schemaString, fieldName+":")
+	}
+
+	lineContent := getLineContent(schemaString, lineNum)
+	message := fmt.Sprintf(
+		"ERROR: Field '%s' in type '%s' is missing a description",
+		fieldName,
+		typeName,
+	)
+
+	return &DescriptionError{
+		LineNum:     lineNum,
+		Message:     message,
+		LineContent: lineContent,
+	}, lineNum
+}
+
+func checkEnumDescription(
+	doc *ast.Document,
+	schemaString string,
+	enum ast.EnumTypeDefinition,
+) (*DescriptionError, int) {
+	if enum.Description.IsDefined {
+		return nil, 0
+	}
+
+	name := doc.Input.ByteSliceString(enum.Name)
+	lineNum := findLineNumberByText(schemaString, "enum "+name)
+	lineContent := getLineContent(schemaString, lineNum)
+	message := fmt.Sprintf("ERROR: Enum '%s' is missing a description", name)
+
+	return &DescriptionError{
+		LineNum:     lineNum,
+		Message:     message,
+		LineContent: lineContent,
+	}, lineNum
+}
+
+func sortDescriptionErrors(errors []DescriptionError) []DescriptionError {
+	// Simple bubble sort for demonstration; use sort.Slice in real code
+	for i := range len(errors) - 1 {
+		for j := range len(errors) - i - 1 {
+			if errors[j].LineNum > errors[j+1].LineNum {
+				errors[j], errors[j+1] = errors[j+1], errors[j]
+			}
+		}
+	}
+
+	return errors
+}
+
+func printDescriptionErrors(errors []DescriptionError, schemaPath string) {
+	for _, err := range errors {
+		log.Infof("%s %s:%d\n", err.Message, schemaPath, err.LineNum)
+		log.Infof("  %d: %s\n", err.LineNum, err.LineContent)
+	}
 }
 
 func LogSchemaParseErrors(
@@ -388,7 +476,11 @@ func reportContextLines(
 	}
 }
 
-func (s Store) validateDataTypes(doc *ast.Document, schemaContent string, schemaPath string) (bool, []int) {
+func (s Store) validateDataTypes(
+	doc *ast.Document,
+	schemaContent string,
+	schemaPath string,
+) (bool, []int) {
 	log.Info("Validating data types...")
 
 	var errorLines []int
@@ -463,7 +555,12 @@ func (s Store) validateDataTypes(doc *ast.Document, schemaContent string, schema
 				lineNum = findLineNumberByText(schemaContent, fieldName+":")
 			}
 
-			log.Errorf("ERROR: Field '%s' references undefined type '%s' (line %d)\n", fieldName, baseType, lineNum)
+			log.Errorf(
+				"ERROR: Field '%s' references undefined type '%s' (line %d)\n",
+				fieldName,
+				baseType,
+				lineNum,
+			)
 			log.Errorf("  Available types: %v\n", getAvailableTypes(builtInScalars, definedTypes))
 
 			if lineNum > 0 {
@@ -495,7 +592,12 @@ func (s Store) validateDataTypes(doc *ast.Document, schemaContent string, schema
 				lineNum = findLineNumberByText(schemaContent, fieldName+":")
 			}
 
-			log.Errorf("ERROR: Input field '%s' references undefined type '%s' (line %d)\n", fieldName, baseType, lineNum)
+			log.Errorf(
+				"ERROR: Input field '%s' references undefined type '%s' (line %d)\n",
+				fieldName,
+				baseType,
+				lineNum,
+			)
 			log.Errorf("  Available types: %v\n", getAvailableTypes(builtInScalars, definedTypes))
 
 			if lineNum > 0 {
@@ -516,8 +618,15 @@ func (s Store) validateDataTypes(doc *ast.Document, schemaContent string, schema
 			// Check for invalid enum value names (ending with numbers, etc.)
 			if !isValidEnumValue(valueName) {
 				lineNum := findLineNumberByText(schemaContent, valueName)
-				log.Infof("ERROR: Enum '%s' has invalid value '%s' (line %d)\n", enumName, valueName, lineNum)
-				log.Infof("  Enum values should be valid GraphQL identifiers (letters, digits, underscores, no leading digits)\n")
+				log.Infof(
+					"ERROR: Enum '%s' has invalid value '%s' (line %d)\n",
+					enumName,
+					valueName,
+					lineNum,
+				)
+				log.Infof(
+					"  Enum values should be valid GraphQL identifiers (letters, digits, underscores, no leading digits)\n",
+				)
 
 				if lineNum > 0 {
 					errorLines = append(errorLines, lineNum)
@@ -530,11 +639,16 @@ func (s Store) validateDataTypes(doc *ast.Document, schemaContent string, schema
 				lineNum := findLineNumberByText(schemaContent, valueName)
 
 				// Check if this error is suppressed
-				if s.IsSuppressed(schemaPath, lineNum, "suspicious_enum_value", valueName) {
+				if s.isSuppressed(schemaPath, lineNum, "suspicious_enum_value", valueName) {
 					continue // Skip this error as it's suppressed
 				}
 
-				log.Infof("ERROR: Enum '%s' has suspicious value '%s' (line %d)\n", enumName, valueName, lineNum)
+				log.Infof(
+					"ERROR: Enum '%s' has suspicious value '%s' (line %d)\n",
+					enumName,
+					valueName,
+					lineNum,
+				)
 
 				// Suggest common fixes for standard GraphQL scalar types
 				if suggestion := suggestCorrectEnumValue(valueName); suggestion != "" {
@@ -578,38 +692,6 @@ func printReport(schemaFiles []string, totalErrors int) {
 
 	log.Infof("Files passed: %d", len(schemaFiles))
 	log.Infof("All %d schema file(s) passed linting successfully!", len(schemaFiles))
-}
-
-func (s Store) LoadConfig(configPath string) (*LinterConfig, error) {
-	config := &LinterConfig{
-		Settings: Settings{
-			StrictMode:         true,
-			ValidateFederation: true,
-			CheckDescriptions:  true,
-		},
-	}
-
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Debugf("no config file found at %s. Using defaults", configPath)
-
-		return config, nil
-	}
-
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
-	}
-
-	err = yaml.Unmarshal(data, config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
-	}
-
-	if s.Verbose {
-		log.Infof("loaded config with %d suppressions", len(config.Suppressions))
-	}
-
-	return config, nil
 }
 
 func findGraphQLFiles(rootPath string) ([]string, error) {
@@ -883,7 +965,7 @@ func (sup Suppression) Matches(filePath string, line int, rule string, value str
 	return fileMatches && lineMatches && ruleMatches && valueMatches
 }
 
-func (s Store) IsSuppressed(filePath string, line int, rule string, value string) bool {
+func (s Store) isSuppressed(filePath string, line int, rule string, value string) bool {
 	if s.LinterConfig == nil {
 		return false
 	}
@@ -1018,14 +1100,26 @@ func validateDirectiveNames(doc *ast.Document) bool {
 
 	for _, obj := range doc.ObjectTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(obj.Name)
-		if !validateDirectives(doc, obj.Directives.Refs, validFederationDirectives, typeName, "type") {
+		if !validateDirectives(
+			doc,
+			obj.Directives.Refs,
+			validFederationDirectives,
+			typeName,
+			"type",
+		) {
 			hasErrors = true
 		}
 	}
 
 	for _, fieldDef := range doc.FieldDefinitions {
 		fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-		if !validateDirectives(doc, fieldDef.Directives.Refs, validFederationDirectives, fieldName, "field") {
+		if !validateDirectives(
+			doc,
+			fieldDef.Directives.Refs,
+			validFederationDirectives,
+			fieldName,
+			"field",
+		) {
 			hasErrors = true
 		}
 	}
@@ -1064,18 +1158,27 @@ func validateDirectives(
 }
 
 func reportDirectiveError(directiveName, parentName, parentKind string) {
-	log.Errorf("ERROR: Invalid federation directive '@%s' on %s '%s'", directiveName, parentKind, parentName)
+	log.Errorf(
+		"ERROR: Invalid federation directive '@%s' on %s '%s'",
+		directiveName,
+		parentKind,
+		parentName,
+	)
 
 	switch parentKind {
 	case "type":
-		log.Errorf(`  Federation only allows these directives: @key, @external, @requires, @provides, @extends,
+		log.Errorf(
+			`  Federation only allows these directives: @key, @external, @requires, @provides, @extends,
           @shareable, @inaccessible, @override, @composeDirective, @interfaceObject, @tag, @deprecated, @specifiedBy,
-          @oneOf`)
+          @oneOf`,
+		)
 		suggestDirective(directiveName, "key")
 		suggestDirective(directiveName, "external")
 	case "field":
-		log.Errorf(`  Federation only allows these directives on fields: @external, @requires, @provides, @shareable,
-          @inaccessible, @override, @tag, @deprecated`)
+		log.Errorf(
+			`  Federation only allows these directives on fields: @external, @requires, @provides, @shareable,
+          @inaccessible, @override, @tag, @deprecated`,
+		)
 	}
 }
 
