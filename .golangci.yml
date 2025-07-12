@@ -31,6 +31,8 @@ linters:
             - github.com/sirupsen/logrus
             - github.com/stretchr/testify/assert
             - github.com/stretchr/testify/require
+            - github.com/wundergraph/graphql-go-tools/pkg/lexer/position
+            - github.com/wundergraph/graphql-go-tools/v2/pkg/ast
             - gopkg.in/yaml.v3
           deny:
             - pkg: log
