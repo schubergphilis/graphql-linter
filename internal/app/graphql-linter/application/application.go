@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data"
+	log "github.com/sirupsen/logrus"
 )
 
 type Executor interface {
@@ -25,14 +26,26 @@ func NewExecute(verbose bool) (Execute, error) {
 }
 
 func (e Execute) Run() error {
-	s, err := data.NewStore(e.Verbose)
+	dataStore, err := data.NewStore(e.Verbose)
 	if err != nil {
 		return fmt.Errorf("unable to load new store: %w", err)
 	}
 
-	if err := s.Run(); err != nil {
-		return fmt.Errorf("unable to run store: %w", err)
+	linterConfig, err := dataStore.LoadConfig()
+	if err != nil {
+		return fmt.Errorf("unable to load config: %w", err)
 	}
+
+	log.Infof("linter config: %v", linterConfig)
+
+	schemaFiles, err := dataStore.FindAndLogGraphQLSchemaFiles()
+	if err != nil {
+		return fmt.Errorf("schema file discovery failed: %w", err)
+	}
+
+	errorCount := dataStore.LintSchemaFiles(schemaFiles)
+
+	dataStore.PrintReport(schemaFiles, errorCount)
 
 	return nil
 }

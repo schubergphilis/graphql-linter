@@ -36,6 +36,106 @@ func (_m *Storer) EXPECT() *Storer_Expecter {
 	return &Storer_Expecter{mock: &_m.Mock}
 }
 
+// FindAndLogGraphQLSchemaFiles provides a mock function for the type Storer
+func (_mock *Storer) FindAndLogGraphQLSchemaFiles() ([]string, error) {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindAndLogGraphQLSchemaFiles")
+	}
+
+	var r0 []string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func() ([]string, error)); ok {
+		return returnFunc()
+	}
+	if returnFunc, ok := ret.Get(0).(func() []string); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func() error); ok {
+		r1 = returnFunc()
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// Storer_FindAndLogGraphQLSchemaFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindAndLogGraphQLSchemaFiles'
+type Storer_FindAndLogGraphQLSchemaFiles_Call struct {
+	*mock.Call
+}
+
+// FindAndLogGraphQLSchemaFiles is a helper method to define mock.On call
+func (_e *Storer_Expecter) FindAndLogGraphQLSchemaFiles() *Storer_FindAndLogGraphQLSchemaFiles_Call {
+	return &Storer_FindAndLogGraphQLSchemaFiles_Call{Call: _e.mock.On("FindAndLogGraphQLSchemaFiles")}
+}
+
+func (_c *Storer_FindAndLogGraphQLSchemaFiles_Call) Run(run func()) *Storer_FindAndLogGraphQLSchemaFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Storer_FindAndLogGraphQLSchemaFiles_Call) Return(strings []string, err error) *Storer_FindAndLogGraphQLSchemaFiles_Call {
+	_c.Call.Return(strings, err)
+	return _c
+}
+
+func (_c *Storer_FindAndLogGraphQLSchemaFiles_Call) RunAndReturn(run func() ([]string, error)) *Storer_FindAndLogGraphQLSchemaFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LintSchemaFiles provides a mock function for the type Storer
+func (_mock *Storer) LintSchemaFiles(schemaFiles []string) int {
+	ret := _mock.Called(schemaFiles)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LintSchemaFiles")
+	}
+
+	var r0 int
+	if returnFunc, ok := ret.Get(0).(func([]string) int); ok {
+		r0 = returnFunc(schemaFiles)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	return r0
+}
+
+// Storer_LintSchemaFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LintSchemaFiles'
+type Storer_LintSchemaFiles_Call struct {
+	*mock.Call
+}
+
+// LintSchemaFiles is a helper method to define mock.On call
+//   - schemaFiles
+func (_e *Storer_Expecter) LintSchemaFiles(schemaFiles interface{}) *Storer_LintSchemaFiles_Call {
+	return &Storer_LintSchemaFiles_Call{Call: _e.mock.On("LintSchemaFiles", schemaFiles)}
+}
+
+func (_c *Storer_LintSchemaFiles_Call) Run(run func(schemaFiles []string)) *Storer_LintSchemaFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].([]string))
+	})
+	return _c
+}
+
+func (_c *Storer_LintSchemaFiles_Call) Return(n int) *Storer_LintSchemaFiles_Call {
+	_c.Call.Return(n)
+	return _c
+}
+
+func (_c *Storer_LintSchemaFiles_Call) RunAndReturn(run func(schemaFiles []string) int) *Storer_LintSchemaFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // LoadConfig provides a mock function for the type Storer
 func (_mock *Storer) LoadConfig(configPath string) (*data.LinterConfig, error) {
 	ret := _mock.Called(configPath)
@@ -92,46 +192,37 @@ func (_c *Storer_LoadConfig_Call) RunAndReturn(run func(configPath string) (*dat
 	return _c
 }
 
-// Run provides a mock function for the type Storer
-func (_mock *Storer) Run() error {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Run")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func() error); ok {
-		r0 = returnFunc()
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
+// PrintReport provides a mock function for the type Storer
+func (_mock *Storer) PrintReport(schemaFiles []string, totalErrors int) {
+	_mock.Called(schemaFiles, totalErrors)
+	return
 }
 
-// Storer_Run_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Run'
-type Storer_Run_Call struct {
+// Storer_PrintReport_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PrintReport'
+type Storer_PrintReport_Call struct {
 	*mock.Call
 }
 
-// Run is a helper method to define mock.On call
-func (_e *Storer_Expecter) Run() *Storer_Run_Call {
-	return &Storer_Run_Call{Call: _e.mock.On("Run")}
+// PrintReport is a helper method to define mock.On call
+//   - schemaFiles
+//   - totalErrors
+func (_e *Storer_Expecter) PrintReport(schemaFiles interface{}, totalErrors interface{}) *Storer_PrintReport_Call {
+	return &Storer_PrintReport_Call{Call: _e.mock.On("PrintReport", schemaFiles, totalErrors)}
 }
 
-func (_c *Storer_Run_Call) Run(run func()) *Storer_Run_Call {
+func (_c *Storer_PrintReport_Call) Run(run func(schemaFiles []string, totalErrors int)) *Storer_PrintReport_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		run(args[0].([]string), args[1].(int))
 	})
 	return _c
 }
 
-func (_c *Storer_Run_Call) Return(err error) *Storer_Run_Call {
-	_c.Call.Return(err)
+func (_c *Storer_PrintReport_Call) Return() *Storer_PrintReport_Call {
+	_c.Call.Return()
 	return _c
 }
 
-func (_c *Storer_Run_Call) RunAndReturn(run func() error) *Storer_Run_Call {
-	_c.Call.Return(run)
+func (_c *Storer_PrintReport_Call) RunAndReturn(run func(schemaFiles []string, totalErrors int)) *Storer_PrintReport_Call {
+	_c.Run(run)
 	return _c
 }

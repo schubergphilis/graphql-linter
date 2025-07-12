@@ -23,8 +23,10 @@ const (
 )
 
 type Storer interface {
+	FindAndLogGraphQLSchemaFiles() ([]string, error)
+	LintSchemaFiles(schemaFiles []string) int
 	LoadConfig(configPath string) (*LinterConfig, error)
-	Run() error
+	PrintReport(schemaFiles []string, totalErrors int)
 }
 
 type Store struct {
@@ -65,30 +67,21 @@ func NewStore(verbose bool) (Store, error) {
 	return s, nil
 }
 
-func (s Store) Run() error {
+func (s Store) FindAndLogGraphQLSchemaFiles() ([]string, error) {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
-		return fmt.Errorf("failed to determine project root: %w", err)
+		return nil, fmt.Errorf("failed to determine project root: %w", err)
 	}
-
-	configPath := filepath.Join(projectRoot, ".graphql-linter.yml")
-
-	linterConfig, err := s.LoadConfig(configPath)
-	if err != nil {
-		return fmt.Errorf("unable to load config: %w", err)
-	}
-
-	log.Infof("linter config: %v", linterConfig)
 
 	targetPath := projectRoot
 
 	schemaFiles, err := findGraphQLFiles(targetPath)
 	if err != nil {
-		return fmt.Errorf("unable to find graphql files: %w", err)
+		return nil, fmt.Errorf("unable to find graphql files: %w", err)
 	}
 
 	if len(schemaFiles) == 0 {
-		return fmt.Errorf("no GraphQL schema files found in directory: %s", targetPath)
+		return nil, fmt.Errorf("no GraphQL schema files found in directory: %s", targetPath)
 	}
 
 	if s.Verbose {
@@ -99,6 +92,10 @@ func (s Store) Run() error {
 		}
 	}
 
+	return schemaFiles, nil
+}
+
+func (s Store) LintSchemaFiles(schemaFiles []string) int {
 	totalErrors := 0
 
 	for _, schemaFile := range schemaFiles {
@@ -111,12 +108,17 @@ func (s Store) Run() error {
 		}
 	}
 
-	printReport(schemaFiles, totalErrors)
-
-	return nil
+	return totalErrors
 }
 
-func (s Store) LoadConfig(configPath string) (*LinterConfig, error) {
+func (s Store) LoadConfig() (*LinterConfig, error) {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	configPath := filepath.Join(projectRoot, ".graphql-linter.yml")
+
 	config := &LinterConfig{
 		Settings: Settings{
 			StrictMode:         true,
@@ -146,256 +148,6 @@ func (s Store) LoadConfig(configPath string) (*LinterConfig, error) {
 	}
 
 	return config, nil
-}
-
-func (s Store) lintSchemaFile(schemaPath string) bool {
-	schemaString, ok := readSchemaFile(schemaPath)
-	if !ok {
-		return false
-	}
-
-	filteredSchema := filterSchemaComments(schemaString)
-
-	log.Debugf("Parsing federation schema from: %s\n", schemaPath)
-	log.Debugf("Schema content length: %d bytes\n", len(schemaString))
-
-	doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
-	LogSchemaParseErrors(schemaString, &parseReport)
-	log.Debug("Schema parsed successfully!")
-
-	var hasValidationErrors bool
-
-	if !validateDirectiveNames(&doc) {
-		hasValidationErrors = true
-	}
-
-	dataTypesValid, errorLines := s.validateDataTypes(&doc, schemaString, schemaPath)
-	if !dataTypesValid {
-		hasValidationErrors = true
-	}
-
-	if !validateFederationSchema(filteredSchema) {
-		hasValidationErrors = true
-	}
-
-	descriptionErrors, errorLines2 := lintDescriptions(&doc, schemaString)
-	if len(descriptionErrors) > 0 {
-		printDescriptionErrors(descriptionErrors, schemaPath)
-
-		hasValidationErrors = true
-
-		errorLines = append(errorLines, errorLines2...)
-	}
-
-	if hasValidationErrors {
-		if len(errorLines) > 0 {
-			log.Infof("Schema linting FAILED: %s:%d\n", schemaPath, errorLines[0])
-		} else {
-			log.Infof("Schema linting FAILED: %s\n", schemaPath)
-		}
-
-		return false
-	}
-
-	log.Debugf("Schema linting PASSED: %s", schemaPath)
-
-	return true
-}
-
-func readSchemaFile(schemaPath string) (string, bool) {
-	schemaBytes, err := os.ReadFile(schemaPath)
-	if err != nil {
-		log.WithError(err).Error("failed to read schema file")
-
-		return "", false
-	}
-
-	return string(schemaBytes), true
-}
-
-func filterSchemaComments(schemaString string) string {
-	lines := strings.Split(schemaString, "\n")
-
-	var filteredLines []string
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if !strings.HasPrefix(trimmed, "//") {
-			filteredLines = append(filteredLines, line)
-		}
-	}
-
-	return strings.Join(filteredLines, "\n")
-}
-
-func validateFederationSchema(filteredSchema string) bool {
-	var report operationreport.Report
-
-	federationSchema, federationErr := federation.BuildFederationSchema(
-		filteredSchema,
-		filteredSchema,
-	)
-	if federationErr != nil {
-		log.Infof("Federation schema build failed: %v\n", federationErr)
-
-		return false
-	}
-
-	_ = federationSchema
-
-	if report.HasErrors() {
-		log.Error("Federation validation errors:")
-
-		for _, internalErr := range report.InternalErrors {
-			log.Errorf("  - %v\n", internalErr)
-		}
-
-		for _, externalErr := range report.ExternalErrors {
-			log.Errorf("  - %s\n", externalErr.Message)
-		}
-
-		return false
-	}
-
-	log.Debug("Federation schema validation passed")
-
-	return true
-}
-
-func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int) {
-	var (
-		descriptionErrors []DescriptionError
-		errorLines        []int
-	)
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		if err, line := checkTypeDescription(doc, schemaString, obj); err != nil {
-			descriptionErrors = append(descriptionErrors, *err)
-
-			if line > 0 {
-				errorLines = append(errorLines, line)
-			}
-		}
-
-		for _, fieldRef := range obj.FieldsDefinition.Refs {
-			if err, line := checkFieldDescription(doc, schemaString, obj, fieldRef); err != nil {
-				descriptionErrors = append(descriptionErrors, *err)
-
-				if line > 0 {
-					errorLines = append(errorLines, line)
-				}
-			}
-		}
-	}
-
-	for _, enum := range doc.EnumTypeDefinitions {
-		if err, line := checkEnumDescription(doc, schemaString, enum); err != nil {
-			descriptionErrors = append(descriptionErrors, *err)
-
-			if line > 0 {
-				errorLines = append(errorLines, line)
-			}
-		}
-	}
-
-	return sortDescriptionErrors(descriptionErrors), errorLines
-}
-
-func checkTypeDescription(
-	doc *ast.Document,
-	schemaString string,
-	obj ast.ObjectTypeDefinition,
-) (*DescriptionError, int) {
-	if obj.Description.IsDefined {
-		return nil, 0
-	}
-
-	name := doc.Input.ByteSliceString(obj.Name)
-	lineNum := findLineNumberByText(schemaString, "type "+name)
-	lineContent := getLineContent(schemaString, lineNum)
-	message := fmt.Sprintf("ERROR: Object type '%s' is missing a description", name)
-
-	return &DescriptionError{
-		LineNum:     lineNum,
-		Message:     message,
-		LineContent: lineContent,
-	}, lineNum
-}
-
-func checkFieldDescription(
-	doc *ast.Document,
-	schemaString string,
-	obj ast.ObjectTypeDefinition,
-	fieldRef int,
-) (*DescriptionError, int) {
-	fieldDef := doc.FieldDefinitions[fieldRef]
-	if fieldDef.Description.IsDefined {
-		return nil, 0
-	}
-
-	fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-	typeName := doc.Input.ByteSliceString(obj.Name)
-	fieldType := doc.Types[fieldDef.Type]
-	baseType := getBaseTypeName(doc, fieldType)
-
-	lineNum := findFieldDefinitionLine(schemaString, fieldName, baseType)
-	if lineNum == 0 {
-		lineNum = findLineNumberByText(schemaString, fieldName+":")
-	}
-
-	lineContent := getLineContent(schemaString, lineNum)
-	message := fmt.Sprintf(
-		"ERROR: Field '%s' in type '%s' is missing a description",
-		fieldName,
-		typeName,
-	)
-
-	return &DescriptionError{
-		LineNum:     lineNum,
-		Message:     message,
-		LineContent: lineContent,
-	}, lineNum
-}
-
-func checkEnumDescription(
-	doc *ast.Document,
-	schemaString string,
-	enum ast.EnumTypeDefinition,
-) (*DescriptionError, int) {
-	if enum.Description.IsDefined {
-		return nil, 0
-	}
-
-	name := doc.Input.ByteSliceString(enum.Name)
-	lineNum := findLineNumberByText(schemaString, "enum "+name)
-	lineContent := getLineContent(schemaString, lineNum)
-	message := fmt.Sprintf("ERROR: Enum '%s' is missing a description", name)
-
-	return &DescriptionError{
-		LineNum:     lineNum,
-		Message:     message,
-		LineContent: lineContent,
-	}, lineNum
-}
-
-func sortDescriptionErrors(errors []DescriptionError) []DescriptionError {
-	// Simple bubble sort for demonstration; use sort.Slice in real code
-	for i := range len(errors) - 1 {
-		for j := range len(errors) - i - 1 {
-			if errors[j].LineNum > errors[j+1].LineNum {
-				errors[j], errors[j+1] = errors[j+1], errors[j]
-			}
-		}
-	}
-
-	return errors
-}
-
-func printDescriptionErrors(errors []DescriptionError, schemaPath string) {
-	for _, err := range errors {
-		log.Infof("%s %s:%d\n", err.Message, schemaPath, err.LineNum)
-		log.Infof("  %d: %s\n", err.LineNum, err.LineContent)
-	}
 }
 
 func LogSchemaParseErrors(
@@ -476,280 +228,7 @@ func reportContextLines(
 	}
 }
 
-func (s Store) validateDataTypes(
-	doc *ast.Document,
-	schemaContent string,
-	schemaPath string,
-) (bool, []int) {
-	log.Info("Validating data types...")
-
-	builtInScalars := map[string]bool{
-		"String":  true,
-		"Int":     true,
-		"Float":   true,
-		"Boolean": true,
-		"ID":      true,
-	}
-	definedTypes := collectDefinedTypes(doc)
-	hasErrors := false
-
-	var errorLines []int
-
-	fieldErrors, fieldErrorLines := validateFieldTypes(
-		doc,
-		schemaContent,
-		builtInScalars,
-		definedTypes,
-	)
-	if len(fieldErrors) > 0 {
-		hasErrors = true
-
-		errorLines = append(errorLines, fieldErrorLines...)
-	}
-
-	inputErrors, inputErrorLines := validateInputFieldTypes(
-		doc,
-		schemaContent,
-		builtInScalars,
-		definedTypes,
-	)
-	if len(inputErrors) > 0 {
-		hasErrors = true
-
-		errorLines = append(errorLines, inputErrorLines...)
-	}
-
-	enumErrors, enumErrorLines := s.validateEnumTypes(doc, schemaContent, schemaPath)
-	if len(enumErrors) > 0 {
-		hasErrors = true
-
-		errorLines = append(errorLines, enumErrorLines...)
-	}
-
-	if hasErrors {
-		log.Error("Data type validation FAILED - schema contains invalid type references")
-
-		return false, errorLines
-	}
-
-	log.Info("Data type validation PASSED")
-
-	return true, errorLines
-}
-
-func collectDefinedTypes(doc *ast.Document) map[string]bool {
-	definedTypes := make(map[string]bool)
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(obj.Name)
-		definedTypes[typeName] = true
-	}
-
-	for _, enum := range doc.EnumTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(enum.Name)
-		definedTypes[typeName] = true
-	}
-
-	for _, input := range doc.InputObjectTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(input.Name)
-		definedTypes[typeName] = true
-	}
-
-	for _, iface := range doc.InterfaceTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(iface.Name)
-		definedTypes[typeName] = true
-	}
-
-	for _, union := range doc.UnionTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(union.Name)
-		definedTypes[typeName] = true
-	}
-
-	for _, scalar := range doc.ScalarTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(scalar.Name)
-		definedTypes[typeName] = true
-	}
-
-	return definedTypes
-}
-
-func validateTypeReferences(
-	doc *ast.Document,
-	schemaContent string,
-	builtInScalars, definedTypes map[string]bool,
-	typeRefs []int,
-	getName func(int) string,
-	getType func(int) ast.Type,
-	errorPrefix string,
-) ([]string, []int) {
-	var (
-		errors     []string
-		errorLines []int
-	)
-
-	for _, ref := range typeRefs {
-		fieldName := getName(ref)
-		fieldType := getType(ref)
-
-		baseType := getBaseTypeName(doc, fieldType)
-		if !builtInScalars[baseType] && !definedTypes[baseType] {
-			lineNum := findFieldDefinitionLine(schemaContent, fieldName, baseType)
-			if lineNum == 0 {
-				lineNum = findLineNumberByText(schemaContent, fieldName+": "+baseType)
-			}
-
-			if lineNum == 0 {
-				lineNum = findLineNumberByText(schemaContent, fieldName+":")
-			}
-
-			log.Errorf(
-				"%s '%s' references undefined type '%s' (line %d)\n",
-				errorPrefix,
-				fieldName,
-				baseType,
-				lineNum,
-			)
-			log.Errorf("  Available types: %v\n", getAvailableTypes(builtInScalars, definedTypes))
-
-			if lineNum > 0 {
-				errorLines = append(errorLines, lineNum)
-			}
-
-			errors = append(errors, fieldName)
-		}
-	}
-
-	return errors, errorLines
-}
-
-func validateFieldTypes(
-	doc *ast.Document,
-	schemaContent string,
-	builtInScalars, definedTypes map[string]bool,
-) ([]string, []int) {
-	return validateTypeReferences(
-		doc,
-		schemaContent,
-		builtInScalars,
-		definedTypes,
-		indexSlice(len(doc.FieldDefinitions)),
-		func(i int) string { return doc.Input.ByteSliceString(doc.FieldDefinitions[i].Name) },
-		func(i int) ast.Type { return doc.Types[doc.FieldDefinitions[i].Type] },
-		"ERROR: Field",
-	)
-}
-
-func validateInputFieldTypes(
-	doc *ast.Document,
-	schemaContent string,
-	builtInScalars, definedTypes map[string]bool,
-) ([]string, []int) {
-	return validateTypeReferences(
-		doc,
-		schemaContent,
-		builtInScalars,
-		definedTypes,
-		indexSlice(len(doc.InputValueDefinitions)),
-		func(i int) string { return doc.Input.ByteSliceString(doc.InputValueDefinitions[i].Name) },
-		func(i int) ast.Type { return doc.Types[doc.InputValueDefinitions[i].Type] },
-		"ERROR: Input field",
-	)
-}
-
-func indexSlice(n int) []int {
-	indices := make([]int, n)
-	for i := range indices {
-		indices[i] = i
-	}
-
-	return indices
-}
-
-func (s Store) validateEnumTypes(
-	doc *ast.Document,
-	schemaContent string,
-	schemaPath string,
-) ([]string, []int) {
-	var (
-		errors     []string
-		errorLines []int
-	)
-
-	for _, enumDef := range doc.EnumTypeDefinitions {
-		enumName := doc.Input.ByteSliceString(enumDef.Name)
-
-		for _, valueRef := range enumDef.EnumValuesDefinition.Refs {
-			valueDef := doc.EnumValueDefinitions[valueRef]
-			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
-
-			if err, line := checkInvalidEnumValue(enumName, valueName, schemaContent); err != "" {
-				errors = append(errors, valueName)
-
-				if line > 0 {
-					errorLines = append(errorLines, line)
-				}
-			}
-
-			if err, line := s.checkSuspiciousEnumValue(enumName, valueName, schemaContent, schemaPath); err != "" {
-				errors = append(errors, valueName)
-
-				if line > 0 {
-					errorLines = append(errorLines, line)
-				}
-			}
-		}
-	}
-
-	return errors, errorLines
-}
-
-func checkInvalidEnumValue(enumName, valueName, schemaContent string) (string, int) {
-	if isValidEnumValue(valueName) {
-		return "", 0
-	}
-
-	lineNum := findLineNumberByText(schemaContent, valueName)
-	log.Infof(
-		"ERROR: Enum '%s' has invalid value '%s' (line %d)\n",
-		enumName,
-		valueName,
-		lineNum,
-	)
-	log.Infof(
-		"  Enum values should be valid GraphQL identifiers (letters, digits, underscores, no leading digits)\n",
-	)
-
-	return valueName, lineNum
-}
-
-func (s Store) checkSuspiciousEnumValue(enumName, valueName, schemaContent, schemaPath string) (string, int) {
-	if !hasSuspiciousEnumValue(valueName) && !hasEmbeddedDigits(valueName) {
-		return "", 0
-	}
-
-	lineNum := findLineNumberByText(schemaContent, valueName)
-	if s.isSuppressed(schemaPath, lineNum, "suspicious_enum_value", valueName) {
-		return "", 0
-	}
-
-	log.Infof(
-		"ERROR: Enum '%s' has suspicious value '%s' (line %d)\n",
-		enumName,
-		valueName,
-		lineNum,
-	)
-
-	if suggestion := suggestCorrectEnumValue(valueName); suggestion != "" {
-		log.Infof("  Did you mean '%s'?\n", suggestion)
-	} else {
-		suggestedValue := removeSuffixDigits(valueName)
-		log.Errorf("  Did you mean '%s'? Enum values typically don't contain numbers.\n", suggestedValue)
-	}
-
-	return valueName, lineNum
-}
-
-func printReport(schemaFiles []string, totalErrors int) {
+func (s Store) PrintReport(schemaFiles []string, totalErrors int) {
 	log.Infof("\n=== Linting Summary ===")
 	log.Infof("Total files checked: %d", len(schemaFiles))
 
@@ -1072,80 +551,6 @@ func findFieldDefinitionLine(schemaContent string, fieldName string, typeName st
 	return 0
 }
 
-// func validateDirectiveNames(doc *ast.Document) bool {
-// 	validFederationDirectives := map[string]bool{
-// 		"key":              true,
-// 		"external":         true,
-// 		"requires":         true,
-// 		"provides":         true,
-// 		"extends":          true,
-// 		"shareable":        true,
-// 		"inaccessible":     true,
-// 		"override":         true,
-// 		"composeDirective": true,
-// 		"interfaceObject":  true,
-// 		"tag":              true,
-// 		"deprecated":       true, // Standard GraphQL directive
-// 		"specifiedBy":      true, // Standard GraphQL directive
-// 		"oneOf":            true, // Standard GraphQL directive
-// 	}
-
-// 	log.Debug("Validating federation directive names...")
-
-// 	hasErrors := false
-
-// 	for _, obj := range doc.ObjectTypeDefinitions {
-// 		typeName := doc.Input.ByteSliceString(obj.Name)
-
-// 		for _, directiveRef := range obj.Directives.Refs {
-// 			directive := doc.Directives[directiveRef]
-// 			directiveName := doc.Input.ByteSliceString(directive.Name)
-
-// 			if !validFederationDirectives[directiveName] {
-// 				log.Errorf("ERROR: Invalid federation directive '@%s' on type '%s'\n", directiveName, typeName)
-// 				log.Errorf(`  Federation only allows these directives: @key, @external, @requires, @provides, @extends,
-// 				  @shareable, @inaccessible, @override, @composeDirective, @interfaceObject, @tag, @deprecated, @specifiedBy,
-// 				  @oneOf`)
-
-// 				if strings.Contains(directiveName, "key") || levenshteinDistance(directiveName, "key") <= levenshteinThreshold {
-// 					log.Errorf("  Did you mean '@key'?\n")
-// 				} else if strings.Contains(directiveName, "external") ||
-// 					levenshteinDistance(directiveName, "external") <= levenshteinThreshold {
-// 					log.Errorf("  Did you mean '@external'?\n")
-// 				}
-
-// 				hasErrors = true
-// 			}
-// 		}
-// 	}
-
-// 	for _, fieldDef := range doc.FieldDefinitions {
-// 		for _, directiveRef := range fieldDef.Directives.Refs {
-// 			directive := doc.Directives[directiveRef]
-// 			directiveName := doc.Input.ByteSliceString(directive.Name)
-
-// 			if !validFederationDirectives[directiveName] {
-// 				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-// 				log.Errorf("ERROR: Invalid federation directive '@%s' on field '%s'\n", directiveName, fieldName)
-// 				log.Errorf(`  Federation only allows these directives on fields: @external, @requires, @provides, @shareable,
-// 				  @inaccessible, @override, @tag, @deprecated`)
-
-// 				hasErrors = true
-// 			}
-// 		}
-// 	}
-
-// 	if hasErrors {
-// 		log.Error("Federation directive validation FAILED - schema contains invalid directives")
-
-// 		return false
-// 	}
-
-// 	log.Debug("federation directive validation PASSED")
-
-// 	return true
-// }
-
 func validateDirectiveNames(doc *ast.Document) bool {
 	validFederationDirectives := map[string]bool{
 		"key":              true,
@@ -1257,4 +662,526 @@ func suggestDirective(directiveName, validName string) {
 		levenshteinDistance(directiveName, validName) <= levenshteinThreshold {
 		log.Errorf("  Did you mean '@%s'?", validName)
 	}
+}
+
+func (s Store) lintSchemaFile(schemaPath string) bool {
+	schemaString, ok := readSchemaFile(schemaPath)
+	if !ok {
+		return false
+	}
+
+	filteredSchema := filterSchemaComments(schemaString)
+
+	log.Debugf("Parsing federation schema from: %s\n", schemaPath)
+	log.Debugf("Schema content length: %d bytes\n", len(schemaString))
+
+	doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
+	LogSchemaParseErrors(schemaString, &parseReport)
+	log.Debug("Schema parsed successfully!")
+
+	var hasValidationErrors bool
+
+	if !validateDirectiveNames(&doc) {
+		hasValidationErrors = true
+	}
+
+	dataTypesValid, errorLines := s.validateDataTypes(&doc, schemaString, schemaPath)
+	if !dataTypesValid {
+		hasValidationErrors = true
+	}
+
+	if !validateFederationSchema(filteredSchema) {
+		hasValidationErrors = true
+	}
+
+	descriptionErrors, errorLines2 := lintDescriptions(&doc, schemaString)
+	if len(descriptionErrors) > 0 {
+		printDescriptionErrors(descriptionErrors, schemaPath)
+
+		hasValidationErrors = true
+
+		errorLines = append(errorLines, errorLines2...)
+	}
+
+	if hasValidationErrors {
+		if len(errorLines) > 0 {
+			log.Infof("Schema linting FAILED: %s:%d\n", schemaPath, errorLines[0])
+		} else {
+			log.Infof("Schema linting FAILED: %s\n", schemaPath)
+		}
+
+		return false
+	}
+
+	log.Debugf("Schema linting PASSED: %s", schemaPath)
+
+	return true
+}
+
+func readSchemaFile(schemaPath string) (string, bool) {
+	schemaBytes, err := os.ReadFile(schemaPath)
+	if err != nil {
+		log.WithError(err).Error("failed to read schema file")
+
+		return "", false
+	}
+
+	return string(schemaBytes), true
+}
+
+func filterSchemaComments(schemaString string) string {
+	lines := strings.Split(schemaString, "\n")
+
+	var filteredLines []string
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "//") {
+			filteredLines = append(filteredLines, line)
+		}
+	}
+
+	return strings.Join(filteredLines, "\n")
+}
+
+func validateFederationSchema(filteredSchema string) bool {
+	var report operationreport.Report
+
+	federationSchema, federationErr := federation.BuildFederationSchema(
+		filteredSchema,
+		filteredSchema,
+	)
+	if federationErr != nil {
+		log.Infof("Federation schema build failed: %v\n", federationErr)
+
+		return false
+	}
+
+	_ = federationSchema
+
+	if report.HasErrors() {
+		log.Error("Federation validation errors:")
+
+		for _, internalErr := range report.InternalErrors {
+			log.Errorf("  - %v\n", internalErr)
+		}
+
+		for _, externalErr := range report.ExternalErrors {
+			log.Errorf("  - %s\n", externalErr.Message)
+		}
+
+		return false
+	}
+
+	log.Debug("Federation schema validation passed")
+
+	return true
+}
+
+func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int) {
+	var (
+		descriptionErrors []DescriptionError
+		errorLines        []int
+	)
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		if err, line := checkTypeDescription(doc, schemaString, obj); err != nil {
+			descriptionErrors = append(descriptionErrors, *err)
+
+			if line > 0 {
+				errorLines = append(errorLines, line)
+			}
+		}
+
+		for _, fieldRef := range obj.FieldsDefinition.Refs {
+			if err, line := checkFieldDescription(doc, schemaString, obj, fieldRef); err != nil {
+				descriptionErrors = append(descriptionErrors, *err)
+
+				if line > 0 {
+					errorLines = append(errorLines, line)
+				}
+			}
+		}
+	}
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		if err, line := checkEnumDescription(doc, schemaString, enum); err != nil {
+			descriptionErrors = append(descriptionErrors, *err)
+
+			if line > 0 {
+				errorLines = append(errorLines, line)
+			}
+		}
+	}
+
+	return sortDescriptionErrors(descriptionErrors), errorLines
+}
+
+func checkTypeDescription(
+	doc *ast.Document,
+	schemaString string,
+	obj ast.ObjectTypeDefinition,
+) (*DescriptionError, int) {
+	if obj.Description.IsDefined {
+		return nil, 0
+	}
+
+	name := doc.Input.ByteSliceString(obj.Name)
+	lineNum := findLineNumberByText(schemaString, "type "+name)
+	lineContent := getLineContent(schemaString, lineNum)
+	message := fmt.Sprintf("ERROR: Object type '%s' is missing a description", name)
+
+	return &DescriptionError{
+		LineNum:     lineNum,
+		Message:     message,
+		LineContent: lineContent,
+	}, lineNum
+}
+
+func checkFieldDescription(
+	doc *ast.Document,
+	schemaString string,
+	obj ast.ObjectTypeDefinition,
+	fieldRef int,
+) (*DescriptionError, int) {
+	fieldDef := doc.FieldDefinitions[fieldRef]
+	if fieldDef.Description.IsDefined {
+		return nil, 0
+	}
+
+	fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+	typeName := doc.Input.ByteSliceString(obj.Name)
+	fieldType := doc.Types[fieldDef.Type]
+	baseType := getBaseTypeName(doc, fieldType)
+
+	lineNum := findFieldDefinitionLine(schemaString, fieldName, baseType)
+	if lineNum == 0 {
+		lineNum = findLineNumberByText(schemaString, fieldName+":")
+	}
+
+	lineContent := getLineContent(schemaString, lineNum)
+	message := fmt.Sprintf(
+		"ERROR: Field '%s' in type '%s' is missing a description",
+		fieldName,
+		typeName,
+	)
+
+	return &DescriptionError{
+		LineNum:     lineNum,
+		Message:     message,
+		LineContent: lineContent,
+	}, lineNum
+}
+
+func checkEnumDescription(
+	doc *ast.Document,
+	schemaString string,
+	enum ast.EnumTypeDefinition,
+) (*DescriptionError, int) {
+	if enum.Description.IsDefined {
+		return nil, 0
+	}
+
+	name := doc.Input.ByteSliceString(enum.Name)
+	lineNum := findLineNumberByText(schemaString, "enum "+name)
+	lineContent := getLineContent(schemaString, lineNum)
+	message := fmt.Sprintf("ERROR: Enum '%s' is missing a description", name)
+
+	return &DescriptionError{
+		LineNum:     lineNum,
+		Message:     message,
+		LineContent: lineContent,
+	}, lineNum
+}
+
+func sortDescriptionErrors(errors []DescriptionError) []DescriptionError {
+	for i := range len(errors) - 1 {
+		for j := range len(errors) - i - 1 {
+			if errors[j].LineNum > errors[j+1].LineNum {
+				errors[j], errors[j+1] = errors[j+1], errors[j]
+			}
+		}
+	}
+
+	return errors
+}
+
+func printDescriptionErrors(errors []DescriptionError, schemaPath string) {
+	for _, err := range errors {
+		log.Infof("%s %s:%d\n", err.Message, schemaPath, err.LineNum)
+		log.Infof("  %d: %s\n", err.LineNum, err.LineContent)
+	}
+}
+
+func (s Store) validateDataTypes(
+	doc *ast.Document,
+	schemaContent string,
+	schemaPath string,
+) (bool, []int) {
+	log.Info("Validating data types...")
+
+	builtInScalars := map[string]bool{
+		"String":  true,
+		"Int":     true,
+		"Float":   true,
+		"Boolean": true,
+		"ID":      true,
+	}
+	definedTypes := collectDefinedTypes(doc)
+	hasErrors := false
+
+	var errorLines []int
+
+	fieldErrors, fieldErrorLines := validateFieldTypes(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+	)
+	if len(fieldErrors) > 0 {
+		hasErrors = true
+
+		errorLines = append(errorLines, fieldErrorLines...)
+	}
+
+	inputErrors, inputErrorLines := validateInputFieldTypes(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+	)
+	if len(inputErrors) > 0 {
+		hasErrors = true
+
+		errorLines = append(errorLines, inputErrorLines...)
+	}
+
+	enumErrors, enumErrorLines := s.validateEnumTypes(doc, schemaContent, schemaPath)
+	if len(enumErrors) > 0 {
+		hasErrors = true
+
+		errorLines = append(errorLines, enumErrorLines...)
+	}
+
+	if hasErrors {
+		log.Error("Data type validation FAILED - schema contains invalid type references")
+
+		return false, errorLines
+	}
+
+	log.Info("Data type validation PASSED")
+
+	return true, errorLines
+}
+
+func collectDefinedTypes(doc *ast.Document) map[string]bool {
+	definedTypes := make(map[string]bool)
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(obj.Name)
+		definedTypes[typeName] = true
+	}
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(enum.Name)
+		definedTypes[typeName] = true
+	}
+
+	for _, input := range doc.InputObjectTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(input.Name)
+		definedTypes[typeName] = true
+	}
+
+	for _, iface := range doc.InterfaceTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(iface.Name)
+		definedTypes[typeName] = true
+	}
+
+	for _, union := range doc.UnionTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(union.Name)
+		definedTypes[typeName] = true
+	}
+
+	for _, scalar := range doc.ScalarTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(scalar.Name)
+		definedTypes[typeName] = true
+	}
+
+	return definedTypes
+}
+
+func validateTypeReferences(
+	doc *ast.Document,
+	schemaContent string,
+	builtInScalars, definedTypes map[string]bool,
+	typeRefs []int,
+	getName func(int) string,
+	getType func(int) ast.Type,
+	errorPrefix string,
+) ([]string, []int) {
+	var (
+		errors     []string
+		errorLines []int
+	)
+
+	for _, ref := range typeRefs {
+		fieldName := getName(ref)
+		fieldType := getType(ref)
+
+		baseType := getBaseTypeName(doc, fieldType)
+		if !builtInScalars[baseType] && !definedTypes[baseType] {
+			lineNum := findFieldDefinitionLine(schemaContent, fieldName, baseType)
+			if lineNum == 0 {
+				lineNum = findLineNumberByText(schemaContent, fieldName+": "+baseType)
+			}
+
+			if lineNum == 0 {
+				lineNum = findLineNumberByText(schemaContent, fieldName+":")
+			}
+
+			log.Errorf(
+				"%s '%s' references undefined type '%s' (line %d)\n",
+				errorPrefix,
+				fieldName,
+				baseType,
+				lineNum,
+			)
+			log.Errorf("  Available types: %v\n", getAvailableTypes(builtInScalars, definedTypes))
+
+			if lineNum > 0 {
+				errorLines = append(errorLines, lineNum)
+			}
+
+			errors = append(errors, fieldName)
+		}
+	}
+
+	return errors, errorLines
+}
+
+func validateFieldTypes(
+	doc *ast.Document,
+	schemaContent string,
+	builtInScalars, definedTypes map[string]bool,
+) ([]string, []int) {
+	return validateTypeReferences(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+		indexSlice(len(doc.FieldDefinitions)),
+		func(i int) string { return doc.Input.ByteSliceString(doc.FieldDefinitions[i].Name) },
+		func(i int) ast.Type { return doc.Types[doc.FieldDefinitions[i].Type] },
+		"ERROR: Field",
+	)
+}
+
+func validateInputFieldTypes(
+	doc *ast.Document,
+	schemaContent string,
+	builtInScalars, definedTypes map[string]bool,
+) ([]string, []int) {
+	return validateTypeReferences(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+		indexSlice(len(doc.InputValueDefinitions)),
+		func(i int) string { return doc.Input.ByteSliceString(doc.InputValueDefinitions[i].Name) },
+		func(i int) ast.Type { return doc.Types[doc.InputValueDefinitions[i].Type] },
+		"ERROR: Input field",
+	)
+}
+
+func indexSlice(n int) []int {
+	indices := make([]int, n)
+	for i := range indices {
+		indices[i] = i
+	}
+
+	return indices
+}
+
+func (s Store) validateEnumTypes(
+	doc *ast.Document,
+	schemaContent string,
+	schemaPath string,
+) ([]string, []int) {
+	var (
+		errors     []string
+		errorLines []int
+	)
+
+	for _, enumDef := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enumDef.Name)
+
+		for _, valueRef := range enumDef.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+
+			if err, line := checkInvalidEnumValue(enumName, valueName, schemaContent); err != "" {
+				errors = append(errors, valueName)
+
+				if line > 0 {
+					errorLines = append(errorLines, line)
+				}
+			}
+
+			if err, line := s.checkSuspiciousEnumValue(enumName, valueName, schemaContent, schemaPath); err != "" {
+				errors = append(errors, valueName)
+
+				if line > 0 {
+					errorLines = append(errorLines, line)
+				}
+			}
+		}
+	}
+
+	return errors, errorLines
+}
+
+func checkInvalidEnumValue(enumName, valueName, schemaContent string) (string, int) {
+	if isValidEnumValue(valueName) {
+		return "", 0
+	}
+
+	lineNum := findLineNumberByText(schemaContent, valueName)
+	log.Infof(
+		"ERROR: Enum '%s' has invalid value '%s' (line %d)\n",
+		enumName,
+		valueName,
+		lineNum,
+	)
+	log.Infof(
+		"  Enum values should be valid GraphQL identifiers (letters, digits, underscores, no leading digits)\n",
+	)
+
+	return valueName, lineNum
+}
+
+func (s Store) checkSuspiciousEnumValue(enumName, valueName, schemaContent, schemaPath string) (string, int) {
+	if !hasSuspiciousEnumValue(valueName) && !hasEmbeddedDigits(valueName) {
+		return "", 0
+	}
+
+	lineNum := findLineNumberByText(schemaContent, valueName)
+	if s.isSuppressed(schemaPath, lineNum, "suspicious_enum_value", valueName) {
+		return "", 0
+	}
+
+	log.Infof(
+		"ERROR: Enum '%s' has suspicious value '%s' (line %d)\n",
+		enumName,
+		valueName,
+		lineNum,
+	)
+
+	if suggestion := suggestCorrectEnumValue(valueName); suggestion != "" {
+		log.Infof("  Did you mean '%s'?\n", suggestion)
+	} else {
+		suggestedValue := removeSuffixDigits(valueName)
+		log.Errorf("  Did you mean '%s'? Enum values typically don't contain numbers.\n", suggestedValue)
+	}
+
+	return valueName, lineNum
 }
