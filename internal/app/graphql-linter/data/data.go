@@ -16,7 +16,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const levenshteinThreshold = 2
+const (
+	levenshteinThreshold = 2
+	linesAfterContext    = 3
+	linesBeforeContext   = 2
+)
 
 type Storer interface {
 	LoadConfig(configPath string) (*LinterConfig, error)
@@ -169,8 +173,8 @@ func (s Store) lintSchemaFile(schemaPath string) bool {
 						log.Infof("  Problematic line: %s\n", lines[errorLineIdx])
 
 						// Show context around the error
-						startIdx := max(0, errorLineIdx-2)
-						endIdx := min(len(lines), errorLineIdx+3)
+						startIdx := max(0, errorLineIdx-linesBeforeContext)
+						endIdx := min(len(lines), errorLineIdx+linesAfterContext)
 
 						log.Infof("  Context:\n")
 
