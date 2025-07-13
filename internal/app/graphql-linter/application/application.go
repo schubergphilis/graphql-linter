@@ -39,6 +39,7 @@ func (e Execute) Run() error {
 	}
 
 	log.Infof("linter config: %v", linterConfig)
+	dataStore.LinterConfig = linterConfig
 
 	schemaFiles, err := dataStore.FindAndLogGraphQLSchemaFiles()
 	if err != nil {

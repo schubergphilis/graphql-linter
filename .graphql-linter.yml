@@ -4,11 +4,11 @@
 
 suppressions:
   # Suppress suspicious enum value warnings for specific cases
-  - file: some/path.graphqls"
-    line: 24
+  - file: test/testdata/graphql/suspicious-enum-value.graphql
+    line: 4
     rule: "suspicious_enum_value"
-    value: "O_VOLUME"
-    reason: "O_VOLUME is a valid domain-specific enum value representing oxygen volume"
+    value: "PO4_VOLUME"
+    reason: "PO4_VOLUME is a valid domain-specific enum value representing phosphate volume"
 
 # Example suppressions for other rule types:
 # - file: "path/to/schema.graphqls"
@@ -26,7 +26,7 @@ suppressions:
 # Global settings
 settings:
   # Whether to treat warnings as errors (default: false)
-  strictMode: false
+  strictMode: true
 
   # Whether to validate federation directives (default: true)
   validateFederation: true
