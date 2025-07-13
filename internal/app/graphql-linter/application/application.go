@@ -14,12 +14,14 @@ type Executor interface {
 }
 
 type Execute struct {
-	Verbose bool
+	Verbose       bool
+	VersionString string
 }
 
-func NewExecute(verbose bool) (Execute, error) {
+func NewExecute(verbose bool, versionString string) (Execute, error) {
 	e := Execute{
-		Verbose: verbose,
+		Verbose:       verbose,
+		VersionString: versionString,
 	}
 
 	return e, nil
@@ -51,6 +53,10 @@ func (e Execute) Run() error {
 }
 
 func (e Execute) Version() string {
+	if e.VersionString != "" {
+		return e.VersionString
+	}
+
 	if info, ok := debug.ReadBuildInfo(); ok {
 		return info.Main.Version
 	}
