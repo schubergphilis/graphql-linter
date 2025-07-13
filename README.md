@@ -1,10 +1,14 @@
 # GraphQL Linter
 
-An opinionated linter for GraphQL SDL (Schema Definition Language) files,
-focused on federation and schema quality.
+As [this issue](https://github.com/cjoudrey/graphql-schema-linter/issues/210)
+has been open since 2020, the decision was made to add federation support to a
+new linter. In other words, the `graphql-schema-linter` spec is honoured and
+federation support is added.
 
 ## Features
 
+- All rules from `graphql-schema-linter` supported.
+- Federation directives and composition are recognized and validated.
 - Validates GraphQL SDL files for syntax and best practices.
 - Checks for Apollo Federation directive usage and typos.
 - Ensures all types, enums, and fields have descriptions.

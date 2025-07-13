@@ -329,7 +329,10 @@ func removeAllDigits(value string) string {
 }
 
 func suggestCorrectEnumValue(value string) string {
-	// Common GraphQL scalar type corrections
+	if len(value) == 0 {
+		return ""
+	}
+
 	corrections := map[string]string{
 		"STRING2":  "STRING",
 		"BOOLEAN2": "BOOLEAN",
@@ -345,14 +348,18 @@ func suggestCorrectEnumValue(value string) string {
 		"INTE2GER": "INTEGER",
 	}
 
-	// Direct match
 	if correction, exists := corrections[value]; exists {
 		return correction
 	}
 
-	// Try removing all digits and see if it matches a standard type
 	cleanValue := removeAllDigits(value)
 	standardTypes := []string{"STRING", "BOOLEAN", "FLOAT", "INT", "INTEGER", "ID"}
+
+	for _, standardType := range standardTypes {
+		if cleanValue == standardType {
+			return standardType
+		}
+	}
 
 	for _, standardType := range standardTypes {
 		if levenshteinDistance(cleanValue, standardType) <= levenshteinThreshold {
