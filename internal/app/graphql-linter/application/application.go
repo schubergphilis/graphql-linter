@@ -13,7 +13,14 @@ type Executor interface {
 	Version()
 }
 
+type Debugger interface {
+	ReadBuildInfo() (info *debug.BuildInfo, ok bool)
+}
+
+type Debug struct{}
+
 type Execute struct {
+	Debugger      Debugger
 	TargetPath    string
 	Verbose       bool
 	VersionString string
@@ -21,12 +28,17 @@ type Execute struct {
 
 func NewExecute(targetPath string, verbose bool, versionString string) (Execute, error) {
 	execute := Execute{
+		Debugger:      Debug{},
 		TargetPath:    targetPath,
 		Verbose:       verbose,
 		VersionString: versionString,
 	}
 
 	return execute, nil
+}
+
+func (Debug) ReadBuildInfo() (*debug.BuildInfo, bool) {
+	return debug.ReadBuildInfo()
 }
 
 func (e Execute) Run() error {
@@ -60,7 +72,7 @@ func (e Execute) Version() string {
 		return e.VersionString
 	}
 
-	if info, ok := debug.ReadBuildInfo(); ok {
+	if info, ok := e.Debugger.ReadBuildInfo(); ok {
 		return info.Main.Version
 	}
 
