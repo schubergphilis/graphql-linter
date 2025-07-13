@@ -1,9 +1,7 @@
-"Hello"
+"Query root."
 type Query {
-  "Hola"
-  hello: String!
-  "Metadata to support paginated queries."
-  pageInfo: PageInfo!
+  "Query root added in order for the introspection endpoint to work."
+  empty: PageInfo
 }
 
 "Pagination information for a connection, following the Relay specification: https://relay.dev/graphql/connections.htm"

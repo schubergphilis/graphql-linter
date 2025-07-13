@@ -1159,7 +1159,12 @@ func checkInvalidEnumValue(enumName, valueName, schemaContent string) (string, i
 	return valueName, lineNum
 }
 
-func (s Store) checkSuspiciousEnumValue(enumName, valueName, schemaContent, schemaPath string) (string, int) {
+func (s Store) checkSuspiciousEnumValue(
+	enumName,
+	valueName,
+	schemaContent,
+	schemaPath string,
+) (string, int) {
 	if !hasSuspiciousEnumValue(valueName) && !hasEmbeddedDigits(valueName) {
 		return "", 0
 	}
@@ -1169,7 +1174,7 @@ func (s Store) checkSuspiciousEnumValue(enumName, valueName, schemaContent, sche
 		return "", 0
 	}
 
-	log.Infof(
+	log.Errorf(
 		"ERROR: Enum '%s' has suspicious value '%s' (line %d)\n",
 		enumName,
 		valueName,
@@ -1177,7 +1182,7 @@ func (s Store) checkSuspiciousEnumValue(enumName, valueName, schemaContent, sche
 	)
 
 	if suggestion := suggestCorrectEnumValue(valueName); suggestion != "" {
-		log.Infof("  Did you mean '%s'?\n", suggestion)
+		log.Errorf("  Did you mean '%s'?\n", suggestion)
 	} else {
 		suggestedValue := removeSuffixDigits(valueName)
 		log.Errorf("  Did you mean '%s'? Enum values typically don't contain numbers.\n", suggestedValue)
