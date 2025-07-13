@@ -13,12 +13,15 @@ type Presenter interface {
 }
 
 type CLI struct {
+	version     string
 	versionFlag bool
 	verboseFlag bool
 }
 
-func NewCLI() (CLI, error) {
-	cli := CLI{}
+func NewCLI(version string) (CLI, error) {
+	cli := CLI{
+		version: version,
+	}
 	flag.BoolVar(&cli.versionFlag, "version", false, "Show version")
 	flag.BoolVar(&cli.verboseFlag, "verbose", false, "Enable verbose output")
 	flag.Parse()
@@ -27,7 +30,7 @@ func NewCLI() (CLI, error) {
 }
 
 func (c CLI) Run() error {
-	applicationExecute, err := application.NewExecute(c.verboseFlag)
+	applicationExecute, err := application.NewExecute(c.verboseFlag, c.version)
 	if err != nil {
 		return fmt.Errorf("unable to load new execute: %w", err)
 	}
