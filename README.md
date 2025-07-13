@@ -39,6 +39,14 @@ graphql-linter --version
 
 ## Usage
 
+### Help
+
 ```zsh
-go run cmd/graphql-linter/main.go
+go run cmd/graphql-linter/main.go --help
+```
+
+### Lint specific directory
+
+```zsh
+go run cmd/graphql-linter/main.go -targetPath test/testdata/graphql/invalid
 ```

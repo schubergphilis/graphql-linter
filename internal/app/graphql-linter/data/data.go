@@ -31,6 +31,7 @@ type Storer interface {
 
 type Store struct {
 	LinterConfig *LinterConfig
+	TargetPath   string
 	Verbose      bool
 }
 
@@ -59,9 +60,10 @@ type DescriptionError struct {
 	LineContent string
 }
 
-func NewStore(verbose bool) (Store, error) {
+func NewStore(targetPath string, verbose bool) (Store, error) {
 	s := Store{
-		Verbose: verbose,
+		TargetPath: targetPath,
+		Verbose:    verbose,
 	}
 
 	return s, nil
@@ -73,15 +75,17 @@ func (s Store) FindAndLogGraphQLSchemaFiles() ([]string, error) {
 		return nil, fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	targetPath := projectRoot
+	if s.TargetPath == "" {
+		s.TargetPath = projectRoot
+	}
 
-	schemaFiles, err := findGraphQLFiles(targetPath)
+	schemaFiles, err := findGraphQLFiles(s.TargetPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to find graphql files: %w", err)
 	}
 
 	if len(schemaFiles) == 0 {
-		return nil, fmt.Errorf("no GraphQL schema files found in directory: %s", targetPath)
+		return nil, fmt.Errorf("no GraphQL schema files found in directory: %s", s.TargetPath)
 	}
 
 	if s.Verbose {

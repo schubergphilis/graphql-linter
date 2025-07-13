@@ -14,21 +14,23 @@ type Executor interface {
 }
 
 type Execute struct {
+	TargetPath    string
 	Verbose       bool
 	VersionString string
 }
 
-func NewExecute(verbose bool, versionString string) (Execute, error) {
-	e := Execute{
+func NewExecute(targetPath string, verbose bool, versionString string) (Execute, error) {
+	execute := Execute{
+		TargetPath:    targetPath,
 		Verbose:       verbose,
 		VersionString: versionString,
 	}
 
-	return e, nil
+	return execute, nil
 }
 
 func (e Execute) Run() error {
-	dataStore, err := data.NewStore(e.Verbose)
+	dataStore, err := data.NewStore(e.TargetPath, e.Verbose)
 	if err != nil {
 		return fmt.Errorf("unable to load new store: %w", err)
 	}
