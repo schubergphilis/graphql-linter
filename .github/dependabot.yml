@@ -1,32 +1,32 @@
 ---
 version: 2
 updates:
-  - package-ecosystem: "docker"
+  - package-ecosystem: docker
     commit-message:
-      prefix: "build(deps)"
-    directory: "/"
+      prefix: build(deps)
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
     groups:
       docker-all:
         patterns:
           - "*"
-  - package-ecosystem: "github-actions"
+  - package-ecosystem: github-actions
     commit-message:
-      prefix: "build(deps)"
-    directory: "/"
+      prefix: build(deps)
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
     groups:
       github-actions-all:
         patterns:
           - "*"
-  - package-ecosystem: "gomod"
+  - package-ecosystem: gomod
     commit-message:
-      prefix: "build(deps)"
-    directory: "/"
+      prefix: build(deps)
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
     groups:
       gomod-all:
         patterns:

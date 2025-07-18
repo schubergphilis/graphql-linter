@@ -6,9 +6,9 @@ suppressions:
   # Suppress suspicious enum value warnings for specific cases
   - file: test/testdata/graphql/suspicious-enum-value.graphql
     line: 4
-    rule: "suspicious_enum_value"
-    value: "PO4_VOLUME"
-    reason: "PO4_VOLUME is a valid domain-specific enum value representing phosphate volume"
+    rule: suspicious_enum_value
+    value: PO4_VOLUME
+    reason: PO4_VOLUME is valid domain-specific enum value phosphate volume
 
 # Example suppressions for other rule types:
 # - file: "path/to/schema.graphqls"
