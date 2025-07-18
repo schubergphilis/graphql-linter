@@ -50,3 +50,11 @@ go run cmd/graphql-linter/main.go --help
 ```zsh
 go run cmd/graphql-linter/main.go -targetPath test/testdata/graphql/invalid
 ```
+
+```zsh
+graphql-schema-linter test/testdata/graphql/invalid/*
+```
+
+```zsh
+graphql-schema-linter test/testdata/graphql/valid/*
+```
