@@ -28,15 +28,15 @@ jobs:
       TASK_X_REMOTE_TASKFILES: 1
     steps:
       - uses: actions/checkout@v4.2.2
-      - uses: schubergphilis/mcvs-golang-action@v3.5.0
+      - uses: schubergphilis/mcvs-golang-action@ctrl-click-coverage-path-mac
         env:
           test-timeout: 10m0s
         with:
           build-tags: ${{ matrix.args.build-tags }}
-          code-coverage-expected: 21.1
+          code-coverage-expected: 21.3
           code-coverage-timeout: ${{ env.test-timeout }}
           golang-unit-tests-exclusions: |-
-            \(deprecated\|filesystem\|mocks\|swagger\|cmd\/mcvs-.*\|mcvs-\(chart-designer\|reporter\)\)$\?
+            \(cmd\/.*\|graphql\-testdata\-generator\|mocks\)$\?
           golangci-timeout: 10
           test-timeout: ${{ env.test-timeout }}
           testing-type: ${{ matrix.args.testing-type }}
