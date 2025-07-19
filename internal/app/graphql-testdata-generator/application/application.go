@@ -114,10 +114,7 @@ func WriteTestSchemaToFile() error {
 	doc := GenerateTestSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/01-enum-values-all-caps.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/01-enum-values-all-caps.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -168,10 +165,7 @@ func WritePrioritySchemaToFile() error {
 	doc := GeneratePrioritySchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/02-enum-values-sorted-alphabetically.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/02-enum-values-sorted-alphabetically.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -223,10 +217,7 @@ func WriteUserSchemaToFile() error {
 	doc := GenerateUserSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/03-fields-are-camel-cased.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/03-fields-are-camel-cased.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -272,10 +263,7 @@ func WritePostSchemaToFile() error {
 	doc := GeneratePostSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/04-fields-have-descriptions.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/04-fields-have-descriptions.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -326,10 +314,7 @@ func WriteCreateUserInputSchemaToFile() error {
 	doc := GenerateCreateUserInputSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/05-input-object-fields-are-camel-cased.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/05-input-object-fields-are-camel-cased.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -385,10 +370,7 @@ func WriteUpdateProfileInputSchemaToFile() error {
 	doc := GenerateUpdateProfileInputSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/06-input-object-fields-have-descriptions.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/06-input-object-fields-have-descriptions.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -439,10 +421,7 @@ func WriteCreatePostInputSchemaToFile() error {
 	doc := GenerateCreatePostInputSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/07-input-object-type-have-description.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/07-input-object-type-have-description.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -493,10 +472,7 @@ func WriteUpdateProfileSchemaToFile() error {
 	doc := GenerateUpdateProfileSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/08-input-object-type-name-ends-with-input.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/08-input-object-type-name-ends-with-input.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -538,10 +514,7 @@ func WriteNodeInterfaceSchemaToFile() error {
 	doc := GenerateNodeInterfaceSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/09-interface-fields-are-camel-cased.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/09-interface-fields-are-camel-cased.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -586,10 +559,7 @@ func WriteLowercaseUserSchemaToFile() error {
 	doc := GenerateLowercaseUserSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/20-object-type-name.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/20-object-type-name.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -634,10 +604,7 @@ func WriteBlogPostSchemaToFile() error {
 	doc := GenerateBlogPostSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/25-type-name-shape.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/25-type-name-shape.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -683,10 +650,7 @@ func WriteProductSchemaToFile() error {
 	doc := GenerateProductSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/26-types-have-descriptions.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/26-types-have-descriptions.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -719,10 +683,7 @@ func WriteBlogInputSchemaToFile() error {
 	doc := GenerateBlogInputSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/27-type-name-ends-with-input.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/27-type-name-ends-with-input.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -759,10 +720,7 @@ func WriteArgumentsHaveDescriptionsSchemaToFile() error {
 	doc := GenerateArgumentsHaveDescriptionsSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/28-arguments-have-descriptions.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/28-arguments-have-descriptions.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -792,10 +750,7 @@ func WriteDefinedTypesAreUsedSchemaToFile() error {
 	doc := GenerateDefinedTypesAreUsedSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/29-defined-types-are-used.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/29-defined-types-are-used.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -827,10 +782,7 @@ func WriteDeprecationsHaveAReasonSchemaToFile() error {
 	doc := GenerateDeprecationsHaveAReasonSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/30-deprecations-have-a-reason.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/30-deprecations-have-a-reason.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -859,10 +811,7 @@ func WriteDescriptionsAreCapitalizedSchemaToFile() error {
 	doc := GenerateDescriptionsAreCapitalizedSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/31-descriptions-are-capitalized.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/31-descriptions-are-capitalized.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -900,10 +849,7 @@ func WriteEnumValuesHaveDescriptionsSchemaToFile() error {
 	doc := GenerateEnumValuesHaveDescriptionsSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/32-enum-values-have-descriptions.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/32-enum-values-have-descriptions.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -941,10 +887,7 @@ func WriteInputObjectFieldsSortedAlphabeticallySchemaToFile() error {
 	doc := GenerateInputObjectFieldsSortedAlphabeticallySchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/33-input-object-fields-sorted-alphabetically.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/33-input-object-fields-sorted-alphabetically.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -979,10 +922,7 @@ func WriteInputObjectValuesAreCamelCasedSchemaToFile() error {
 	doc := GenerateInputObjectValuesAreCamelCasedSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/34-input-object-values-are-camel-cased.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/34-input-object-values-are-camel-cased.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1017,10 +957,7 @@ func WriteInputObjectValuesHaveDescriptionsSchemaToFile() error {
 	doc := GenerateInputObjectValuesHaveDescriptionsSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/35-input-object-values-have-descriptions.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/35-input-object-values-have-descriptions.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1052,10 +989,7 @@ func WriteInterfaceFieldsSortedAlphabeticallySchemaToFile() error {
 	doc := GenerateInterfaceFieldsSortedAlphabeticallySchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/36-interface-fields-sorted-alphabetically.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/36-interface-fields-sorted-alphabetically.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1101,10 +1035,7 @@ func WriteRelayConnectionArgumentsSpecSchemaToFile() error {
 	doc := GenerateRelayConnectionArgumentsSpecSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/37-relay-connection-arguments-spec.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/37-relay-connection-arguments-spec.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1143,10 +1074,7 @@ func WriteRelayConnectionArgumentsSpec2SchemaToFile() error {
 	data.AddFieldToObject(doc, queryIdx, "posts", "PostConnection", "Returns a post connection.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/38-relay-connection-arguments-spec.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/38-relay-connection-arguments-spec.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1171,10 +1099,7 @@ func WriteAnimalInterfaceSchemaToFile() error {
 	data.AddFieldToObject(doc, objIdx, "animal", "Animal", "Returns animal.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/10-interface-fields-have-descriptions.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/10-interface-fields-have-descriptions.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1199,10 +1124,7 @@ func WriteResourceInterfaceSchemaToFile() error {
 	data.AddFieldToObject(doc, objIdx, "resource", "Resource", "Returns resource.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/11-interface-type-have-description.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/11-interface-type-have-description.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1227,10 +1149,7 @@ func WriteUserInterfaceSchemaToFile() error {
 	data.AddFieldToObject(doc, objIdx, "user", "user", "Returns user.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/12-interface-type-name.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/12-interface-type-name.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1261,10 +1180,7 @@ func WriteMutationFieldArgsSchemaToFile() error {
 
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/13-mutation-field-arguments-are-camel-cased.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/13-mutation-field-arguments-are-camel-cased.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1295,10 +1211,7 @@ func WriteMutationFieldArgsDescSchemaToFile() error {
 
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/14-mutation-field-arguments-have-descriptions.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/14-mutation-field-arguments-have-descriptions.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1336,10 +1249,7 @@ func WriteMutationInputArgSchemaToFile() error {
 
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/15-mutation-input-arg.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/15-mutation-input-arg.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1362,10 +1272,7 @@ func WriteMutationTypeNameSchemaToFile() error {
 	data.AddFieldToObject(doc, objIdx, "dummy", "Boolean", "Dummy field.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/16-mutation-type-name.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/16-mutation-type-name.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1388,10 +1295,7 @@ func WriteObjectFieldsCamelCasedSchemaToFile() error {
 	data.AddFieldToObject(doc, objIdx, "not_camel_case", "String", "Not camel case.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/17-object-fields-are-camel-cased.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/17-object-fields-are-camel-cased.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1414,10 +1318,7 @@ func WriteObjectFieldsDescSchemaToFile() error {
 	data.AddFieldToObject(doc, objIdx, "field", "String", "") // missing description
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/18-object-fields-have-descriptions.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/18-object-fields-have-descriptions.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1439,10 +1340,7 @@ func WriteObjectTypeDescSchemaToFile() error {
 	_ = data.AddObject(doc, "TestType", "") // missing description
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/19-object-type-have-description.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/19-object-type-have-description.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1464,10 +1362,7 @@ func WriteQueryTypeNameSchemaToFile() error {
 	_ = data.AddObject(doc, "query", "Query root.") // lowercase name
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/21-query-type-name.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/21-query-type-name.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1489,10 +1384,7 @@ func WriteRelayConnectionSchemaToFile() error {
 	_ = data.AddObject(doc, "PostConnection", "") // missing description
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/22-relay-connection-types-spec.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/22-relay-connection-types-spec.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1514,10 +1406,7 @@ func WriteRelayEdgeSchemaToFile() error {
 	_ = data.AddObject(doc, "PostEdge", "") // missing description
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/23-relay-edge-types-spec.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/23-relay-edge-types-spec.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1541,10 +1430,7 @@ func WriteFieldsSortedSchemaToFile() error {
 	data.AddFieldToObject(doc, objIdx, "alpha", "String", "Alpha field.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/24-type-fields-sorted-alphabetically.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/24-type-fields-sorted-alphabetically.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1567,10 +1453,7 @@ func WriteQueryRootMustBeProvidedSchemaToFile() error {
 	data.AddFieldToObject(doc, mutationIdx, "dummy", "String", "Dummy field.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		projectRoot,
-		"test/testdata/graphql/invalid/38-query-root-must-be-provided.graphql",
-	)
+	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid/38-query-root-must-be-provided.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
