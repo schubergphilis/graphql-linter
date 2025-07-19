@@ -1,8 +1,11 @@
-"""Available colors."""
-enum Color {
-  blue
-  """Red color."""
-  red
+"""Priority of the task."""
+enum Priority {
+  """High priority."""
+  HIGH
+  """Medium priority."""
+  MEDIUM
+  """Low priority."""
+  LOW
 }
 
 """Relay-compliant PageInfo object."""
@@ -19,7 +22,7 @@ type PageInfo {
 
 """Query root."""
 type Query {
-  """Returns a color."""
-  color: Color
+  """Returns a priority."""
+  priority: Priority
 }
 

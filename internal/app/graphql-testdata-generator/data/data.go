@@ -1,6 +1,8 @@
 package data
 
 import (
+	"fmt"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 )
 
@@ -176,4 +178,85 @@ func AddInputObject(doc *ast.Document, name, description string, fields []InputF
 	}
 
 	return idx
+}
+
+const UnknownType = "Unknown"
+
+func GenerateGraphQLFromDocument(doc *ast.Document) string {
+	var result string
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+		desc := getDescription(doc, enum.Description)
+		if desc != "" {
+			result += desc + "\n"
+		}
+		result += fmt.Sprintf("enum %s {\n", enumName)
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			value := doc.EnumValueDefinitions[valueRef]
+			valueName := doc.Input.ByteSliceString(value.EnumValue)
+			valueDesc := getDescription(doc, value.Description)
+			if valueDesc != "" {
+				result += fmt.Sprintf("  %s\n", valueDesc)
+			}
+			result += fmt.Sprintf("  %s\n", valueName)
+		}
+		result += "}\n\n"
+	}
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		objName := doc.Input.ByteSliceString(obj.Name)
+		desc := getDescription(doc, obj.Description)
+		if desc != "" {
+			result += desc + "\n"
+		}
+		result += fmt.Sprintf("type %s {\n", objName)
+		for _, fieldRef := range obj.FieldsDefinition.Refs {
+			field := doc.FieldDefinitions[fieldRef]
+			fieldName := doc.Input.ByteSliceString(field.Name)
+			fieldDesc := getDescription(doc, field.Description)
+			fieldType := getFieldType(doc, field.Type)
+			if fieldDesc != "" {
+				result += fmt.Sprintf("  %s\n", fieldDesc)
+			}
+			result += fmt.Sprintf("  %s: %s\n", fieldName, fieldType)
+		}
+		result += "}\n\n"
+	}
+
+	return result
+}
+
+func getDescription(doc *ast.Document, desc ast.Description) string {
+	if !desc.IsDefined {
+		return ""
+	}
+
+	content := doc.Input.ByteSliceString(desc.Content)
+
+	return fmt.Sprintf(`"""%s"""`, content)
+}
+
+func getFieldType(doc *ast.Document, typeIndex int) string {
+	if typeIndex >= len(doc.Types) {
+		return UnknownType
+	}
+
+	typeInfo := doc.Types[typeIndex]
+	switch typeInfo.TypeKind {
+	case ast.TypeKindNamed:
+		return doc.Input.ByteSliceString(typeInfo.Name)
+	case ast.TypeKindNonNull:
+		innerType := getFieldType(doc, typeInfo.OfType)
+
+		return innerType + "!"
+	case ast.TypeKindList:
+		innerType := getFieldType(doc, typeInfo.OfType)
+
+		return "[" + innerType + "]"
+	case ast.TypeKindUnknown:
+		return UnknownType
+	default:
+		return UnknownType
+	}
 }
