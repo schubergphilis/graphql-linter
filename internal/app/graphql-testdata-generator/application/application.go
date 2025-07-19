@@ -29,6 +29,18 @@ func NewExecute() Execute {
 }
 
 func (e Execute) Run() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	testdataBaseDir := filepath.Join(projectRoot, "test", "testdata", "graphql", "base")
+	testdataInvalidDir := filepath.Join(testdataBaseDir, "invalid")
+
+	if err := os.RemoveAll(testdataInvalidDir); err != nil {
+		return fmt.Errorf("unable to remove directory: '%s'. Error: %w", testdataInvalidDir, err)
+	}
+
 	writers := []func() error{
 		WriteTestSchemaToFile,
 		WritePrioritySchemaToFile,
