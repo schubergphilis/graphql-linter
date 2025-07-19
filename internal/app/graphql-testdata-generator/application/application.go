@@ -46,35 +46,34 @@ func (e Execute) Run() error {
 	}
 
 	writers := []func() error{
-		func() error { return WriteArgumentsHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteDefinedTypesAreUsedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteDeprecationsHaveAReasonSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteDescriptionsAreCapitalizedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteTestSchemaToFile(e.testdataInvalidDir) }, // enum-values-all-caps
-		func() error { return WriteEnumValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WritePrioritySchemaToFile(e.testdataInvalidDir) }, // enum-values-sorted-alphabetically
-		func() error { return WriteUserSchemaToFile(e.testdataInvalidDir) },     // fields-are-camel-cased
-		func() error { return WritePostSchemaToFile(e.testdataInvalidDir) },     // fields-have-descriptions
-		func() error { return WriteInputObjectFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteInputObjectValuesAreCamelCasedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteInputObjectValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteInterfaceFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteRelayConnectionSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteRelayConnectionArgumentsSpecSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteFieldsSortedSchemaToFile(e.testdataInvalidDir) }, // type-fields-sorted-alphabetically
-		func() error { return WriteBlogPostSchemaToFile(e.testdataInvalidDir) },     // types-are-capitalized
-		func() error { return WriteProductSchemaToFile(e.testdataInvalidDir) },      // types-have-descriptions
-		func() error { return WriteQueryRootMustBeProvidedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteRelayConnectionArgumentsSpec2SchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteUpdateProfileInputSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteCreatePostInputSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteArgumentsHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },             // 01
+		func() error { return WriteDefinedTypesAreUsedSchemaToFile(e.testdataInvalidDir) },                   // 02
+		func() error { return WriteDeprecationsHaveAReasonSchemaToFile(e.testdataInvalidDir) },               // 03
+		func() error { return WriteDescriptionsAreCapitalizedSchemaToFile(e.testdataInvalidDir) },            // 04
+		func() error { return WriteTestSchemaToFile(e.testdataInvalidDir) },                                  // 05
+		func() error { return WriteEnumValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },            // 06
+		func() error { return WritePrioritySchemaToFile(e.testdataInvalidDir) },                              // 07
+		func() error { return WriteUserSchemaToFile(e.testdataInvalidDir) },                                  // 08
+		func() error { return WritePostSchemaToFile(e.testdataInvalidDir) },                                  // 09
+		func() error { return WriteInputObjectFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) }, // 10
+		func() error { return WriteInputObjectValuesAreCamelCasedSchemaToFile(e.testdataInvalidDir) },        // 11
+		func() error { return WriteInputObjectValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },     // 12
+		func() error { return WriteInterfaceFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) },   // 13
+		func() error { return WriteRelayConnectionSchemaToFile(e.testdataInvalidDir) },                       // 14
+		func() error { return WriteRelayConnectionArgumentsSpecSchemaToFile(e.testdataInvalidDir) },          // 15
+		func() error { return WriteFieldsSortedSchemaToFile(e.testdataInvalidDir) },                          // 16
+		func() error { return WriteBlogPostSchemaToFile(e.testdataInvalidDir) },                              // 17
+		func() error { return WriteProductSchemaToFile(e.testdataInvalidDir) },                               // 18
+		func() error { return WriteQueryRootMustBeProvidedSchemaToFile(e.testdataInvalidDir) },               // 19
+		func() error { return WriteRelayConnectionArgumentsSpec2SchemaToFile(e.testdataInvalidDir) },         // 20
+		func() error { return WriteUpdateProfileInputSchemaToFile(e.testdataInvalidDir) },                    // 21
+		func() error { return WriteCreatePostInputSchemaToFile(e.testdataInvalidDir) },                       // 22
 	}
-	for _, writer := range writers {
+	for i, writer := range writers {
 		if err := writer(); err != nil {
-			return err
+			return fmt.Errorf("error in writer %d: %w", i+1, err)
 		}
 	}
-
 	return nil
 }
 
@@ -110,7 +109,7 @@ func WriteTestSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"01-enum-values-all-caps.graphql",
+		"05-enum-values-all-caps.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -159,7 +158,7 @@ func WritePrioritySchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"02-enum-values-sorted-alphabetically.graphql",
+		"07-enum-values-sorted-alphabetically.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -209,7 +208,7 @@ func WriteUserSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"03-fields-are-camel-cased.graphql",
+		"08-fields-are-camel-cased.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -253,7 +252,7 @@ func WritePostSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"04-fields-have-descriptions.graphql",
+		"09-fields-have-descriptions.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -337,7 +336,7 @@ func WriteUpdateProfileInputSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"06-input-object-values-have-descriptions.graphql",
+		"12-input-object-values-have-descriptions.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -386,7 +385,7 @@ func WriteCreatePostInputSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"07-types-have-descriptions.graphql",
+		"20-types-have-descriptions.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -467,7 +466,7 @@ func WriteBlogPostSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"25-type-name-shape.graphql",
+		"17-type-name-shape.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -511,7 +510,7 @@ func WriteProductSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"26-types-have-descriptions.graphql",
+		"18-types-have-descriptions.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -558,7 +557,7 @@ func WriteArgumentsHaveDescriptionsSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"28-arguments-have-descriptions.graphql",
+		"01-arguments-have-descriptions.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -586,7 +585,7 @@ func WriteDefinedTypesAreUsedSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"29-defined-types-are-used.graphql",
+		"02-defined-types-are-used.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -616,7 +615,7 @@ func WriteDeprecationsHaveAReasonSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"30-deprecations-have-a-reason.graphql",
+		"03-deprecations-have-a-reason.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -643,7 +642,7 @@ func WriteDescriptionsAreCapitalizedSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"31-descriptions-are-capitalized.graphql",
+		"04-descriptions-are-capitalized.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -679,7 +678,7 @@ func WriteEnumValuesHaveDescriptionsSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"32-enum-values-have-descriptions.graphql",
+		"06-enum-values-have-descriptions.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -715,7 +714,7 @@ func WriteInputObjectFieldsSortedAlphabeticallySchemaToFile(outputDir string) er
 
 	outputPath := filepath.Join(
 		outputDir,
-		"33-input-object-fields-sorted-alphabetically.graphql",
+		"10-input-object-fields-sorted-alphabetically.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -751,7 +750,7 @@ func WriteInputObjectValuesAreCamelCasedSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"34-input-object-values-are-camel-cased.graphql",
+		"11-input-object-values-are-camel-cased.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -784,7 +783,7 @@ func WriteInputObjectValuesHaveDescriptionsSchemaToFile(outputDir string) error 
 
 	outputPath := filepath.Join(
 		outputDir,
-		"35-input-object-values-have-descriptions.graphql",
+		"12-input-object-values-have-descriptions.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -814,7 +813,7 @@ func WriteInterfaceFieldsSortedAlphabeticallySchemaToFile(outputDir string) erro
 
 	outputPath := filepath.Join(
 		outputDir,
-		"36-interface-fields-sorted-alphabetically.graphql",
+		"13-interface-fields-sorted-alphabetically.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -858,7 +857,7 @@ func WriteRelayConnectionArgumentsSpecSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"37-relay-connection-arguments-spec.graphql",
+		"15-relay-connection-arguments-spec.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -895,7 +894,7 @@ func WriteRelayConnectionArgumentsSpec2SchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"38-relay-connection-arguments-spec-2.graphql",
+		"16-relay-connection-arguments-spec-2.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -913,7 +912,7 @@ func WriteRelayConnectionSchemaToFile(outputDir string) error {
 	_ = data.AddObject(doc, "PostConnection", "") // missing description
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(outputDir, "21-relay-connection-types-spec.graphql")
+	outputPath := filepath.Join(outputDir, "14-relay-connection-types-spec.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -932,7 +931,7 @@ func WriteFieldsSortedSchemaToFile(outputDir string) error {
 	data.AddFieldToObject(doc, objIdx, "alpha", "String", "Alpha field.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(outputDir, "23-type-fields-sorted-alphabetically.graphql")
+	outputPath := filepath.Join(outputDir, "21-type-fields-sorted-alphabetically.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -956,7 +955,7 @@ func WriteQueryRootMustBeProvidedSchemaToFile(outputDir string) error {
 	doc := GenerateQueryRootMustBeProvidedSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(outputDir, "39-query-root-must-be-provided.graphql")
+	outputPath := filepath.Join(outputDir, "19-query-root-must-be-provided.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
