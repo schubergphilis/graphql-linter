@@ -28,7 +28,11 @@ func validateErrorName(t *testing.T, fileName string) string {
 	errorName := strings.TrimSuffix(parts[1], ".graphql")
 	for _, r := range errorName {
 		if r >= '0' && r <= '9' {
-			t.Errorf("Error name contains digits (possible typo): %s: extracted error name: %s", fileName, errorName)
+			t.Errorf(
+				"Error name contains digits (possible typo): %s: extracted error name: %s",
+				fileName,
+				errorName,
+			)
 		}
 	}
 
@@ -130,7 +134,9 @@ func TestInvalidSchemas(t *testing.T) {
 		if !found {
 			t.Fatalf(
 				"File: expected error rule not found in output: %s: expected error rule '%s' in output, got rules: %s",
-				file.Name(), errorName, strings.Join(rules, ", "),
+				file.Name(),
+				errorName,
+				strings.Join(rules, ", "),
 			)
 		}
 	}

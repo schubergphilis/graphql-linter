@@ -403,7 +403,13 @@ func GenerateBlogPostSchema() *ast.Document {
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
 	data.AddFieldToObject(doc, queryIdx, "blogPost", "Blogpost", "Returns a blog post.")

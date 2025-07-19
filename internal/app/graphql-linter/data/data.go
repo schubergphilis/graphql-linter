@@ -678,6 +678,50 @@ func suggestDirective(directiveName, validName string) {
 	}
 }
 
+func lintSchemaValidation(
+	store Store,
+	doc *ast.Document,
+	schemaString, filteredSchema, schemaPath string,
+) (bool, []int) {
+	var (
+		hasValidationErrors bool
+		errorLines          []int
+	)
+
+	if !validateDirectiveNames(doc) {
+		hasValidationErrors = true
+	}
+
+	dataTypesValid, errorLinesDT := store.validateDataTypes(doc, schemaString, schemaPath)
+	if !dataTypesValid {
+		hasValidationErrors = true
+	}
+
+	if !validateFederationSchema(filteredSchema) {
+		hasValidationErrors = true
+	}
+
+	descriptionErrors, errorLinesDesc, hasDeprecationReasonError := lintDescriptions(
+		doc,
+		schemaString,
+	)
+	if len(descriptionErrors) > 0 {
+		printDescriptionErrors(descriptionErrors, schemaPath)
+
+		hasValidationErrors = true
+
+		errorLines = append(errorLines, errorLinesDesc...)
+	}
+
+	if hasDeprecationReasonError {
+		hasValidationErrors = true
+	}
+
+	errorLines = append(errorLines, errorLinesDT...)
+
+	return hasValidationErrors, errorLines
+}
+
 func (s Store) lintSchemaFile(schemaPath string) bool {
 	schemaString, ok := readSchemaFile(schemaPath)
 	if !ok {
@@ -693,29 +737,13 @@ func (s Store) lintSchemaFile(schemaPath string) bool {
 	LogSchemaParseErrors(schemaString, &parseReport)
 	log.Debug("Schema parsed successfully!")
 
-	var hasValidationErrors bool
-
-	if !validateDirectiveNames(&doc) {
-		hasValidationErrors = true
-	}
-
-	dataTypesValid, errorLines := s.validateDataTypes(&doc, schemaString, schemaPath)
-	if !dataTypesValid {
-		hasValidationErrors = true
-	}
-
-	if !validateFederationSchema(filteredSchema) {
-		hasValidationErrors = true
-	}
-
-	descriptionErrors, errorLines2 := lintDescriptions(&doc, schemaString)
-	if len(descriptionErrors) > 0 {
-		printDescriptionErrors(descriptionErrors, schemaPath)
-
-		hasValidationErrors = true
-
-		errorLines = append(errorLines, errorLines2...)
-	}
+	hasValidationErrors, errorLines := lintSchemaValidation(
+		s,
+		&doc,
+		schemaString,
+		filteredSchema,
+		schemaPath,
+	)
 
 	if hasValidationErrors {
 		if len(errorLines) > 0 {
@@ -1242,7 +1270,11 @@ func findMissingArgumentDescriptions(doc *ast.Document, schemaString string) []D
 					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
 					lineNum := findLineNumberByText(schemaString, argName+":")
 					lineContent := getLineContent(schemaString, lineNum)
-					message := fmt.Sprintf("ERROR: Argument '%s' of field '%s' is missing a description", argName, fieldName)
+					message := fmt.Sprintf(
+						"ERROR: Argument '%s' of field '%s' is missing a description",
+						argName,
+						fieldName,
+					)
 					errors = append(errors, DescriptionError{
 						LineNum:     lineNum,
 						Message:     message,
@@ -1268,9 +1300,75 @@ func findMissingEnumDescriptions(doc *ast.Document, schemaString string) []Descr
 	return errors
 }
 
-func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int) {
+func checkEnumValueDeprecationReason(
+	doc *ast.Document,
+	enumName, valueName string,
+	valueDef ast.EnumValueDefinition,
+	schemaString string,
+) *DescriptionError {
+	for _, dirRef := range valueDef.Directives.Refs {
+		dir := doc.Directives[dirRef]
+
+		dirName := doc.Input.ByteSliceString(dir.Name)
+		if dirName == "deprecated" {
+			deprecationReason := ""
+
+			for _, argRef := range dir.Arguments.Refs {
+				arg := doc.InputValueDefinitions[argRef]
+
+				argName := doc.Input.ByteSliceString(arg.Name)
+				if argName == "reason" {
+					if arg.DefaultValue.IsDefined {
+						deprecationReason = fmt.Sprintf("%v", arg.DefaultValue.Value)
+					}
+				}
+			}
+
+			if deprecationReason == "" {
+				lineNum := findLineNumberByText(schemaString, valueName)
+				lineContent := getLineContent(schemaString, lineNum)
+				message := fmt.Sprintf(
+					"deprecations-have-a-reason: Enum value '%s.%s' is deprecated but has no deprecation reason.",
+					enumName,
+					valueName,
+				)
+
+				return &DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func findMissingDeprecationReasons(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+
+			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+
+			if err := checkEnumValueDeprecationReason(doc, enumName, valueName, valueDef, schemaString); err != nil {
+				errors = append(errors, *err)
+			}
+		}
+	}
+
+	return errors
+}
+
+func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
 	errorLines := make([]int, 0, defaultErrorCapacity)
+	hasDeprecationReasonError := false
 
 	helpers := []func(*ast.Document, string) []DescriptionError{
 		findUnusedTypes,
@@ -1278,6 +1376,7 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findMissingFieldDescriptions,
 		findMissingArgumentDescriptions,
 		findMissingEnumDescriptions,
+		findMissingDeprecationReasons,
 	}
 
 	for _, helper := range helpers {
@@ -1289,8 +1388,12 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 			if err.LineNum > 0 {
 				errorLines = append(errorLines, err.LineNum)
 			}
+
+			if strings.Contains(err.Message, "deprecations-have-a-reason") {
+				hasDeprecationReasonError = true
+			}
 		}
 	}
 
-	return sortDescriptionErrors(descriptionErrors), errorLines
+	return sortDescriptionErrors(descriptionErrors), errorLines, hasDeprecationReasonError
 }
