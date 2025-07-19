@@ -1,0 +1,18 @@
+"""Input type."""
+input InputType {
+  """Not camel case."""
+  not_camel_case: String
+}
+
+"""Dummy output type."""
+type DummyOutput {
+  """Dummy field."""
+  dummy: String
+}
+
+"""Query root."""
+type Query {
+  """Returns dummy output."""
+  dummy: DummyOutput
+}
+
