@@ -1,0 +1,26 @@
+"""An employee."""
+type Employee {
+  """The employee name."""
+  name: String
+  department: String   # triggers object-fields-have-descriptions
+}
+
+
+"""Relay-compliant PageInfo object."""
+type PageInfo {
+  """Has next page."""
+  hasNextPage: Boolean!
+  """Has previous page."""
+  hasPreviousPage: Boolean!
+  """Start cursor."""
+  startCursor: String
+  """End cursor."""
+  endCursor: String
+}
+
+
+"""Query root."""
+type Query {
+  """Returns an employee."""
+  employee: Employee
+}

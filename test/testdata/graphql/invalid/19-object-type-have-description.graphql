@@ -1,0 +1,24 @@
+type Company {    # triggers object-type-have-description
+  """The company ID."""
+  id: ID!
+}
+
+
+"""Relay-compliant PageInfo object."""
+type PageInfo {
+  """Has next page."""
+  hasNextPage: Boolean!
+  """Has previous page."""
+  hasPreviousPage: Boolean!
+  """Start cursor."""
+  startCursor: String
+  """End cursor."""
+  endCursor: String
+}
+
+
+"""Query root."""
+type Query {
+  """Returns a company."""
+  company: Company
+}

@@ -1,0 +1,30 @@
+interface Resource {   # triggers interface-type-have-description
+  """The resource ID."""
+  id: ID!
+}
+
+"""A thing."""
+type Thing implements Resource {
+  """The thing id."""
+  id: ID!
+}
+
+
+"""Relay-compliant PageInfo object."""
+type PageInfo {
+  """Has next page."""
+  hasNextPage: Boolean!
+  """Has previous page."""
+  hasPreviousPage: Boolean!
+  """Start cursor."""
+  startCursor: String
+  """End cursor."""
+  endCursor: String
+}
+
+
+"""Query root."""
+type Query {
+  """Returns a resource."""
+  resource: Resource
+}

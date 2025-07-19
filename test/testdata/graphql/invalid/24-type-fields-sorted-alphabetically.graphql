@@ -1,0 +1,29 @@
+"""A person."""
+type Person {
+  """The ID."""
+  id: ID!
+  """The name."""
+  name: String
+  """The age."""
+  age: Int  # triggers type-fields-sorted-alphabetically (age should precede id/name)
+}
+
+
+"""Relay-compliant PageInfo object."""
+type PageInfo {
+  """Has next page."""
+  hasNextPage: Boolean!
+  """Has previous page."""
+  hasPreviousPage: Boolean!
+  """Start cursor."""
+  startCursor: String
+  """End cursor."""
+  endCursor: String
+}
+
+
+"""Query root."""
+type Query {
+  """Returns a person."""
+  person: Person
+}

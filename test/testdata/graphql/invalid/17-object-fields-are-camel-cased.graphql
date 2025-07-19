@@ -1,0 +1,26 @@
+"""A blog."""
+type Blog {
+  Post_Title: String  # triggers object-fields-are-camel-cased
+  """The author of the blog."""
+  author: String
+}
+
+
+"""Relay-compliant PageInfo object."""
+type PageInfo {
+  """Has next page."""
+  hasNextPage: Boolean!
+  """Has previous page."""
+  hasPreviousPage: Boolean!
+  """Start cursor."""
+  startCursor: String
+  """End cursor."""
+  endCursor: String
+}
+
+
+"""Query root."""
+type Query {
+  """Returns a blog."""
+  blog: Blog
+}
