@@ -4,10 +4,10 @@ package application
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -28,7 +28,11 @@ func validateErrorName(t *testing.T, fileName string) string {
 	errorName := strings.TrimSuffix(parts[1], ".graphql")
 	for _, r := range errorName {
 		if r >= '0' && r <= '9' {
-			require.FailNow(t, "Error name contains digits (possible typo)", fileName+": extracted error name: "+errorName)
+			require.FailNow(
+				t,
+				"Error name contains digits (possible typo)",
+				fileName+": extracted error name: "+errorName,
+			)
 		}
 	}
 
@@ -57,21 +61,42 @@ func parseLinterOutput(t *testing.T, output []byte, fileName string) []string {
 }
 
 func checkLinterVersion(t *testing.T) {
+	t.Helper()
+
 	cmd := exec.Command("graphql-schema-linter", "--version")
 	output, err := cmd.CombinedOutput()
 	version := strings.TrimSpace(string(output))
+
 	if err != nil || version != requiredLinterVersion {
-		fmt.Println("graphql-schema-linter not installed or not version", requiredLinterVersion, ". Attempting to install...")
-		installCmd := exec.Command("npm", "install", "-g", "graphql-schema-linter@"+requiredLinterVersion, "graphql")
+		installCmd := exec.Command(
+			"npm",
+			"install",
+			"-g",
+			"graphql-schema-linter@"+requiredLinterVersion,
+			"graphql",
+		)
 		installOut, installErr := installCmd.CombinedOutput()
+
 		if installErr != nil {
-			t.Fatalf("Failed to install graphql-schema-linter@%s: %v\n%s", requiredLinterVersion, installErr, string(installOut))
+			t.Fatalf(
+				"Failed to install graphql-schema-linter@%s: %v\n%s",
+				requiredLinterVersion,
+				installErr,
+				string(installOut),
+			)
 		}
+
 		cmd = exec.Command("graphql-schema-linter", "--version")
 		output, err = cmd.CombinedOutput()
 		version = strings.TrimSpace(string(output))
+
 		if err != nil || version != requiredLinterVersion {
-			t.Fatalf("graphql-schema-linter version is %s, but %s is required after install.\n%s", version, requiredLinterVersion, string(output))
+			t.Fatalf(
+				"graphql-schema-linter version is %s, but %s is required after install.\n%s",
+				version,
+				requiredLinterVersion,
+				string(output),
+			)
 		}
 	}
 }
@@ -104,20 +129,16 @@ func TestInvalidSchemas(t *testing.T) {
 
 		errorName := validateErrorName(t, file.Name())
 		rules := parseLinterOutput(t, output, file.Name())
-		fmt.Println("------------", rules, errorName)
-		found := false
-		for _, rule := range rules {
-			if rule == errorName {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(rules, errorName)
 
 		if !found {
 			require.FailNow(
 				t,
 				"File: expected error rule not found in output",
-				file.Name()+": expected error rule '"+errorName+"' in output, got rules: "+strings.Join(rules, ", "),
+				file.Name()+": expected error rule '"+errorName+"' in output, got rules: "+strings.Join(
+					rules,
+					", ",
+				),
 			)
 		}
 	}
