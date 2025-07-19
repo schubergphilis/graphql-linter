@@ -57,6 +57,17 @@ func (e Execute) Run() error {
 		WriteRelayConnectionSchemaToFile,
 		WriteRelayEdgeSchemaToFile,
 		WriteFieldsSortedSchemaToFile,
+		WriteArgumentsHaveDescriptionsSchemaToFile,
+		WriteDefinedTypesAreUsedSchemaToFile,
+		WriteDeprecationsHaveAReasonSchemaToFile,
+		WriteDescriptionsAreCapitalizedSchemaToFile,
+		WriteEnumValuesHaveDescriptionsSchemaToFile,
+		WriteInputObjectFieldsSortedAlphabeticallySchemaToFile,
+		WriteInputObjectValuesAreCamelCasedSchemaToFile,
+		WriteInputObjectValuesHaveDescriptionsSchemaToFile,
+		WriteInterfaceFieldsSortedAlphabeticallySchemaToFile,
+		WriteRelayConnectionArgumentsSpecSchemaToFile,
+		WriteQueryRootMustBeProvidedSchemaToFile,
 	}
 
 	for _, writer := range writers {
@@ -693,18 +704,6 @@ func GenerateBlogInputSchema() *ast.Document {
 	blogInputIdx := data.AddObject(doc, "BlogInput", "Should be an input, but is an object.")
 	data.AddFieldToObject(doc, blogInputIdx, "id", "ID!", "ID.")
 
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
 	data.AddFieldToObject(doc, queryIdx, "blogInput", "BlogInput", "Returns a blog input.")
 
@@ -735,9 +734,347 @@ func WriteBlogInputSchemaToFile() error {
 	return nil
 }
 
-func GenerateAnimalInterfaceSchema() *ast.Document {
+func GenerateArgumentsHaveDescriptionsSchema() *ast.Document {
 	doc := data.NewDocument()
+	objIdx := data.AddObject(doc, "Mutation", "Mutation root.")
+	// Argument missing description
+	data.AddFieldWithArgsToObject(
+		doc,
+		objIdx,
+		"doSomething",
+		"Boolean",
+		"Does something.",
+		[]data.Argument{{Name: "input", Type: "String", Description: ""}},
+	)
 
+	return doc
+}
+
+func WriteArgumentsHaveDescriptionsSchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := GenerateArgumentsHaveDescriptionsSchema()
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/28-arguments-have-descriptions.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func GenerateDefinedTypesAreUsedSchema() *ast.Document {
+	doc := data.NewDocument()
+	_ = data.AddObject(doc, "UnusedType", "This type is not used.")
+	queryIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, queryIdx, "dummy", "Boolean", "Dummy field.")
+
+	return doc
+}
+
+func WriteDefinedTypesAreUsedSchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := GenerateDefinedTypesAreUsedSchema()
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/29-defined-types-are-used.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func GenerateDeprecationsHaveAReasonSchema() *ast.Document {
+	doc := data.NewDocument()
+	_ = data.AddEnum(doc, "Status", "Status enum.", []data.EnumValue{
+		{Name: "OLD", Description: "Old status."},
+	})
+	queryIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, queryIdx, "status", "Status", "Returns status.")
+
+	return doc
+}
+
+func WriteDeprecationsHaveAReasonSchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := GenerateDeprecationsHaveAReasonSchema()
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/30-deprecations-have-a-reason.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func GenerateDescriptionsAreCapitalizedSchema() *ast.Document {
+	doc := data.NewDocument()
+	objIdx := data.AddObject(doc, "Query", "query root.")                  // not capitalized
+	data.AddFieldToObject(doc, objIdx, "dummy", "Boolean", "dummy field.") // not capitalized
+
+	return doc
+}
+
+func WriteDescriptionsAreCapitalizedSchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := GenerateDescriptionsAreCapitalizedSchema()
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/31-descriptions-are-capitalized.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func GenerateEnumValuesHaveDescriptionsSchema() *ast.Document {
+	doc := data.NewDocument()
+	_ = data.AddEnum(
+		doc,
+		"Color",
+		"Colors.",
+		[]data.EnumValue{
+			{Name: "RED", Description: ""},
+			{Name: "BLUE", Description: "Blue color."},
+		},
+	)
+	queryIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, queryIdx, "color", "Color", "Returns a color.")
+
+	return doc
+}
+
+func WriteEnumValuesHaveDescriptionsSchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := GenerateEnumValuesHaveDescriptionsSchema()
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/32-enum-values-have-descriptions.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func GenerateInputObjectFieldsSortedAlphabeticallySchema() *ast.Document {
+	doc := data.NewDocument()
+	_ = data.AddInputObject(
+		doc,
+		"InputType",
+		"Input type.",
+		[]data.InputField{
+			{Name: "zeta", Type: "String", Description: "Zeta field."},
+			{Name: "alpha", Type: "String", Description: "Alpha field."},
+		},
+	)
+	queryIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, queryIdx, "input", "InputType", "Returns input.")
+
+	return doc
+}
+
+func WriteInputObjectFieldsSortedAlphabeticallySchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := GenerateInputObjectFieldsSortedAlphabeticallySchema()
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/33-input-object-fields-sorted-alphabetically.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func GenerateInputObjectValuesAreCamelCasedSchema() *ast.Document {
+	doc := data.NewDocument()
+	_ = data.AddInputObject(
+		doc,
+		"InputType",
+		"Input type.",
+		[]data.InputField{{Name: "not_camel_case", Type: "String", Description: "Not camel case."}},
+	)
+	queryIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, queryIdx, "input", "InputType", "Returns input.")
+
+	return doc
+}
+
+func WriteInputObjectValuesAreCamelCasedSchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := GenerateInputObjectValuesAreCamelCasedSchema()
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/34-input-object-values-are-camel-cased.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func GenerateInputObjectValuesHaveDescriptionsSchema() *ast.Document {
+	doc := data.NewDocument()
+	_ = data.AddInputObject(
+		doc,
+		"InputType",
+		"Input type.",
+		[]data.InputField{{Name: "value", Type: "String", Description: ""}},
+	)
+	queryIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, queryIdx, "input", "InputType", "Returns input.")
+
+	return doc
+}
+
+func WriteInputObjectValuesHaveDescriptionsSchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := GenerateInputObjectValuesHaveDescriptionsSchema()
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/35-input-object-values-have-descriptions.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func GenerateInterfaceFieldsSortedAlphabeticallySchema() *ast.Document {
+	doc := data.NewDocument()
+	ifaceIdx := data.AddInterface(doc, "TestInterface", "Test interface.")
+	data.AddFieldToInterface(doc, ifaceIdx, "zeta", "String", "Zeta field.")
+	data.AddFieldToInterface(doc, ifaceIdx, "alpha", "String", "Alpha field.")
+	objIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, objIdx, "iface", "TestInterface", "Returns interface.")
+
+	return doc
+}
+
+func WriteInterfaceFieldsSortedAlphabeticallySchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := GenerateInterfaceFieldsSortedAlphabeticallySchema()
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/36-interface-fields-sorted-alphabetically.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func GenerateRelayConnectionArgumentsSpecSchema() *ast.Document {
+	doc := data.NewDocument()
+	postIdx := data.AddObject(doc, "Post", "A post.")
+	data.AddFieldToObject(doc, postIdx, "id", "ID!", "The post id.")
+	postConnectionIdx := data.AddObject(doc, "PostConnection", "Post connection.")
+	// Missing required pagination arguments
+	data.AddFieldToObject(doc, postConnectionIdx, "edges", "[Post]", "Edges.")
+	data.AddFieldToObject(doc, postConnectionIdx, "pageInfo", "PageInfo!", "Page info.")
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
 	data.AddNonNullFieldToObject(
@@ -749,11 +1086,76 @@ func GenerateAnimalInterfaceSchema() *ast.Document {
 	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "dummy", "Boolean", "Returns true.")
+	data.AddFieldToObject(doc, queryIdx, "posts", "PostConnection", "Returns a post connection.")
 
 	return doc
+}
+
+func WriteRelayConnectionArgumentsSpecSchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := GenerateRelayConnectionArgumentsSpecSchema()
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/37-relay-connection-arguments-spec.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func WriteRelayConnectionArgumentsSpec2SchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := data.NewDocument()
+	postIdx := data.AddObject(doc, "Post", "A post.")
+	data.AddFieldToObject(doc, postIdx, "id", "ID!", "The post id.")
+	postConnectionIdx := data.AddObject(doc, "PostConnection", "Post connection.")
+	data.AddFieldToObject(doc, postConnectionIdx, "edges", "[Post]", "Edges.")
+	data.AddFieldToObject(doc, postConnectionIdx, "pageInfo", "PageInfo!", "Page info.")
+	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
+	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
+	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
+	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
+	queryIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, queryIdx, "posts", "PostConnection", "Returns a post connection.")
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/38-relay-connection-arguments-spec.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
 }
 
 func WriteAnimalInterfaceSchemaToFile() error {
@@ -762,7 +1164,11 @@ func WriteAnimalInterfaceSchemaToFile() error {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateAnimalInterfaceSchema()
+	doc := data.NewDocument()
+	ifaceIdx := data.AddInterface(doc, "Animal", "")              // missing description
+	data.AddFieldToInterface(doc, ifaceIdx, "name", "String", "") // missing field description
+	objIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, objIdx, "animal", "Animal", "Returns animal.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -780,34 +1186,17 @@ func WriteAnimalInterfaceSchemaToFile() error {
 	return nil
 }
 
-func GenerateResourceInterfaceSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "dummy", "Boolean", "Returns true.")
-
-	return doc
-}
-
 func WriteResourceInterfaceSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateResourceInterfaceSchema()
+	doc := data.NewDocument()
+	ifaceIdx := data.AddInterface(doc, "Resource", "") // missing description
+	data.AddFieldToInterface(doc, ifaceIdx, "id", "ID", "Resource id.")
+	objIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, objIdx, "resource", "Resource", "Returns resource.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -825,34 +1214,17 @@ func WriteResourceInterfaceSchemaToFile() error {
 	return nil
 }
 
-func GenerateUserInterfaceSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "dummy", "Boolean", "Returns true.")
-
-	return doc
-}
-
 func WriteUserInterfaceSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateUserInterfaceSchema()
+	doc := data.NewDocument()
+	ifaceIdx := data.AddInterface(doc, "user", "A user interface.") // lowercase name
+	data.AddFieldToInterface(doc, ifaceIdx, "id", "ID", "User id.")
+	objIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, objIdx, "user", "user", "Returns user.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -870,34 +1242,23 @@ func WriteUserInterfaceSchemaToFile() error {
 	return nil
 }
 
-func GenerateMutationFieldArgsSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "dummy", "Boolean", "Returns true.")
-
-	return doc
-}
-
 func WriteMutationFieldArgsSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateMutationFieldArgsSchema()
+	doc := data.NewDocument()
+	objIdx := data.AddObject(doc, "Mutation", "Mutation root.")
+	data.AddFieldWithArgsToObject(
+		doc,
+		objIdx,
+		"doSomething",
+		"Boolean",
+		"Does something.",
+		[]data.Argument{{Name: "not_camel_case", Type: "String", Description: "Argument."}},
+	)
+
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -915,34 +1276,23 @@ func WriteMutationFieldArgsSchemaToFile() error {
 	return nil
 }
 
-func GenerateMutationFieldArgsDescSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "dummy", "Boolean", "Returns true.")
-
-	return doc
-}
-
 func WriteMutationFieldArgsDescSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateMutationFieldArgsDescSchema()
+	doc := data.NewDocument()
+	objIdx := data.AddObject(doc, "Mutation", "Mutation root.")
+	data.AddFieldWithArgsToObject(
+		doc,
+		objIdx,
+		"doSomething",
+		"Boolean",
+		"Does something.",
+		[]data.Argument{{Name: "input", Type: "String", Description: ""}},
+	)
+
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -960,34 +1310,30 @@ func WriteMutationFieldArgsDescSchemaToFile() error {
 	return nil
 }
 
-func GenerateMutationInputArgSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "dummy", "Boolean", "Returns true.")
-
-	return doc
-}
-
 func WriteMutationInputArgSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateMutationInputArgSchema()
+	doc := data.NewDocument()
+	objIdx := data.AddObject(doc, "Mutation", "Mutation root.")
+	data.AddFieldWithArgsToObject(
+		doc,
+		objIdx,
+		"doSomething",
+		"Boolean",
+		"Does something.",
+		[]data.Argument{{Name: "input", Type: "InputType", Description: "Input argument."}},
+	)
+
+	_ = data.AddInputObject(
+		doc,
+		"InputType",
+		"Input type.",
+		[]data.InputField{{Name: "field", Type: "String", Description: "Field."}},
+	)
+
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -1005,34 +1351,15 @@ func WriteMutationInputArgSchemaToFile() error {
 	return nil
 }
 
-func GenerateMutationTypeNameSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "dummy", "Boolean", "Returns true.")
-
-	return doc
-}
-
 func WriteMutationTypeNameSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateMutationTypeNameSchema()
+	doc := data.NewDocument()
+	objIdx := data.AddObject(doc, "mutation", "Mutation root.") // lowercase name
+	data.AddFieldToObject(doc, objIdx, "dummy", "Boolean", "Dummy field.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -1050,38 +1377,15 @@ func WriteMutationTypeNameSchemaToFile() error {
 	return nil
 }
 
-func GenerateObjectFieldsCamelCasedSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	blogIdx := data.AddObject(doc, "Blog", "A blog.")
-	data.AddFieldToObject(doc, blogIdx, "Post_Title", "String", "")
-	data.AddFieldToObject(doc, blogIdx, "author", "String", "The author of the blog.")
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "blog", "Blog", "Returns a blog.")
-
-	return doc
-}
-
 func WriteObjectFieldsCamelCasedSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateObjectFieldsCamelCasedSchema()
+	doc := data.NewDocument()
+	objIdx := data.AddObject(doc, "TestType", "Test type.")
+	data.AddFieldToObject(doc, objIdx, "not_camel_case", "String", "Not camel case.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -1099,38 +1403,15 @@ func WriteObjectFieldsCamelCasedSchemaToFile() error {
 	return nil
 }
 
-func GenerateObjectFieldsDescSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	employeeIdx := data.AddObject(doc, "Employee", "An employee.")
-	data.AddFieldToObject(doc, employeeIdx, "name", "String", "The employee name.")
-	data.AddFieldToObject(doc, employeeIdx, "department", "String", "")
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "employee", "Employee", "Returns an employee.")
-
-	return doc
-}
-
 func WriteObjectFieldsDescSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateObjectFieldsDescSchema()
+	doc := data.NewDocument()
+	objIdx := data.AddObject(doc, "TestType", "Test type.")
+	data.AddFieldToObject(doc, objIdx, "field", "String", "") // missing description
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -1148,37 +1429,14 @@ func WriteObjectFieldsDescSchemaToFile() error {
 	return nil
 }
 
-func GenerateObjectTypeDescSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	companyIdx := data.AddObject(doc, "Company", "")
-	data.AddFieldToObject(doc, companyIdx, "id", "ID!", "The company ID.")
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "company", "Company", "Returns a company.")
-
-	return doc
-}
-
 func WriteObjectTypeDescSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateObjectTypeDescSchema()
+	doc := data.NewDocument()
+	_ = data.AddObject(doc, "TestType", "") // missing description
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -1196,34 +1454,14 @@ func WriteObjectTypeDescSchemaToFile() error {
 	return nil
 }
 
-func GenerateQueryTypeNameSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	rootQueryIdx := data.AddObject(doc, "RootQuery", "Custom root query.")
-	data.AddFieldToObject(doc, rootQueryIdx, "dummy", "Boolean", "Returns true.")
-
-	return doc
-}
-
 func WriteQueryTypeNameSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateQueryTypeNameSchema()
+	doc := data.NewDocument()
+	_ = data.AddObject(doc, "query", "Query root.") // lowercase name
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -1241,50 +1479,14 @@ func WriteQueryTypeNameSchemaToFile() error {
 	return nil
 }
 
-func GenerateRelayConnectionSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	postIdx := data.AddObject(doc, "Post", "A post.")
-	data.AddFieldToObject(doc, postIdx, "id", "ID!", "The post id.")
-
-	postConnectionIdx := data.AddObject(
-		doc,
-		"PostConnection",
-		"Post connection which is missing relay keys.",
-	)
-	data.AddListFieldToObject(
-		doc,
-		postConnectionIdx,
-		"items",
-		"Post",
-		"This should be 'edges' and 'pageInfo' per relay.",
-	)
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "posts", "PostConnection", "Returns a post connection.")
-
-	return doc
-}
-
 func WriteRelayConnectionSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateRelayConnectionSchema()
+	doc := data.NewDocument()
+	_ = data.AddObject(doc, "PostConnection", "") // missing description
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -1302,40 +1504,14 @@ func WriteRelayConnectionSchemaToFile() error {
 	return nil
 }
 
-func GenerateRelayEdgeSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	postIdx := data.AddObject(doc, "Post", "A post.")
-	data.AddFieldToObject(doc, postIdx, "id", "ID!", "The post id.")
-
-	postEdgeIdx := data.AddObject(doc, "PostEdge", "Post edge, missing cursor field.")
-	data.AddFieldToObject(doc, postEdgeIdx, "node", "Post", "Node ref.")
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "postEdge", "PostEdge", "Returns a post edge.")
-
-	return doc
-}
-
 func WriteRelayEdgeSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateRelayEdgeSchema()
+	doc := data.NewDocument()
+	_ = data.AddObject(doc, "PostEdge", "") // missing description
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
@@ -1353,44 +1529,47 @@ func WriteRelayEdgeSchemaToFile() error {
 	return nil
 }
 
-func GenerateFieldsSortedSchema() *ast.Document {
-	doc := data.NewDocument()
-
-	personIdx := data.AddObject(doc, "Person", "A person.")
-	data.AddFieldToObject(doc, personIdx, "id", "ID!", "The ID.")
-	data.AddFieldToObject(doc, personIdx, "name", "String", "The name.")
-	data.AddFieldToObject(doc, personIdx, "age", "Int", "The age.")
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "person", "Person", "Returns a person.")
-
-	return doc
-}
-
 func WriteFieldsSortedSchemaToFile() error {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to determine project root: %w", err)
 	}
 
-	doc := GenerateFieldsSortedSchema()
+	doc := data.NewDocument()
+	objIdx := data.AddObject(doc, "TestType", "Test type.")
+	data.AddFieldToObject(doc, objIdx, "zeta", "String", "Zeta field.")
+	data.AddFieldToObject(doc, objIdx, "alpha", "String", "Alpha field.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(
 		projectRoot,
 		"test/testdata/graphql/invalid/24-type-fields-sorted-alphabetically.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func WriteQueryRootMustBeProvidedSchemaToFile() error {
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	doc := data.NewDocument()
+	mutationIdx := data.AddObject(doc, "Mutation", "Mutation root.")
+	data.AddFieldToObject(doc, mutationIdx, "dummy", "String", "Dummy field.")
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/38-query-root-must-be-provided.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)

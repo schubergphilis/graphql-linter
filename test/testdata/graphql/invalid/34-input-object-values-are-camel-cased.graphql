@@ -1,0 +1,12 @@
+"""Input type."""
+input InputType {
+  """Not camel case."""
+  not_camel_case: String
+}
+
+"""Query root."""
+type Query {
+  """Returns input."""
+  input: InputType
+}
+

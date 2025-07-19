@@ -1,0 +1,12 @@
+"""Status enum."""
+enum Status {
+  """Old status."""
+  OLD
+}
+
+"""Query root."""
+type Query {
+  """Returns status."""
+  status: Status
+}
+

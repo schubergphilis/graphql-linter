@@ -1,6 +1,6 @@
 """Mutation root."""
-type mutation {
+type Mutation {
   """Dummy field."""
-  dummy: Boolean
+  dummy: String
 }
 

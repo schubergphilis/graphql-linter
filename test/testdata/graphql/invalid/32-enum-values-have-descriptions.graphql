@@ -1,0 +1,13 @@
+"""Colors."""
+enum Color {
+  RED
+  """Blue color."""
+  BLUE
+}
+
+"""Query root."""
+type Query {
+  """Returns a color."""
+  color: Color
+}
+

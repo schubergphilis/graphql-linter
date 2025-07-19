@@ -1,9 +1,0 @@
-"Mutation root."
-type Mutation {
-  # "Called whenever code is deployed."
-  # deployedVersionTag(
-  #   "the input for syncing a given data type to the metadata API."
-  #   input: DeploymentInfo!
-  # ): Boolean!
-  mundo: String!
-}

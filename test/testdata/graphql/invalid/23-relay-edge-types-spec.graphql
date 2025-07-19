@@ -1,30 +1,3 @@
-"""A post."""
-type Post {
-  """The post id."""
-  id: ID!
-}
-
-"""Post edge, missing cursor field."""
 type PostEdge {
-  """Node ref."""
-  node: Post
-}
-
-"""Relay-compliant PageInfo object."""
-type PageInfo {
-  """Has next page."""
-  hasNextPage: Boolean!
-  """Has previous page."""
-  hasPreviousPage: Boolean!
-  """Start cursor."""
-  startCursor: String
-  """End cursor."""
-  endCursor: String
-}
-
-"""Query root."""
-type Query {
-  """Returns a post edge."""
-  postEdge: PostEdge
 }
 
