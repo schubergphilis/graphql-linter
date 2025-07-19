@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const requiredLinterVersion = "3.0.1"
+
 func validateErrorName(t *testing.T, fileName string) string {
 	t.Helper()
 
@@ -54,8 +56,29 @@ func parseLinterOutput(t *testing.T, output []byte, fileName string) []string {
 	return rules
 }
 
+func checkLinterVersion(t *testing.T) {
+	cmd := exec.Command("graphql-schema-linter", "--version")
+	output, err := cmd.CombinedOutput()
+	version := strings.TrimSpace(string(output))
+	if err != nil || version != requiredLinterVersion {
+		fmt.Println("graphql-schema-linter not installed or not version", requiredLinterVersion, ". Attempting to install...")
+		installCmd := exec.Command("npm", "install", "-g", "graphql-schema-linter@"+requiredLinterVersion, "graphql")
+		installOut, installErr := installCmd.CombinedOutput()
+		if installErr != nil {
+			t.Fatalf("Failed to install graphql-schema-linter@%s: %v\n%s", requiredLinterVersion, installErr, string(installOut))
+		}
+		cmd = exec.Command("graphql-schema-linter", "--version")
+		output, err = cmd.CombinedOutput()
+		version = strings.TrimSpace(string(output))
+		if err != nil || version != requiredLinterVersion {
+			t.Fatalf("graphql-schema-linter version is %s, but %s is required after install.\n%s", version, requiredLinterVersion, string(output))
+		}
+	}
+}
+
 func TestInvalidSchemas(t *testing.T) {
 	t.Parallel()
+	checkLinterVersion(t)
 
 	projectRoot, err := projectroot.FindProjectRoot()
 	require.NoError(t, err, "failed to determine project root")
