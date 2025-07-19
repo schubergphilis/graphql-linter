@@ -19,7 +19,10 @@ func NewCLI() (CLI, error) {
 }
 
 func (c CLI) Run() error {
-	applicationExecute := application.NewExecute()
+	applicationExecute, err := application.NewExecute()
+	if err != nil {
+		return fmt.Errorf("unable to create application execute: %w", err)
+	}
 
 	if err := applicationExecute.Run(); err != nil {
 		return fmt.Errorf("unable to run execute: %w", err)
