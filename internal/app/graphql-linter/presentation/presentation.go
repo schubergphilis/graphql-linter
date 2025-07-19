@@ -50,9 +50,9 @@ func (c CLI) Run() error {
 
 	if c.verboseFlag {
 		log.Info("Verbose output enabled")
+		log.SetLevel(log.DebugLevel)
+		log.SetReportCaller(true)
 	}
-
-	log.Info("Running main logic...")
 
 	if err := applicationExecute.Run(); err != nil {
 		return fmt.Errorf("unable to run execute: %w", err)

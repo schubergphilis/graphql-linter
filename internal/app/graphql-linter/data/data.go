@@ -233,7 +233,7 @@ func reportContextLines(
 }
 
 func (s Store) PrintReport(schemaFiles []string, totalErrors int) {
-	log.Infof("\n=== Linting Summary ===")
+	log.Infof("=== Linting Summary ===")
 	log.Infof("Total files checked: %d", len(schemaFiles))
 
 	if totalErrors > 0 {
@@ -929,8 +929,6 @@ func (s Store) validateDataTypes(
 	schemaContent string,
 	schemaPath string,
 ) (bool, []int) {
-	log.Info("Validating data types...")
-
 	builtInScalars := map[string]bool{
 		"String":  true,
 		"Int":     true,
@@ -980,7 +978,7 @@ func (s Store) validateDataTypes(
 		return false, errorLines
 	}
 
-	log.Info("Data type validation PASSED")
+	log.Debug("Data type validation PASSED")
 
 	return true, errorLines
 }

@@ -52,7 +52,7 @@ func (e Execute) Run() error {
 		return fmt.Errorf("unable to load config: %w", err)
 	}
 
-	log.Infof("linter config: %v", linterConfig)
+	log.Debugf("linter config: %v", linterConfig)
 	dataStore.LinterConfig = linterConfig
 
 	schemaFiles, err := dataStore.FindAndLogGraphQLSchemaFiles()
