@@ -1365,12 +1365,31 @@ func findMissingDeprecationReasons(doc *ast.Document, schemaString string) []Des
 	return errors
 }
 
+func findMissingQueryRootType(doc *ast.Document, schemaString string) []DescriptionError {
+	for _, obj := range doc.ObjectTypeDefinitions {
+		if doc.Input.ByteSliceString(obj.Name) == "Query" {
+			return nil
+		}
+	}
+
+	lineNum := 1
+	lineContent := getLineContent(schemaString, lineNum)
+	message := "invalid-graphql-schema: Query root type must be provided."
+
+	return []DescriptionError{{
+		LineNum:     lineNum,
+		Message:     message,
+		LineContent: lineContent,
+	}}
+}
+
 func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
 	errorLines := make([]int, 0, defaultErrorCapacity)
 	hasDeprecationReasonError := false
 
 	helpers := []func(*ast.Document, string) []DescriptionError{
+		findMissingQueryRootType,
 		findUnusedTypes,
 		findMissingTypeDescriptions,
 		findMissingFieldDescriptions,
