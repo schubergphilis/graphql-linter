@@ -30,10 +30,8 @@ func NewExecute() (Execute, error) {
 	if err != nil {
 		return Execute{}, fmt.Errorf("failed to determine project root: %w", err)
 	}
-
 	testdataBaseDir := filepath.Join(projectRoot, "test", "testdata", "graphql", "base")
 	testdataInvalidDir := filepath.Join(testdataBaseDir, "invalid")
-
 	return Execute{
 		testdataBaseDir:    testdataBaseDir,
 		testdataInvalidDir: testdataInvalidDir,
@@ -44,30 +42,29 @@ func (e Execute) Run() error {
 	if err := os.RemoveAll(e.testdataInvalidDir); err != nil {
 		return fmt.Errorf("unable to remove directory: '%s'. Error: %w", e.testdataInvalidDir, err)
 	}
-
 	writers := []func() error{
-		func() error { return WriteArgumentsHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },             // 01
-		func() error { return WriteDefinedTypesAreUsedSchemaToFile(e.testdataInvalidDir) },                   // 02
-		func() error { return WriteDeprecationsHaveAReasonSchemaToFile(e.testdataInvalidDir) },               // 03
-		func() error { return WriteDescriptionsAreCapitalizedSchemaToFile(e.testdataInvalidDir) },            // 04
-		func() error { return WriteTestSchemaToFile(e.testdataInvalidDir) },                                  // 05
-		func() error { return WriteEnumValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },            // 06
-		func() error { return WritePrioritySchemaToFile(e.testdataInvalidDir) },                              // 07
-		func() error { return WriteUserSchemaToFile(e.testdataInvalidDir) },                                  // 08
-		func() error { return WritePostSchemaToFile(e.testdataInvalidDir) },                                  // 09
-		func() error { return WriteInputObjectFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) }, // 10
-		func() error { return WriteInputObjectValuesAreCamelCasedSchemaToFile(e.testdataInvalidDir) },        // 11
-		func() error { return WriteInputObjectValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },     // 12
-		func() error { return WriteInterfaceFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) },   // 13
-		func() error { return WriteRelayConnectionSchemaToFile(e.testdataInvalidDir) },                       // 14
-		func() error { return WriteRelayConnectionArgumentsSpecSchemaToFile(e.testdataInvalidDir) },          // 15
-		func() error { return WriteFieldsSortedSchemaToFile(e.testdataInvalidDir) },                          // 16
-		func() error { return WriteBlogPostSchemaToFile(e.testdataInvalidDir) },                              // 17
-		func() error { return WriteProductSchemaToFile(e.testdataInvalidDir) },                               // 18
-		func() error { return WriteQueryRootMustBeProvidedSchemaToFile(e.testdataInvalidDir) },               // 19
-		func() error { return WriteRelayConnectionArgumentsSpec2SchemaToFile(e.testdataInvalidDir) },         // 20
-		func() error { return WriteUpdateProfileInputSchemaToFile(e.testdataInvalidDir) },                    // 21
-		func() error { return WriteCreatePostInputSchemaToFile(e.testdataInvalidDir) },                       // 22
+		func() error { return WriteArgumentsHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteDefinedTypesAreUsedSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteDeprecationsHaveAReasonSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteDescriptionsAreCapitalizedSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteTestSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteEnumValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WritePrioritySchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteUserSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WritePostSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteInputObjectFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteInputObjectValuesAreCamelCasedSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteInputObjectValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteInterfaceFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteRelayConnectionSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteRelayConnectionArgumentsSpecSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteFieldsSortedSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteBlogPostSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteProductSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteQueryRootMustBeProvidedSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteRelayConnectionArgumentsSpec2SchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteUpdateProfileInputSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteCreatePostInputSchemaToFile(e.testdataInvalidDir) },
 	}
 	for i, writer := range writers {
 		if err := writer(); err != nil {
@@ -79,12 +76,10 @@ func (e Execute) Run() error {
 
 func GenerateTestSchema() *ast.Document {
 	doc := data.NewDocument()
-
 	data.AddEnum(doc, "Color", "Available colors.", []data.EnumValue{
 		{Name: "blue", Description: ""},
 		{Name: "red", Description: "Red color."},
 	})
-
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
 	data.AddNonNullFieldToObject(
@@ -96,10 +91,8 @@ func GenerateTestSchema() *ast.Document {
 	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
 	data.AddFieldToObject(doc, queryIdx, "color", "Color", "Returns a color.")
-
 	return doc
 }
 
@@ -130,7 +123,7 @@ func GeneratePrioritySchema() *ast.Document {
 		{
 			Name:        "MEDIUM",
 			Description: "Medium priority.",
-		}, // Should be after LOW for alphabetical order
+		},
 		{Name: "LOW", Description: "Low priority."},
 	})
 
@@ -181,7 +174,7 @@ func GenerateUserSchema() *ast.Document {
 		"first_name",
 		"String",
 		"",
-	) // triggers fields-are-camel-cased
+	)
 	data.AddFieldToObject(doc, userIdx, "lastName", "String", "The user's last name.")
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
@@ -226,7 +219,7 @@ func GeneratePostSchema() *ast.Document {
 
 	postIdx := data.AddObject(doc, "Post", "A post.")
 	data.AddFieldToObject(doc, postIdx, "id", "ID!", "The post ID.")
-	data.AddFieldToObject(doc, postIdx, "title", "String", "") // triggers fields-have-descriptions
+	data.AddFieldToObject(doc, postIdx, "title", "String", "")
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
@@ -273,7 +266,7 @@ func GenerateCreateUserInputSchema() *ast.Document {
 			Name:        "FirstName",
 			Type:        "String",
 			Description: "",
-		}, // triggers input-object-fields-are-camel-cased
+		},
 		{Name: "lastName", Type: "String", Description: "The user's last name."},
 	})
 
@@ -308,7 +301,7 @@ func GenerateUpdateProfileInputSchema() *ast.Document {
 				Name:        "address",
 				Type:        "String",
 				Description: "",
-			}, // triggers input-object-fields-have-descriptions
+			},
 		},
 	)
 
@@ -356,7 +349,7 @@ func GenerateCreatePostInputSchema() *ast.Document {
 		doc,
 		"CreatePostInput",
 		"",
-		[]data.InputField{ // triggers input-object-type-have-description
+		[]data.InputField{
 			{Name: "title", Type: "String", Description: "The title for the post."},
 		},
 	)
@@ -400,10 +393,9 @@ func WriteCreatePostInputSchemaToFile(outputDir string) error {
 
 func GenerateUpdateProfileSchema() *ast.Document {
 	doc := data.NewDocument()
-	// Should trigger input-object-type-name-ends-with-input
 	data.AddInputObject(
 		doc,
-		"UpdateProfile", // does not end with 'Input'
+		"UpdateProfile",
 		"Profile update input.",
 		[]data.InputField{{Name: "age", Type: "Int", Description: "The age of the profile owner."}},
 	)
@@ -416,7 +408,6 @@ func GenerateUpdateProfileSchema() *ast.Document {
 
 func GenerateNodeInterfaceSchema() *ast.Document {
 	doc := data.NewDocument()
-	// Should trigger interface-fields-are-camel-cased
 	ifaceIdx := data.AddInterface(doc, "Node", "A node interface.")
 	data.AddFieldToInterface(doc, ifaceIdx, "not_camel_case", "ID", "Not camel case.")
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
@@ -427,9 +418,8 @@ func GenerateNodeInterfaceSchema() *ast.Document {
 
 func GenerateAnimalInterfaceSchema() *ast.Document {
 	doc := data.NewDocument()
-	// Should trigger interface-fields-have-descriptions
 	ifaceIdx := data.AddInterface(doc, "Animal", "Animal interface.")
-	data.AddFieldToInterface(doc, ifaceIdx, "name", "String", "") // missing description
+	data.AddFieldToInterface(doc, ifaceIdx, "name", "String", "")
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
 	data.AddFieldToObject(doc, queryIdx, "animal", "Animal", "Returns animal.")
 
@@ -538,7 +528,6 @@ func GenerateBlogInputSchema() *ast.Document {
 func GenerateArgumentsHaveDescriptionsSchema() *ast.Document {
 	doc := data.NewDocument()
 	objIdx := data.AddObject(doc, "Mutation", "Mutation root.")
-	// Argument missing description
 	data.AddFieldWithArgsToObject(
 		doc,
 		objIdx,
@@ -630,8 +619,8 @@ func WriteDeprecationsHaveAReasonSchemaToFile(outputDir string) error {
 
 func GenerateDescriptionsAreCapitalizedSchema() *ast.Document {
 	doc := data.NewDocument()
-	objIdx := data.AddObject(doc, "Query", "query root.")                  // not capitalized
-	data.AddFieldToObject(doc, objIdx, "dummy", "Boolean", "dummy field.") // not capitalized
+	objIdx := data.AddObject(doc, "Query", "query root.")
+	data.AddFieldToObject(doc, objIdx, "dummy", "Boolean", "dummy field.")
 
 	return doc
 }
@@ -831,7 +820,6 @@ func GenerateRelayConnectionArgumentsSpecSchema() *ast.Document {
 	postIdx := data.AddObject(doc, "Post", "A post.")
 	data.AddFieldToObject(doc, postIdx, "id", "ID!", "The post id.")
 	postConnectionIdx := data.AddObject(doc, "PostConnection", "Post connection.")
-	// Missing required pagination arguments
 	data.AddFieldToObject(doc, postConnectionIdx, "edges", "[Post]", "Edges.")
 	data.AddFieldToObject(doc, postConnectionIdx, "pageInfo", "PageInfo!", "Page info.")
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
@@ -909,7 +897,7 @@ func WriteRelayConnectionArgumentsSpec2SchemaToFile(outputDir string) error {
 
 func WriteRelayConnectionSchemaToFile(outputDir string) error {
 	doc := data.NewDocument()
-	_ = data.AddObject(doc, "PostConnection", "") // missing description
+	_ = data.AddObject(doc, "PostConnection", "")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(outputDir, "14-relay-connection-types-spec.graphql")
