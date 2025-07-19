@@ -1430,6 +1430,46 @@ func findUnsortedTypeFields(doc *ast.Document, schemaString string) []Descriptio
 	return errors
 }
 
+func findRelayConnectionArgumentSpec(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		for _, fieldRef := range obj.FieldsDefinition.Refs {
+			fieldDef := doc.FieldDefinitions[fieldRef]
+
+			fieldType := getBaseTypeName(doc, doc.Types[fieldDef.Type])
+			if strings.HasSuffix(fieldType, "Connection") {
+				argNames := map[string]bool{}
+
+				for _, argRef := range fieldDef.ArgumentsDefinition.Refs {
+					argDef := doc.InputValueDefinitions[argRef]
+					argName := doc.Input.ByteSliceString(argDef.Name)
+					argNames[argName] = true
+				}
+
+				forward := argNames["first"] && argNames["after"]
+
+				backward := argNames["last"] && argNames["before"]
+				if !forward && !backward {
+					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+					lineNum := findFieldDefinitionLine(schemaString, fieldName, fieldType)
+					lineContent := getLineContent(schemaString, lineNum)
+					message := "relay-connection-arguments-spec: A field that returns a Connection Type must include forward" +
+						"pagination arguments (`first` and `after`), backward pagination arguments (`last` and `before`), or both" +
+						"as per the Relay spec."
+					errors = append(errors, DescriptionError{
+						LineNum:     lineNum,
+						Message:     message,
+						LineContent: lineContent,
+					})
+				}
+			}
+		}
+	}
+
+	return errors
+}
+
 func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
 	errorLines := make([]int, 0, defaultErrorCapacity)
@@ -1438,6 +1478,7 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 	helpers := []func(*ast.Document, string) []DescriptionError{
 		findMissingQueryRootType,
 		findUnsortedTypeFields,
+		findRelayConnectionArgumentSpec,
 		findUnusedTypes,
 		findMissingTypeDescriptions,
 		findMissingFieldDescriptions,
