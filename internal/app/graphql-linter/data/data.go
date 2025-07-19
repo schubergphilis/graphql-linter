@@ -795,6 +795,60 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		errorLines        []int
 	)
 
+	usedTypes := map[string]bool{}
+
+	for _, fieldDef := range doc.FieldDefinitions {
+		baseType := getBaseTypeName(doc, doc.Types[fieldDef.Type])
+		usedTypes[baseType] = true
+	}
+	for _, inputDef := range doc.InputValueDefinitions {
+		baseType := getBaseTypeName(doc, doc.Types[inputDef.Type])
+		usedTypes[baseType] = true
+	}
+	for _, enumDef := range doc.EnumTypeDefinitions {
+		usedTypes[doc.Input.ByteSliceString(enumDef.Name)] = true
+	}
+	for _, obj := range doc.ObjectTypeDefinitions {
+		usedTypes[doc.Input.ByteSliceString(obj.Name)] = true
+	}
+	for _, iface := range doc.InterfaceTypeDefinitions {
+		usedTypes[doc.Input.ByteSliceString(iface.Name)] = true
+	}
+	for _, union := range doc.UnionTypeDefinitions {
+		usedTypes[doc.Input.ByteSliceString(union.Name)] = true
+	}
+	for _, scalar := range doc.ScalarTypeDefinitions {
+		usedTypes[doc.Input.ByteSliceString(scalar.Name)] = true
+	}
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		name := doc.Input.ByteSliceString(obj.Name)
+		if name == "Query" || name == "Mutation" || name == "Subscription" {
+			continue
+		}
+		isUsed := false
+		for _, fieldDef := range doc.FieldDefinitions {
+			baseType := getBaseTypeName(doc, doc.Types[fieldDef.Type])
+			if baseType == name {
+				isUsed = true
+				break
+			}
+		}
+		if !isUsed {
+			lineNum := findLineNumberByText(schemaString, "type "+name)
+			lineContent := getLineContent(schemaString, lineNum)
+			message := fmt.Sprintf("ERROR: Type '%s' is defined but not used", name)
+			descriptionErrors = append(descriptionErrors, DescriptionError{
+				LineNum:     lineNum,
+				Message:     message,
+				LineContent: lineContent,
+			})
+			if lineNum > 0 {
+				errorLines = append(errorLines, lineNum)
+			}
+		}
+	}
+
 	for _, obj := range doc.ObjectTypeDefinitions {
 		if err, line := checkTypeDescription(doc, schemaString, obj); err != nil {
 			descriptionErrors = append(descriptionErrors, *err)
