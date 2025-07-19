@@ -45,6 +45,7 @@ func (e Execute) Run() error {
 		func() error { return WriteRelayConnectionSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteRelayConnectionArgumentsSpecSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteFieldsSortedSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteProductSchemaToFile17(e.testdataInvalidDir) },
 		func() error { return WriteProductSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteQueryRootMustBeProvidedSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteUpdateProfileInputSchemaToFile(e.testdataInvalidDir) },
