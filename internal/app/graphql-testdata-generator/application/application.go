@@ -398,7 +398,7 @@ func WriteUpdateProfileInputSchemaToFile() error {
 
 	outputPath := filepath.Join(
 		projectRoot,
-		"test/testdata/graphql/base/invalid/06-input-object-fields-have-descriptions.graphql",
+		"test/testdata/graphql/base/invalid/06-input-object-values-have-descriptions.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -452,7 +452,7 @@ func WriteCreatePostInputSchemaToFile() error {
 
 	outputPath := filepath.Join(
 		projectRoot,
-		"test/testdata/graphql/base/invalid/07-input-object-type-have-description.graphql",
+		"test/testdata/graphql/base/invalid/07-types-have-descriptions.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
