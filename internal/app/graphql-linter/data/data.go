@@ -1470,6 +1470,44 @@ func findRelayConnectionArgumentSpec(doc *ast.Document, schemaString string) []D
 	return errors
 }
 
+func findRelayConnectionTypesSpec(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(obj.Name)
+		if strings.HasSuffix(typeName, "Connection") {
+			hasPageInfo := false
+
+			for _, fieldRef := range obj.FieldsDefinition.Refs {
+				fieldDef := doc.FieldDefinitions[fieldRef]
+
+				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+				if fieldName == "pageInfo" {
+					hasPageInfo = true
+
+					break
+				}
+			}
+
+			if !hasPageInfo {
+				lineNum := findLineNumberByText(schemaString, "type "+typeName)
+				lineContent := getLineContent(schemaString, lineNum)
+				message := fmt.Sprintf(
+					"relay-connection-types-spec: Connection `%s` is missing the following field: pageInfo.",
+					typeName,
+				)
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				})
+			}
+		}
+	}
+
+	return errors
+}
+
 func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
 	errorLines := make([]int, 0, defaultErrorCapacity)
@@ -1479,6 +1517,7 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findMissingQueryRootType,
 		findUnsortedTypeFields,
 		findRelayConnectionArgumentSpec,
+		findRelayConnectionTypesSpec,
 		findUnusedTypes,
 		findMissingTypeDescriptions,
 		findMissingFieldDescriptions,
