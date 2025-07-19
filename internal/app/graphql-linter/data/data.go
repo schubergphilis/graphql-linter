@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -17,10 +18,11 @@ import (
 )
 
 const (
-	levenshteinThreshold = 2
-	linesAfterContext    = 3
-	linesBeforeContext   = 2
-	defaultErrorCapacity = 32
+	levenshteinThreshold  = 2
+	linesAfterContext     = 3
+	linesBeforeContext    = 2
+	defaultErrorCapacity  = 32
+	minFieldsForSortCheck = 2
 )
 
 type Storer interface {
@@ -1383,6 +1385,51 @@ func findMissingQueryRootType(doc *ast.Document, schemaString string) []Descript
 	}}
 }
 
+func findUnsortedTypeFields(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(obj.Name)
+
+		fieldNames := make([]string, len(obj.FieldsDefinition.Refs))
+
+		for i, fieldRef := range obj.FieldsDefinition.Refs {
+			fieldDef := doc.FieldDefinitions[fieldRef]
+			fieldNames[i] = doc.Input.ByteSliceString(fieldDef.Name)
+		}
+
+		if len(fieldNames) < minFieldsForSortCheck {
+			continue
+		}
+
+		sorted := make([]string, len(fieldNames))
+		copy(sorted, fieldNames)
+		sort.Strings(sorted)
+
+		for i := range fieldNames {
+			if fieldNames[i] != sorted[i] {
+				lineNum := findLineNumberByText(schemaString, "type "+typeName)
+				lineContent := getLineContent(schemaString, lineNum)
+				message := fmt.Sprintf(
+					"type-fields-sorted-alphabetically: The fields of object type `%s` should be sorted in alphabetical order."+
+						"\nExpected sorting: %s",
+					typeName,
+					strings.Join(sorted, ", "),
+				)
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				})
+
+				break
+			}
+		}
+	}
+
+	return errors
+}
+
 func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
 	errorLines := make([]int, 0, defaultErrorCapacity)
@@ -1390,6 +1437,7 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 
 	helpers := []func(*ast.Document, string) []DescriptionError{
 		findMissingQueryRootType,
+		findUnsortedTypeFields,
 		findUnusedTypes,
 		findMissingTypeDescriptions,
 		findMissingFieldDescriptions,
