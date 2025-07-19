@@ -128,7 +128,7 @@ func TestInvalidSchemas(t *testing.T) {
 		found := slices.Contains(rules, errorName)
 
 		if !found {
-			t.Errorf(
+			t.Fatalf(
 				"File: expected error rule not found in output: %s: expected error rule '%s' in output, got rules: %s",
 				file.Name(), errorName, strings.Join(rules, ", "),
 			)

@@ -4,15 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"strings"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-testdata-generator/data"
-)
-
-const (
-	dirPerm  = 0o700
-	filePerm = 0o600
+	"github.com/schubergphilis/graphql-linter/internal/pkg/constants"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 )
 
 type Execute struct {
@@ -31,6 +27,7 @@ func (e Execute) Run() error {
 	if err := os.RemoveAll(e.testdataInvalidDir); err != nil {
 		return fmt.Errorf("unable to remove directory: '%s'. Error: %w", e.testdataInvalidDir, err)
 	}
+
 	writers := []func() error{
 		func() error { return WriteArgumentsHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteDefinedTypesAreUsedSchemaToFile(e.testdataInvalidDir) },
@@ -60,6 +57,7 @@ func (e Execute) Run() error {
 			return fmt.Errorf("error in writer %d: %w", i+1, err)
 		}
 	}
+
 	return nil
 }
 
@@ -69,6 +67,7 @@ func GenerateTestSchema() *ast.Document {
 		{Name: "blue", Description: ""},
 		{Name: "red", Description: "Red color."},
 	})
+
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
 	data.AddNonNullFieldToObject(
@@ -82,6 +81,7 @@ func GenerateTestSchema() *ast.Document {
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
 	data.AddFieldToObject(doc, queryIdx, "color", "Color", "Returns a color.")
+
 	return doc
 }
 
@@ -93,11 +93,11 @@ func WriteTestSchemaToFile(outputDir string) error {
 		outputDir,
 		"05-enum-values-all-caps.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -142,11 +142,11 @@ func WritePrioritySchemaToFile(outputDir string) error {
 		outputDir,
 		"07-enum-values-sorted-alphabetically.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -192,11 +192,11 @@ func WriteUserSchemaToFile(outputDir string) error {
 		outputDir,
 		"08-fields-are-camel-cased.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -236,11 +236,11 @@ func WritePostSchemaToFile(outputDir string) error {
 		outputDir,
 		"09-fields-have-descriptions.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -320,11 +320,11 @@ func WriteUpdateProfileInputSchemaToFile(outputDir string) error {
 		outputDir,
 		"12-input-object-values-have-descriptions.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -369,11 +369,11 @@ func WriteCreatePostInputSchemaToFile(outputDir string) error {
 		outputDir,
 		"20-types-have-descriptions.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -447,11 +447,11 @@ func WriteBlogPostSchemaToFile(outputDir string) error {
 		outputDir,
 		"17-type-name-shape.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -491,11 +491,11 @@ func WriteProductSchemaToFile(outputDir string) error {
 		outputDir,
 		"18-types-have-descriptions.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -526,6 +526,9 @@ func GenerateArgumentsHaveDescriptionsSchema() *ast.Document {
 		[]data.Argument{{Name: "input", Type: "String", Description: ""}},
 	)
 
+	queryIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, queryIdx, "dummy", "Boolean", "Dummy field.")
+
 	return doc
 }
 
@@ -537,11 +540,11 @@ func WriteArgumentsHaveDescriptionsSchemaToFile(outputDir string) error {
 		outputDir,
 		"01-arguments-have-descriptions.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -550,7 +553,8 @@ func WriteArgumentsHaveDescriptionsSchemaToFile(outputDir string) error {
 
 func GenerateDefinedTypesAreUsedSchema() *ast.Document {
 	doc := data.NewDocument()
-	_ = data.AddObject(doc, "UnusedType", "This type is not used.")
+	unusedIdx := data.AddObject(doc, "UnusedType", "This type is not used.")
+	data.AddFieldToObject(doc, unusedIdx, "field", "String", "Unused field.")
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
 	data.AddFieldToObject(doc, queryIdx, "dummy", "Boolean", "Dummy field.")
 
@@ -565,11 +569,11 @@ func WriteDefinedTypesAreUsedSchemaToFile(outputDir string) error {
 		outputDir,
 		"02-defined-types-are-used.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -580,6 +584,7 @@ func GenerateDeprecationsHaveAReasonSchema() *ast.Document {
 	doc := data.NewDocument()
 	_ = data.AddEnum(doc, "Status", "Status enum.", []data.EnumValue{
 		{Name: "OLD", Description: "Old status."},
+		{Name: "ACTIVE", Description: "Active status."},
 	})
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
 	data.AddFieldToObject(doc, queryIdx, "status", "Status", "Returns status.")
@@ -590,20 +595,29 @@ func GenerateDeprecationsHaveAReasonSchema() *ast.Document {
 func WriteDeprecationsHaveAReasonSchemaToFile(outputDir string) error {
 	doc := GenerateDeprecationsHaveAReasonSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
+	gql = replaceEnumDeprecated(gql)
 
 	outputPath := filepath.Join(
 		outputDir,
 		"03-deprecations-have-a-reason.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
 	return nil
+}
+
+func replaceEnumDeprecated(gql string) string {
+	return replaceEnumValue(gql, "OLD", "OLD @deprecated")
+}
+
+func replaceEnumValue(gql, oldValue, newValue string) string {
+	return strings.Replace(gql, oldValue+"\n", newValue+"\n", 1)
 }
 
 func GenerateDescriptionsAreCapitalizedSchema() *ast.Document {
@@ -622,11 +636,11 @@ func WriteDescriptionsAreCapitalizedSchemaToFile(outputDir string) error {
 		outputDir,
 		"04-descriptions-are-capitalized.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -658,11 +672,11 @@ func WriteEnumValuesHaveDescriptionsSchemaToFile(outputDir string) error {
 		outputDir,
 		"06-enum-values-have-descriptions.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -694,11 +708,11 @@ func WriteInputObjectFieldsSortedAlphabeticallySchemaToFile(outputDir string) er
 		outputDir,
 		"10-input-object-fields-sorted-alphabetically.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -730,11 +744,11 @@ func WriteInputObjectValuesAreCamelCasedSchemaToFile(outputDir string) error {
 		outputDir,
 		"11-input-object-values-are-camel-cased.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -763,11 +777,11 @@ func WriteInputObjectValuesHaveDescriptionsSchemaToFile(outputDir string) error 
 		outputDir,
 		"12-input-object-values-have-descriptions.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -793,11 +807,11 @@ func WriteInterfaceFieldsSortedAlphabeticallySchemaToFile(outputDir string) erro
 		outputDir,
 		"13-interface-fields-sorted-alphabetically.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -836,11 +850,11 @@ func WriteRelayConnectionArgumentsSpecSchemaToFile(outputDir string) error {
 		outputDir,
 		"15-relay-connection-arguments-spec.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -873,11 +887,11 @@ func WriteRelayConnectionArgumentsSpec2SchemaToFile(outputDir string) error {
 		outputDir,
 		"16-relay-connection-arguments-spec-2.graphql",
 	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -890,11 +904,11 @@ func WriteRelayConnectionSchemaToFile(outputDir string) error {
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(outputDir, "14-relay-connection-types-spec.graphql")
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -909,11 +923,11 @@ func WriteFieldsSortedSchemaToFile(outputDir string) error {
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(outputDir, "21-type-fields-sorted-alphabetically.graphql")
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -933,11 +947,11 @@ func WriteQueryRootMustBeProvidedSchemaToFile(outputDir string) error {
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(outputDir, "19-query-root-must-be-provided.graphql")
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 

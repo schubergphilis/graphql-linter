@@ -9,12 +9,6 @@ import (
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 )
 
-const (
-	dirPerm     = 0o700
-	filePerm    = 0o600
-	unknownType = "Unknown"
-)
-
 type Executor interface {
 	Run() error
 }
@@ -29,8 +23,10 @@ func NewExecute() (Execute, error) {
 	if err != nil {
 		return Execute{}, fmt.Errorf("failed to determine project root: %w", err)
 	}
+
 	testdataBaseDir := filepath.Join(projectRoot, "test", "testdata", "graphql", "base")
 	testdataInvalidDir := filepath.Join(testdataBaseDir, "invalid")
+
 	return Execute{
 		testdataBaseDir:    testdataBaseDir,
 		testdataInvalidDir: testdataInvalidDir,

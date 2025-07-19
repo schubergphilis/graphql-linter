@@ -4,3 +4,9 @@ type Mutation {
   doSomething(input: String): Boolean
 }
 
+"""Query root."""
+type Query {
+  """Dummy field."""
+  dummy: Boolean
+}
+

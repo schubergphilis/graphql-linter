@@ -1,7 +1,9 @@
 """Status enum."""
 enum Status {
   """Old status."""
-  OLD
+  OLD @deprecated
+  """Active status."""
+  ACTIVE
 }
 
 """Query root."""
