@@ -45,12 +45,9 @@ func (e Execute) Run() error {
 		func() error { return WriteRelayConnectionSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteRelayConnectionArgumentsSpecSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteFieldsSortedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteBlogPostSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteProductSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteQueryRootMustBeProvidedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteRelayConnectionArgumentsSpec2SchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteUpdateProfileInputSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteCreatePostInputSchemaToFile(e.testdataInvalidDir) },
 	}
 	for i, writer := range writers {
 		if err := writer(); err != nil {
@@ -361,25 +358,6 @@ func GenerateCreatePostInputSchema() *ast.Document {
 	return doc
 }
 
-func WriteCreatePostInputSchemaToFile(outputDir string) error {
-	doc := GenerateCreatePostInputSchema()
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"20-types-have-descriptions.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
 func GenerateUpdateProfileSchema() *ast.Document {
 	doc := data.NewDocument()
 	data.AddInputObject(
@@ -418,50 +396,24 @@ func GenerateAnimalInterfaceSchema() *ast.Document {
 func GenerateBlogPostSchema() *ast.Document {
 	doc := data.NewDocument()
 
-	blogPostIdx := data.AddObject(doc, "blogPost", "A blog post.")
+	blogPostIdx := data.AddObject(doc, "Blogpost", "A blog post.")
 	data.AddFieldToObject(doc, blogPostIdx, "id", "ID!", "ID.")
-
+	data.AddFieldToObject(doc, blogPostIdx, "pageInfo", "PageInfo", "Page info.")
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
+	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
+	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "blogPost", "blogPost", "Returns a blog post.")
+	data.AddFieldToObject(doc, queryIdx, "blogPost", "Blogpost", "Returns a blog post.")
 
 	return doc
-}
-
-func WriteBlogPostSchemaToFile(outputDir string) error {
-	doc := GenerateBlogPostSchema()
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"17-type-name-shape.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
 }
 
 func GenerateProductSchema() *ast.Document {
 	doc := data.NewDocument()
 
-	productIdx := data.AddObject(doc, "Product", "")
+	productIdx := data.AddObject(doc, "product", "")
 	data.AddFieldToObject(doc, productIdx, "id", "ID!", "The product id.")
 	data.AddFieldToObject(doc, productIdx, "name", "String", "Product name.")
 
@@ -478,7 +430,7 @@ func GenerateProductSchema() *ast.Document {
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "product", "Product", "Returns a product.")
+	data.AddFieldToObject(doc, queryIdx, "product", "product", "Returns a product.")
 
 	return doc
 }
@@ -490,6 +442,25 @@ func WriteProductSchemaToFile(outputDir string) error {
 	outputPath := filepath.Join(
 		outputDir,
 		"18-types-have-descriptions.graphql",
+	)
+	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func WriteProductSchemaToFile17(outputDir string) error {
+	doc := GenerateProductSchema()
+	gql := data.GenerateGraphQLFromDocument(doc)
+
+	outputPath := filepath.Join(
+		outputDir,
+		"17-types-are-capitalized.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -695,7 +666,14 @@ func GenerateInputObjectFieldsSortedAlphabeticallySchema() *ast.Document {
 		},
 	)
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "input", "InputType", "Returns input.")
+	data.AddFieldWithArgsToObject(
+		doc,
+		queryIdx,
+		"input",
+		"String",
+		"Returns input.",
+		[]data.Argument{{Name: "input", Type: "InputType", Description: "Input argument."}},
+	)
 
 	return doc
 }
@@ -861,46 +839,12 @@ func WriteRelayConnectionArgumentsSpecSchemaToFile(outputDir string) error {
 	return nil
 }
 
-func WriteRelayConnectionArgumentsSpec2SchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	postIdx := data.AddObject(doc, "Post", "A post.")
-	data.AddFieldToObject(doc, postIdx, "id", "ID!", "The post id.")
-	postConnectionIdx := data.AddObject(doc, "PostConnection", "Post connection.")
-	data.AddFieldToObject(doc, postConnectionIdx, "edges", "[Post]", "Edges.")
-	data.AddFieldToObject(doc, postConnectionIdx, "pageInfo", "PageInfo!", "Page info.")
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "posts", "PostConnection", "Returns a post connection.")
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"16-relay-connection-arguments-spec-2.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), constants.FilePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
 func WriteRelayConnectionSchemaToFile(outputDir string) error {
 	doc := data.NewDocument()
-	_ = data.AddObject(doc, "PostConnection", "")
+	postConnIdx := data.AddObject(doc, "PostConnection", "")
+	data.AddFieldToObject(doc, postConnIdx, "edges", "String", "Edges field.")
+	queryIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, queryIdx, "posts", "PostConnection", "Returns post connection.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(outputDir, "14-relay-connection-types-spec.graphql")
@@ -920,9 +864,11 @@ func WriteFieldsSortedSchemaToFile(outputDir string) error {
 	objIdx := data.AddObject(doc, "TestType", "Test type.")
 	data.AddFieldToObject(doc, objIdx, "zeta", "String", "Zeta field.")
 	data.AddFieldToObject(doc, objIdx, "alpha", "String", "Alpha field.")
+	queryIdx := data.AddObject(doc, "Query", "Query root.")
+	data.AddFieldToObject(doc, queryIdx, "testType", "TestType", "Returns test type.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(outputDir, "21-type-fields-sorted-alphabetically.graphql")
+	outputPath := filepath.Join(outputDir, "16-type-fields-sorted-alphabetically.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -946,7 +892,7 @@ func WriteQueryRootMustBeProvidedSchemaToFile(outputDir string) error {
 	doc := GenerateQueryRootMustBeProvidedSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(outputDir, "19-query-root-must-be-provided.graphql")
+	outputPath := filepath.Join(outputDir, "19-invalid-graphql-schema.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}

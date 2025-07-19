@@ -6,3 +6,9 @@ type TestType {
   alpha: String
 }
 
+"""Query root."""
+type Query {
+  """Returns test type."""
+  testType: TestType
+}
+

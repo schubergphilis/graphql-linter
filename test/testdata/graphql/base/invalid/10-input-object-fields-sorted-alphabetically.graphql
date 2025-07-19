@@ -9,6 +9,6 @@ input InputType {
 """Query root."""
 type Query {
   """Returns input."""
-  input: InputType
+  input(input: InputType): String
 }
 
