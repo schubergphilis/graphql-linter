@@ -1,6 +1,0 @@
-"""Test type."""
-type TestType {
-  """Not camel case."""
-  not_camel_case: String
-}
-

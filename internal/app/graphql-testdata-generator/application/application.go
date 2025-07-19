@@ -46,43 +46,28 @@ func (e Execute) Run() error {
 	}
 
 	writers := []func() error{
-		func() error { return WriteTestSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WritePrioritySchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteUserSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WritePostSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteUpdateProfileInputSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteCreatePostInputSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteUpdateProfileSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteLowercaseUserSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteBlogPostSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteProductSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteBlogInputSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteNodeInterfaceSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteAnimalInterfaceSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteResourceInterfaceSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteUserInterfaceSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteMutationFieldArgsSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteMutationFieldArgsDescSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteMutationInputArgSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteMutationTypeNameSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteObjectFieldsCamelCasedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteObjectFieldsDescSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteObjectTypeDescSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteQueryTypeNameSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteRelayConnectionSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteRelayEdgeSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteFieldsSortedSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteArgumentsHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteDefinedTypesAreUsedSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteDeprecationsHaveAReasonSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteDescriptionsAreCapitalizedSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteTestSchemaToFile(e.testdataInvalidDir) }, // enum-values-all-caps
 		func() error { return WriteEnumValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WritePrioritySchemaToFile(e.testdataInvalidDir) }, // enum-values-sorted-alphabetically
+		func() error { return WriteUserSchemaToFile(e.testdataInvalidDir) },     // fields-are-camel-cased
+		func() error { return WritePostSchemaToFile(e.testdataInvalidDir) },     // fields-have-descriptions
 		func() error { return WriteInputObjectFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteInputObjectValuesAreCamelCasedSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteInputObjectValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteInterfaceFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteRelayConnectionSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteRelayConnectionArgumentsSpecSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteFieldsSortedSchemaToFile(e.testdataInvalidDir) }, // type-fields-sorted-alphabetically
+		func() error { return WriteBlogPostSchemaToFile(e.testdataInvalidDir) },     // types-are-capitalized
+		func() error { return WriteProductSchemaToFile(e.testdataInvalidDir) },      // types-have-descriptions
 		func() error { return WriteQueryRootMustBeProvidedSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteRelayConnectionArgumentsSpec2SchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteUpdateProfileInputSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteCreatePostInputSchemaToFile(e.testdataInvalidDir) },
 	}
 	for _, writer := range writers {
 		if err := writer(); err != nil {
@@ -311,25 +296,6 @@ func GenerateCreateUserInputSchema() *ast.Document {
 	return doc
 }
 
-func WriteCreateUserInputSchemaToFile(outputDir string) error {
-	doc := GenerateCreateUserInputSchema()
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"05-input-object-fields-are-camel-cased.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
 func GenerateUpdateProfileInputSchema() *ast.Document {
 	doc := data.NewDocument()
 
@@ -435,134 +401,40 @@ func WriteCreatePostInputSchemaToFile(outputDir string) error {
 
 func GenerateUpdateProfileSchema() *ast.Document {
 	doc := data.NewDocument()
-
+	// Should trigger input-object-type-name-ends-with-input
 	data.AddInputObject(
 		doc,
-		"UpdateProfile",
+		"UpdateProfile", // does not end with 'Input'
 		"Profile update input.",
-		[]data.InputField{ // triggers input-object-type-name-ends-with-input
-			{Name: "age", Type: "Int", Description: "The age of the profile owner."},
-		},
+		[]data.InputField{{Name: "age", Type: "Int", Description: "The age of the profile owner."}},
 	)
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "updateProfile", "Boolean", "Validates input.")
+	data.AddFieldToObject(doc, queryIdx, "updateProfile", "UpdateProfile", "Validates input.")
 
 	return doc
-}
-
-func WriteUpdateProfileSchemaToFile(outputDir string) error {
-	doc := GenerateUpdateProfileSchema()
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"08-input-object-type-name-ends-with-input.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
 }
 
 func GenerateNodeInterfaceSchema() *ast.Document {
 	doc := data.NewDocument()
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
+	// Should trigger interface-fields-are-camel-cased
+	ifaceIdx := data.AddInterface(doc, "Node", "A node interface.")
+	data.AddFieldToInterface(doc, ifaceIdx, "not_camel_case", "ID", "Not camel case.")
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "dummy", "Boolean", "Returns true.")
+	data.AddFieldToObject(doc, queryIdx, "node", "Node", "Returns node.")
 
 	return doc
 }
 
-func WriteNodeInterfaceSchemaToFile(outputDir string) error {
-	doc := GenerateNodeInterfaceSchema()
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"09-interface-fields-are-camel-cased.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func GenerateLowercaseUserSchema() *ast.Document {
+func GenerateAnimalInterfaceSchema() *ast.Document {
 	doc := data.NewDocument()
-
-	userIdx := data.AddObject(doc, "user", "The user type.")
-	data.AddFieldToObject(doc, userIdx, "id", "ID!", "ID.")
-
-	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(
-		doc,
-		pageInfoIdx,
-		"hasPreviousPage",
-		"Boolean",
-		"Has previous page.",
-	)
-	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
-	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
-
+	// Should trigger interface-fields-have-descriptions
+	ifaceIdx := data.AddInterface(doc, "Animal", "Animal interface.")
+	data.AddFieldToInterface(doc, ifaceIdx, "name", "String", "") // missing description
 	queryIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, queryIdx, "user", "user", "Returns a user.")
+	data.AddFieldToObject(doc, queryIdx, "animal", "Animal", "Returns animal.")
 
 	return doc
-}
-
-func WriteLowercaseUserSchemaToFile(outputDir string) error {
-	doc := GenerateLowercaseUserSchema()
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"20-object-type-name.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
 }
 
 func GenerateBlogPostSchema() *ast.Document {
@@ -662,25 +534,6 @@ func GenerateBlogInputSchema() *ast.Document {
 	data.AddFieldToObject(doc, queryIdx, "blogInput", "BlogInput", "Returns a blog input.")
 
 	return doc
-}
-
-func WriteBlogInputSchemaToFile(outputDir string) error {
-	doc := GenerateBlogInputSchema()
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"27-type-name-ends-with-input.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
 }
 
 func GenerateArgumentsHaveDescriptionsSchema() *ast.Document {
@@ -898,7 +751,7 @@ func WriteInputObjectValuesAreCamelCasedSchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"05-input-object-values-are-camel-cased.graphql",
+		"34-input-object-values-are-camel-cased.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -1042,273 +895,7 @@ func WriteRelayConnectionArgumentsSpec2SchemaToFile(outputDir string) error {
 
 	outputPath := filepath.Join(
 		outputDir,
-		"38-relay-connection-arguments-spec.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteAnimalInterfaceSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	ifaceIdx := data.AddInterface(doc, "Animal", "")              // missing description
-	data.AddFieldToInterface(doc, ifaceIdx, "name", "String", "") // missing field description
-	objIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, objIdx, "animal", "Animal", "Returns animal.")
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"10-interface-fields-have-descriptions.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteResourceInterfaceSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	ifaceIdx := data.AddInterface(doc, "Resource", "") // missing description
-	data.AddFieldToInterface(doc, ifaceIdx, "id", "ID", "Resource id.")
-	objIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, objIdx, "resource", "Resource", "Returns resource.")
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"11-interface-type-have-description.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteUserInterfaceSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	ifaceIdx := data.AddInterface(doc, "user", "A user interface.") // lowercase name
-	data.AddFieldToInterface(doc, ifaceIdx, "id", "ID", "User id.")
-	objIdx := data.AddObject(doc, "Query", "Query root.")
-	data.AddFieldToObject(doc, objIdx, "user", "user", "Returns user.")
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"12-interface-type-name.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteMutationFieldArgsSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	objIdx := data.AddObject(doc, "Mutation", "Mutation root.")
-	data.AddFieldWithArgsToObject(
-		doc,
-		objIdx,
-		"doSomething",
-		"Boolean",
-		"Does something.",
-		[]data.Argument{{Name: "not_camel_case", Type: "String", Description: "Argument."}},
-	)
-
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"13-mutation-field-arguments-are-camel-cased.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteMutationFieldArgsDescSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	objIdx := data.AddObject(doc, "Mutation", "Mutation root.")
-	data.AddFieldWithArgsToObject(
-		doc,
-		objIdx,
-		"doSomething",
-		"Boolean",
-		"Does something.",
-		[]data.Argument{{Name: "input", Type: "String", Description: ""}},
-	)
-
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"14-mutation-field-arguments-have-descriptions.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteMutationInputArgSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	objIdx := data.AddObject(doc, "Mutation", "Mutation root.")
-	data.AddFieldWithArgsToObject(
-		doc,
-		objIdx,
-		"doSomething",
-		"Boolean",
-		"Does something.",
-		[]data.Argument{{Name: "input", Type: "InputType", Description: "Input argument."}},
-	)
-
-	_ = data.AddInputObject(
-		doc,
-		"InputType",
-		"Input type.",
-		[]data.InputField{{Name: "field", Type: "String", Description: "Field."}},
-	)
-
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"15-mutation-input-arg.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteMutationTypeNameSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	objIdx := data.AddObject(doc, "mutation", "Mutation root.") // lowercase name
-	data.AddFieldToObject(doc, objIdx, "dummy", "Boolean", "Dummy field.")
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"16-mutation-type-name.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteObjectFieldsCamelCasedSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	objIdx := data.AddObject(doc, "TestType", "Test type.")
-	data.AddFieldToObject(doc, objIdx, "not_camel_case", "String", "Not camel case.")
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"17-object-fields-are-camel-cased.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteObjectFieldsDescSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	objIdx := data.AddObject(doc, "TestType", "Test type.")
-	data.AddFieldToObject(doc, objIdx, "field", "String", "") // missing description
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"18-object-fields-have-descriptions.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteObjectTypeDescSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	_ = data.AddObject(doc, "TestType", "") // missing description
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"19-object-type-have-description.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteQueryTypeNameSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	_ = data.AddObject(doc, "query", "Query root.") // lowercase name
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"21-query-type-name.graphql",
+		"38-relay-connection-arguments-spec-2.graphql",
 	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -1326,30 +913,7 @@ func WriteRelayConnectionSchemaToFile(outputDir string) error {
 	_ = data.AddObject(doc, "PostConnection", "") // missing description
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		outputDir,
-		"22-relay-connection-types-spec.graphql",
-	)
-	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(gql), filePerm); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-func WriteRelayEdgeSchemaToFile(outputDir string) error {
-	doc := data.NewDocument()
-	_ = data.AddObject(doc, "PostEdge", "") // missing description
-	gql := data.GenerateGraphQLFromDocument(doc)
-
-	outputPath := filepath.Join(
-		outputDir,
-		"23-relay-edge-types-spec.graphql",
-	)
+	outputPath := filepath.Join(outputDir, "21-relay-connection-types-spec.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1368,10 +932,7 @@ func WriteFieldsSortedSchemaToFile(outputDir string) error {
 	data.AddFieldToObject(doc, objIdx, "alpha", "String", "Alpha field.")
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		outputDir,
-		"24-type-fields-sorted-alphabetically.graphql",
-	)
+	outputPath := filepath.Join(outputDir, "23-type-fields-sorted-alphabetically.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1383,16 +944,19 @@ func WriteFieldsSortedSchemaToFile(outputDir string) error {
 	return nil
 }
 
-func WriteQueryRootMustBeProvidedSchemaToFile(outputDir string) error {
+func GenerateQueryRootMustBeProvidedSchema() *ast.Document {
 	doc := data.NewDocument()
 	mutationIdx := data.AddObject(doc, "Mutation", "Mutation root.")
 	data.AddFieldToObject(doc, mutationIdx, "dummy", "String", "Dummy field.")
+
+	return doc
+}
+
+func WriteQueryRootMustBeProvidedSchemaToFile(outputDir string) error {
+	doc := GenerateQueryRootMustBeProvidedSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(
-		outputDir,
-		"38-query-root-must-be-provided.graphql",
-	)
+	outputPath := filepath.Join(outputDir, "39-query-root-must-be-provided.graphql")
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}

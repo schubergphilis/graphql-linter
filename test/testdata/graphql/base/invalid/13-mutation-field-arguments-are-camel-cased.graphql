@@ -1,6 +1,0 @@
-"""Mutation root."""
-type Mutation {
-  """Does something."""
-  doSomething(not_camel_case: String): Boolean
-}
-

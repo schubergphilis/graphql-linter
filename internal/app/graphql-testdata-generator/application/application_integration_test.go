@@ -22,17 +22,13 @@ func validateErrorName(t *testing.T, fileName string) string {
 
 	parts := strings.SplitN(fileName, "-", 2)
 	if len(parts) < 2 {
-		require.FailNow(t, "Filename does not contain error name.", fileName)
+		t.Errorf("Filename does not contain error name: %s", fileName)
 	}
 
 	errorName := strings.TrimSuffix(parts[1], ".graphql")
 	for _, r := range errorName {
 		if r >= '0' && r <= '9' {
-			require.FailNow(
-				t,
-				"Error name contains digits (possible typo)",
-				fileName+": extracted error name: "+errorName,
-			)
+			t.Errorf("Error name contains digits (possible typo): %s: extracted error name: %s", fileName, errorName)
 		}
 	}
 
@@ -122,7 +118,7 @@ func TestInvalidSchemas(t *testing.T) {
 		output, err := cmd.CombinedOutput()
 
 		if err == nil {
-			require.FailNow(t, "Expected error for file, but linter passed.", file.Name())
+			t.Errorf("Expected error for file, but linter passed: %s", file.Name())
 
 			continue
 		}
@@ -132,13 +128,9 @@ func TestInvalidSchemas(t *testing.T) {
 		found := slices.Contains(rules, errorName)
 
 		if !found {
-			require.FailNow(
-				t,
-				"File: expected error rule not found in output",
-				file.Name()+": expected error rule '"+errorName+"' in output, got rules: "+strings.Join(
-					rules,
-					", ",
-				),
+			t.Errorf(
+				"File: expected error rule not found in output: %s: expected error rule '%s' in output, got rules: %s",
+				file.Name(), errorName, strings.Join(rules, ", "),
 			)
 		}
 	}

@@ -1,5 +1,0 @@
-"""Test type."""
-type TestType {
-  field: String
-}
-

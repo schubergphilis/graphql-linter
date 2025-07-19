@@ -1,7 +1,15 @@
-"""The user type."""
-type user {
-  """ID."""
+"""A post."""
+type Post {
+  """The post id."""
   id: ID!
+}
+
+"""Post connection."""
+type PostConnection {
+  """Edges."""
+  edges: [Post]
+  """Page info."""
+  pageInfo: PageInfo!
 }
 
 """Relay-compliant PageInfo object."""
@@ -18,7 +26,7 @@ type PageInfo {
 
 """Query root."""
 type Query {
-  """Returns a user."""
-  user: user
+  """Returns a post connection."""
+  posts: PostConnection
 }
 

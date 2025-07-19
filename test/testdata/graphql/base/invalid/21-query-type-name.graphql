@@ -1,4 +1,0 @@
-"""Query root."""
-type query {
-}
-
