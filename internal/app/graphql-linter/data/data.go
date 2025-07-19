@@ -23,6 +23,7 @@ const (
 	linesBeforeContext    = 2
 	defaultErrorCapacity  = 32
 	minFieldsForSortCheck = 2
+	percentMultiplier     = 100
 )
 
 type Storer interface {
@@ -102,20 +103,24 @@ func (s Store) FindAndLogGraphQLSchemaFiles() ([]string, error) {
 	return schemaFiles, nil
 }
 
-func (s Store) LintSchemaFiles(schemaFiles []string) int {
+func (s Store) LintSchemaFiles(schemaFiles []string) (int, int) {
 	totalErrors := 0
+	errorFilesCount := 0
 
 	for _, schemaFile := range schemaFiles {
 		if s.Verbose {
 			log.Infof("=== Linting %s ===", schemaFile)
 		}
 
-		if !s.lintSchemaFile(schemaFile) {
-			totalErrors++
+		errCount := s.lintSchemaFile(schemaFile)
+		totalErrors += errCount
+
+		if errCount > 0 {
+			errorFilesCount++
 		}
 	}
 
-	return totalErrors
+	return totalErrors, errorFilesCount
 }
 
 func (s Store) LoadConfig() (*LinterConfig, error) {
@@ -235,16 +240,31 @@ func reportContextLines(
 	}
 }
 
-func (s Store) PrintReport(schemaFiles []string, totalErrors int) {
+func (s Store) PrintReport(schemaFiles []string, totalErrors int, passedFiles int) {
+	percentPassed := 0.0
+	if len(schemaFiles) > 0 {
+		percentPassed = float64(passedFiles) / float64(len(schemaFiles)) * percentMultiplier
+	}
+
+	percentageFilesWithAtLeastOneError := 0.0
+	if len(schemaFiles) > 0 {
+		percentageFilesWithAtLeastOneError = float64(len(schemaFiles)-passedFiles) /
+			float64(len(schemaFiles)) * percentMultiplier
+	}
+
 	log.WithFields(log.Fields{
-		"totalFiles":  len(schemaFiles),
-		"passedFiles": len(schemaFiles) - totalErrors,
+		"passedFiles":   passedFiles,
+		"totalFiles":    len(schemaFiles),
+		"percentPassed": fmt.Sprintf("%.2f%%", percentPassed),
 	}).Info("linting summary")
 
 	if totalErrors > 0 {
 		log.WithFields(log.Fields{
-			"totalErrors": totalErrors,
-		}).Fatal("linting failed with errors")
+			"filesWithAtLeastOneError": len(schemaFiles) - passedFiles,
+			"percentage":               fmt.Sprintf("%.2f%%", percentageFilesWithAtLeastOneError),
+		}).Error("files with at least one error")
+
+		log.Fatalf("totalErrors: %d", totalErrors)
 
 		return
 	}
@@ -680,54 +700,20 @@ func suggestDirective(directiveName, validName string) {
 	}
 }
 
-func lintSchemaValidation(
-	store Store,
-	doc *ast.Document,
-	schemaString, filteredSchema, schemaPath string,
-) (bool, []int) {
-	var (
-		hasValidationErrors bool
-		errorLines          []int
-	)
-
-	if !validateDirectiveNames(doc) {
-		hasValidationErrors = true
-	}
-
-	dataTypesValid, errorLinesDT := store.validateDataTypes(doc, schemaString, schemaPath)
-	if !dataTypesValid {
-		hasValidationErrors = true
-	}
-
-	if !validateFederationSchema(filteredSchema) {
-		hasValidationErrors = true
-	}
-
-	descriptionErrors, errorLinesDesc, hasDeprecationReasonError := lintDescriptions(
-		doc,
-		schemaString,
-	)
+func printAndValidateDescriptionErrors(descriptionErrors []DescriptionError, schemaPath string) bool {
 	if len(descriptionErrors) > 0 {
 		printDescriptionErrors(descriptionErrors, schemaPath)
 
-		hasValidationErrors = true
-
-		errorLines = append(errorLines, errorLinesDesc...)
+		return true
 	}
 
-	if hasDeprecationReasonError {
-		hasValidationErrors = true
-	}
-
-	errorLines = append(errorLines, errorLinesDT...)
-
-	return hasValidationErrors, errorLines
+	return false
 }
 
-func (s Store) lintSchemaFile(schemaPath string) bool {
+func (s Store) lintSchemaFile(schemaPath string) int {
 	schemaString, ok := readSchemaFile(schemaPath)
 	if !ok {
-		return false
+		return 1
 	}
 
 	filteredSchema := filterSchemaComments(schemaString)
@@ -739,18 +725,35 @@ func (s Store) lintSchemaFile(schemaPath string) bool {
 	LogSchemaParseErrors(schemaString, &parseReport)
 	log.Debug("Schema parsed successfully!")
 
-	hasValidationErrors, errorLines := lintSchemaValidation(
-		s,
+	descriptionErrors, errorLines, hasDeprecationReasonError := lintDescriptions(
 		&doc,
 		schemaString,
-		filteredSchema,
-		schemaPath,
 	)
+
+	var hasValidationErrors bool
+	if !validateDirectiveNames(&doc) {
+		hasValidationErrors = true
+	}
+
+	dataTypesValid, _ := s.validateDataTypes(&doc, schemaString, schemaPath)
+	if !dataTypesValid {
+		hasValidationErrors = true
+	}
+
+	if !validateFederationSchema(filteredSchema) {
+		hasValidationErrors = true
+	}
+
+	hasValidationErrors = printAndValidateDescriptionErrors(descriptionErrors, schemaPath) || hasValidationErrors
+
+	if hasDeprecationReasonError {
+		hasValidationErrors = true
+	}
 
 	if hasValidationErrors {
 		if len(errorLines) > 0 {
 			log.WithFields(log.Fields{
-				"numberOfErrors":                len(errorLines),
+				"numberOfErrors":                len(descriptionErrors),
 				"schemaPathIncludingLineNumber": schemaPath + fmt.Sprintf(":%d", errorLines[0]),
 			}).Error("schema linting FAILED with errors")
 		} else {
@@ -759,12 +762,12 @@ func (s Store) lintSchemaFile(schemaPath string) bool {
 			}).Error("schema linting FAILED with no specific errors reported")
 		}
 
-		return false
+		return len(descriptionErrors)
 	}
 
 	log.Debugf("Schema linting PASSED: %s", schemaPath)
 
-	return true
+	return 0
 }
 
 func readSchemaFile(schemaPath string) (string, bool) {

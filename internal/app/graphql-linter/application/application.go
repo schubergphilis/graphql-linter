@@ -60,9 +60,9 @@ func (e Execute) Run() error {
 		return fmt.Errorf("schema file discovery failed: %w", err)
 	}
 
-	errorCount := dataStore.LintSchemaFiles(schemaFiles)
+	totalErrors, errorFilesCount := dataStore.LintSchemaFiles(schemaFiles)
 
-	dataStore.PrintReport(schemaFiles, errorCount)
+	dataStore.PrintReport(schemaFiles, totalErrors, len(schemaFiles)-errorFilesCount)
 
 	return nil
 }
