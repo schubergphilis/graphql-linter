@@ -812,6 +812,26 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 					errorLines = append(errorLines, line)
 				}
 			}
+
+			fieldDef := doc.FieldDefinitions[fieldRef]
+			for _, argRef := range fieldDef.ArgumentsDefinition.Refs {
+				argDef := doc.InputValueDefinitions[argRef]
+				if !argDef.Description.IsDefined {
+					argName := doc.Input.ByteSliceString(argDef.Name)
+					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+					lineNum := findLineNumberByText(schemaString, argName+":")
+					lineContent := getLineContent(schemaString, lineNum)
+					message := fmt.Sprintf("ERROR: Argument '%s' of field '%s' is missing a description", argName, fieldName)
+					descriptionErrors = append(descriptionErrors, DescriptionError{
+						LineNum:     lineNum,
+						Message:     message,
+						LineContent: lineContent,
+					})
+					if lineNum > 0 {
+						errorLines = append(errorLines, lineNum)
+					}
+				}
+			}
 		}
 	}
 
