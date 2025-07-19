@@ -1,3 +1,10 @@
+"""Input for creating a user."""
+input CreateUserInput {
+  FirstName: String
+  """The user's last name."""
+  lastName: String
+}
+
 """Relay-compliant PageInfo object."""
 type PageInfo {
   """Has next page."""

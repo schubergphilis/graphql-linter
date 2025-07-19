@@ -29,112 +29,40 @@ func NewExecute() Execute {
 }
 
 func (e Execute) Run() error {
-	if err := WriteTestSchemaToFile(); err != nil {
-		return err
+	writers := []func() error{
+		WriteTestSchemaToFile,
+		WritePrioritySchemaToFile,
+		WriteUserSchemaToFile,
+		WritePostSchemaToFile,
+		WriteCreateUserInputSchemaToFile,
+		WriteUpdateProfileInputSchemaToFile,
+		WriteCreatePostInputSchemaToFile,
+		WriteUpdateProfileSchemaToFile,
+		WriteLowercaseUserSchemaToFile,
+		WriteBlogPostSchemaToFile,
+		WriteProductSchemaToFile,
+		WriteBlogInputSchemaToFile,
+		WriteNodeInterfaceSchemaToFile,
+		WriteAnimalInterfaceSchemaToFile,
+		WriteResourceInterfaceSchemaToFile,
+		WriteUserInterfaceSchemaToFile,
+		WriteMutationFieldArgsSchemaToFile,
+		WriteMutationFieldArgsDescSchemaToFile,
+		WriteMutationInputArgSchemaToFile,
+		WriteMutationTypeNameSchemaToFile,
+		WriteObjectFieldsCamelCasedSchemaToFile,
+		WriteObjectFieldsDescSchemaToFile,
+		WriteObjectTypeDescSchemaToFile,
+		WriteQueryTypeNameSchemaToFile,
+		WriteRelayConnectionSchemaToFile,
+		WriteRelayEdgeSchemaToFile,
+		WriteFieldsSortedSchemaToFile,
 	}
 
-	if err := WritePrioritySchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteUserSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WritePostSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteCreateUserInputSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteUpdateProfileInputSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteCreatePostInputSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteUpdateProfileSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteLowercaseUserSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteBlogPostSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteProductSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteBlogInputSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteNodeInterfaceSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteAnimalInterfaceSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteResourceInterfaceSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteUserInterfaceSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteMutationFieldArgsSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteMutationFieldArgsDescSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteMutationInputArgSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteMutationTypeNameSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteObjectFieldsCamelCasedSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteObjectFieldsDescSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteObjectTypeDescSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteQueryTypeNameSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteRelayConnectionSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteRelayEdgeSchemaToFile(); err != nil {
-		return err
-	}
-
-	if err := WriteFieldsSortedSchemaToFile(); err != nil {
-		return err
+	for _, writer := range writers {
+		if err := writer(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -150,7 +78,13 @@ func GenerateTestSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -169,7 +103,10 @@ func WriteTestSchemaToFile() error {
 	doc := GenerateTestSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/01-enum-values-all-caps.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/01-enum-values-all-caps.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -186,13 +123,22 @@ func GeneratePrioritySchema() *ast.Document {
 
 	data.AddEnum(doc, "Priority", "Priority of the task.", []data.EnumValue{
 		{Name: "HIGH", Description: "High priority."},
-		{Name: "MEDIUM", Description: "Medium priority."}, // Should be after LOW for alphabetical order
+		{
+			Name:        "MEDIUM",
+			Description: "Medium priority.",
+		}, // Should be after LOW for alphabetical order
 		{Name: "LOW", Description: "Low priority."},
 	})
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -211,7 +157,10 @@ func WritePrioritySchemaToFile() error {
 	doc := GeneratePrioritySchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/02-enum-values-sorted-alphabetically.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/02-enum-values-sorted-alphabetically.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -227,12 +176,24 @@ func GenerateUserSchema() *ast.Document {
 	doc := data.NewDocument()
 
 	userIdx := data.AddObject(doc, "User", "A user object.")
-	data.AddFieldToObject(doc, userIdx, "first_name", "String", "") // triggers fields-are-camel-cased
+	data.AddFieldToObject(
+		doc,
+		userIdx,
+		"first_name",
+		"String",
+		"",
+	) // triggers fields-are-camel-cased
 	data.AddFieldToObject(doc, userIdx, "lastName", "String", "The user's last name.")
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -251,7 +212,10 @@ func WriteUserSchemaToFile() error {
 	doc := GenerateUserSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/03-fields-are-camel-cased.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/03-fields-are-camel-cased.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -272,7 +236,13 @@ func GeneratePostSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -291,7 +261,10 @@ func WritePostSchemaToFile() error {
 	doc := GeneratePostSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/04-fields-have-descriptions.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/04-fields-have-descriptions.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -307,13 +280,23 @@ func GenerateCreateUserInputSchema() *ast.Document {
 	doc := data.NewDocument()
 
 	data.AddInputObject(doc, "CreateUserInput", "Input for creating a user.", []data.InputField{
-		{Name: "FirstName", Type: "String", Description: ""}, // triggers input-object-fields-are-camel-cased
+		{
+			Name:        "FirstName",
+			Type:        "String",
+			Description: "",
+		}, // triggers input-object-fields-are-camel-cased
 		{Name: "lastName", Type: "String", Description: "The user's last name."},
 	})
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -332,7 +315,10 @@ func WriteCreateUserInputSchemaToFile() error {
 	doc := GenerateCreateUserInputSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/05-input-object-fields-are-camel-cased.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/05-input-object-fields-are-camel-cased.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -344,18 +330,32 @@ func WriteCreateUserInputSchemaToFile() error {
 	return nil
 }
 
-// Scenario 06: input-object-fields-have-descriptions
 func GenerateUpdateProfileInputSchema() *ast.Document {
 	doc := data.NewDocument()
 
-	data.AddInputObject(doc, "UpdateProfileInput", "Input for updating a profile.", []data.InputField{
-		{Name: "age", Type: "Int", Description: "The age of the profile owner."},
-		{Name: "address", Type: "String", Description: ""}, // triggers input-object-fields-have-descriptions
-	})
+	data.AddInputObject(
+		doc,
+		"UpdateProfileInput",
+		"Input for updating a profile.",
+		[]data.InputField{
+			{Name: "age", Type: "Int", Description: "The age of the profile owner."},
+			{
+				Name:        "address",
+				Type:        "String",
+				Description: "",
+			}, // triggers input-object-fields-have-descriptions
+		},
+	)
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -374,7 +374,10 @@ func WriteUpdateProfileInputSchemaToFile() error {
 	doc := GenerateUpdateProfileInputSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/06-input-object-fields-have-descriptions.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/06-input-object-fields-have-descriptions.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -386,17 +389,27 @@ func WriteUpdateProfileInputSchemaToFile() error {
 	return nil
 }
 
-// Scenario 07: input-object-type-have-description
 func GenerateCreatePostInputSchema() *ast.Document {
 	doc := data.NewDocument()
 
-	data.AddInputObject(doc, "CreatePostInput", "", []data.InputField{ // triggers input-object-type-have-description
-		{Name: "title", Type: "String", Description: "The title for the post."},
-	})
+	data.AddInputObject(
+		doc,
+		"CreatePostInput",
+		"",
+		[]data.InputField{ // triggers input-object-type-have-description
+			{Name: "title", Type: "String", Description: "The title for the post."},
+		},
+	)
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -415,7 +428,10 @@ func WriteCreatePostInputSchemaToFile() error {
 	doc := GenerateCreatePostInputSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/07-input-object-type-have-description.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/07-input-object-type-have-description.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -427,17 +443,27 @@ func WriteCreatePostInputSchemaToFile() error {
 	return nil
 }
 
-// Scenario 08: input-object-type-name-ends-with-input
 func GenerateUpdateProfileSchema() *ast.Document {
 	doc := data.NewDocument()
 
-	data.AddInputObject(doc, "UpdateProfile", "Profile update input.", []data.InputField{ // triggers input-object-type-name-ends-with-input
-		{Name: "age", Type: "Int", Description: "The age of the profile owner."},
-	})
+	data.AddInputObject(
+		doc,
+		"UpdateProfile",
+		"Profile update input.",
+		[]data.InputField{ // triggers input-object-type-name-ends-with-input
+			{Name: "age", Type: "Int", Description: "The age of the profile owner."},
+		},
+	)
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -456,7 +482,10 @@ func WriteUpdateProfileSchemaToFile() error {
 	doc := GenerateUpdateProfileSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/08-input-object-type-name-ends-with-input.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/08-input-object-type-name-ends-with-input.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -473,7 +502,13 @@ func GenerateNodeInterfaceSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -492,7 +527,10 @@ func WriteNodeInterfaceSchemaToFile() error {
 	doc := GenerateNodeInterfaceSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/09-interface-fields-are-camel-cased.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/09-interface-fields-are-camel-cased.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -512,7 +550,13 @@ func GenerateLowercaseUserSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -531,7 +575,10 @@ func WriteLowercaseUserSchemaToFile() error {
 	doc := GenerateLowercaseUserSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/20-object-type-name.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/20-object-type-name.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -551,7 +598,13 @@ func GenerateBlogPostSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -570,7 +623,10 @@ func WriteBlogPostSchemaToFile() error {
 	doc := GenerateBlogPostSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/25-type-name-shape.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/25-type-name-shape.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -591,7 +647,13 @@ func GenerateProductSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -610,7 +672,10 @@ func WriteProductSchemaToFile() error {
 	doc := GenerateProductSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/26-types-have-descriptions.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/26-types-have-descriptions.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -630,7 +695,13 @@ func GenerateBlogInputSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -649,7 +720,10 @@ func WriteBlogInputSchemaToFile() error {
 	doc := GenerateBlogInputSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/27-type-name-ends-with-input.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/27-type-name-ends-with-input.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -666,7 +740,13 @@ func GenerateAnimalInterfaceSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -685,7 +765,10 @@ func WriteAnimalInterfaceSchemaToFile() error {
 	doc := GenerateAnimalInterfaceSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/10-interface-fields-have-descriptions.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/10-interface-fields-have-descriptions.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -702,7 +785,13 @@ func GenerateResourceInterfaceSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -721,7 +810,10 @@ func WriteResourceInterfaceSchemaToFile() error {
 	doc := GenerateResourceInterfaceSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/11-interface-type-have-description.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/11-interface-type-have-description.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -738,7 +830,13 @@ func GenerateUserInterfaceSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -757,7 +855,10 @@ func WriteUserInterfaceSchemaToFile() error {
 	doc := GenerateUserInterfaceSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/12-interface-type-name.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/12-interface-type-name.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -774,7 +875,13 @@ func GenerateMutationFieldArgsSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -793,7 +900,10 @@ func WriteMutationFieldArgsSchemaToFile() error {
 	doc := GenerateMutationFieldArgsSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/13-mutation-field-arguments-are-camel-cased.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/13-mutation-field-arguments-are-camel-cased.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -810,7 +920,13 @@ func GenerateMutationFieldArgsDescSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -829,7 +945,10 @@ func WriteMutationFieldArgsDescSchemaToFile() error {
 	doc := GenerateMutationFieldArgsDescSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/14-mutation-field-arguments-have-descriptions.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/14-mutation-field-arguments-have-descriptions.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -846,7 +965,13 @@ func GenerateMutationInputArgSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -865,7 +990,10 @@ func WriteMutationInputArgSchemaToFile() error {
 	doc := GenerateMutationInputArgSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/15-mutation-input-arg.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/15-mutation-input-arg.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -882,7 +1010,13 @@ func GenerateMutationTypeNameSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -901,7 +1035,10 @@ func WriteMutationTypeNameSchemaToFile() error {
 	doc := GenerateMutationTypeNameSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/16-mutation-type-name.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/16-mutation-type-name.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -922,7 +1059,13 @@ func GenerateObjectFieldsCamelCasedSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -941,7 +1084,10 @@ func WriteObjectFieldsCamelCasedSchemaToFile() error {
 	doc := GenerateObjectFieldsCamelCasedSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/17-object-fields-are-camel-cased.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/17-object-fields-are-camel-cased.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -962,7 +1108,13 @@ func GenerateObjectFieldsDescSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -981,7 +1133,10 @@ func WriteObjectFieldsDescSchemaToFile() error {
 	doc := GenerateObjectFieldsDescSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/18-object-fields-have-descriptions.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/18-object-fields-have-descriptions.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1001,7 +1156,13 @@ func GenerateObjectTypeDescSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -1020,7 +1181,10 @@ func WriteObjectTypeDescSchemaToFile() error {
 	doc := GenerateObjectTypeDescSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/19-object-type-have-description.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/19-object-type-have-description.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1037,7 +1201,13 @@ func GenerateQueryTypeNameSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -1056,7 +1226,10 @@ func WriteQueryTypeNameSchemaToFile() error {
 	doc := GenerateQueryTypeNameSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/21-query-type-name.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/21-query-type-name.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1074,12 +1247,28 @@ func GenerateRelayConnectionSchema() *ast.Document {
 	postIdx := data.AddObject(doc, "Post", "A post.")
 	data.AddFieldToObject(doc, postIdx, "id", "ID!", "The post id.")
 
-	postConnectionIdx := data.AddObject(doc, "PostConnection", "Post connection which is missing relay keys.")
-	data.AddListFieldToObject(doc, postConnectionIdx, "items", "Post", "This should be 'edges' and 'pageInfo' per relay.")
+	postConnectionIdx := data.AddObject(
+		doc,
+		"PostConnection",
+		"Post connection which is missing relay keys.",
+	)
+	data.AddListFieldToObject(
+		doc,
+		postConnectionIdx,
+		"items",
+		"Post",
+		"This should be 'edges' and 'pageInfo' per relay.",
+	)
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -1098,7 +1287,10 @@ func WriteRelayConnectionSchemaToFile() error {
 	doc := GenerateRelayConnectionSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/22-relay-connection-types-spec.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/22-relay-connection-types-spec.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1121,7 +1313,13 @@ func GenerateRelayEdgeSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -1140,7 +1338,10 @@ func WriteRelayEdgeSchemaToFile() error {
 	doc := GenerateRelayEdgeSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/23-relay-edge-types-spec.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/23-relay-edge-types-spec.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -1162,7 +1363,13 @@ func GenerateFieldsSortedSchema() *ast.Document {
 
 	pageInfoIdx := data.AddObject(doc, "PageInfo", "Relay-compliant PageInfo object.")
 	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasNextPage", "Boolean", "Has next page.")
-	data.AddNonNullFieldToObject(doc, pageInfoIdx, "hasPreviousPage", "Boolean", "Has previous page.")
+	data.AddNonNullFieldToObject(
+		doc,
+		pageInfoIdx,
+		"hasPreviousPage",
+		"Boolean",
+		"Has previous page.",
+	)
 	data.AddFieldToObject(doc, pageInfoIdx, "startCursor", "String", "Start cursor.")
 	data.AddFieldToObject(doc, pageInfoIdx, "endCursor", "String", "End cursor.")
 
@@ -1181,7 +1388,10 @@ func WriteFieldsSortedSchemaToFile() error {
 	doc := GenerateFieldsSortedSchema()
 	gql := data.GenerateGraphQLFromDocument(doc)
 
-	outputPath := filepath.Join(projectRoot, "test/testdata/graphql/invalid/24-type-fields-sorted-alphabetically.graphql")
+	outputPath := filepath.Join(
+		projectRoot,
+		"test/testdata/graphql/invalid/24-type-fields-sorted-alphabetically.graphql",
+	)
 	if err := os.MkdirAll(filepath.Dir(outputPath), dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}

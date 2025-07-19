@@ -23,7 +23,12 @@ func NewCLI(version string) (CLI, error) {
 	cli := CLI{
 		version: version,
 	}
-	flag.StringVar(&cli.targetPathFlag, "targetPath", "", "The directory with GraphQL files that should be checked")
+	flag.StringVar(
+		&cli.targetPathFlag,
+		"targetPath",
+		"",
+		"The directory with GraphQL files that should be checked",
+	)
 	flag.BoolVar(&cli.versionFlag, "version", false, "Show version")
 	flag.BoolVar(&cli.verboseFlag, "verbose", false, "Enable verbose output")
 	flag.Parse()

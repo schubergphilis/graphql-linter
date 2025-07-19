@@ -1,3 +1,8 @@
+input CreatePostInput {
+  """The title for the post."""
+  title: String
+}
+
 """Relay-compliant PageInfo object."""
 type PageInfo {
   """Has next page."""

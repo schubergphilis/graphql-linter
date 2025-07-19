@@ -1,3 +1,10 @@
+"""Input for updating a profile."""
+input UpdateProfileInput {
+  """The age of the profile owner."""
+  age: Int
+  address: String
+}
+
 """Relay-compliant PageInfo object."""
 type PageInfo {
   """Has next page."""
