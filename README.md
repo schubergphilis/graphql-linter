@@ -39,6 +39,12 @@ graphql-linter --version
 
 ## Usage
 
+### Testdata generation
+
+```zsh
+go run cmd/graphql-testdata-generator/main.go
+```
+
 ### Help
 
 ```zsh
