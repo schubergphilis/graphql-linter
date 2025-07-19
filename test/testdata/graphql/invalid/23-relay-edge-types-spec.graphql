@@ -8,9 +8,7 @@ type Post {
 type PostEdge {
   """Node ref."""
   node: Post
-  # missing 'cursor' field triggers relay-edge-types-spec
 }
-
 
 """Relay-compliant PageInfo object."""
 type PageInfo {
@@ -24,9 +22,9 @@ type PageInfo {
   endCursor: String
 }
 
-
 """Query root."""
 type Query {
   """Returns a post edge."""
   postEdge: PostEdge
 }
+

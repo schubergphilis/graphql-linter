@@ -2,9 +2,8 @@
 type Employee {
   """The employee name."""
   name: String
-  department: String   # triggers object-fields-have-descriptions
+  department: String
 }
-
 
 """Relay-compliant PageInfo object."""
 type PageInfo {
@@ -18,9 +17,9 @@ type PageInfo {
   endCursor: String
 }
 
-
 """Query root."""
 type Query {
   """Returns an employee."""
   employee: Employee
 }
+

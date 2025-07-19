@@ -1,16 +1,3 @@
-"""An interface for users."""
-interface User {   # triggers interface-type-name (if rule expects e.g. 'IUser')
-  """The user id."""
-  id: ID!
-}
-
-"""A user implementation."""
-type UserImpl implements User {
-  """The user id."""
-  id: ID!
-}
-
-
 """Relay-compliant PageInfo object."""
 type PageInfo {
   """Has next page."""
@@ -23,9 +10,9 @@ type PageInfo {
   endCursor: String
 }
 
-
 """Query root."""
 type Query {
-  """Returns a user."""
-  user: User
+  """Returns true."""
+  dummy: Boolean
 }
+

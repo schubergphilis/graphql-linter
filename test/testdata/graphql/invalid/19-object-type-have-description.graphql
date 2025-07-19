@@ -1,8 +1,7 @@
-type Company {    # triggers object-type-have-description
+type Company {
   """The company ID."""
   id: ID!
 }
-
 
 """Relay-compliant PageInfo object."""
 type PageInfo {
@@ -16,9 +15,9 @@ type PageInfo {
   endCursor: String
 }
 
-
 """Query root."""
 type Query {
   """Returns a company."""
   company: Company
 }
+

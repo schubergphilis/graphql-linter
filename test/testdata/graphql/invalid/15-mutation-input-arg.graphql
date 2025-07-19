@@ -1,9 +1,3 @@
-"""Mutation root."""
-type Mutation {
-  createUser(name: String, age: Int): Boolean  # triggers mutation-input-arg
-}
-
-
 """Relay-compliant PageInfo object."""
 type PageInfo {
   """Has next page."""
@@ -16,9 +10,9 @@ type PageInfo {
   endCursor: String
 }
 
-
 """Query root."""
 type Query {
   """Returns true."""
   dummy: Boolean
 }
+

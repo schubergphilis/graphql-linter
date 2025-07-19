@@ -5,9 +5,8 @@ type Person {
   """The name."""
   name: String
   """The age."""
-  age: Int  # triggers type-fields-sorted-alphabetically (age should precede id/name)
+  age: Int
 }
-
 
 """Relay-compliant PageInfo object."""
 type PageInfo {
@@ -21,9 +20,9 @@ type PageInfo {
   endCursor: String
 }
 
-
 """Query root."""
 type Query {
   """Returns a person."""
   person: Person
 }
+

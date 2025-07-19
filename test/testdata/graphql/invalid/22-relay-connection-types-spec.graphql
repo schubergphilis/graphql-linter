@@ -7,9 +7,8 @@ type Post {
 """Post connection which is missing relay keys."""
 type PostConnection {
   """This should be 'edges' and 'pageInfo' per relay."""
-  items: [Post]   # triggers relay-connection-types-spec
+  items: [Post]
 }
-
 
 """Relay-compliant PageInfo object."""
 type PageInfo {
@@ -23,9 +22,9 @@ type PageInfo {
   endCursor: String
 }
 
-
 """Query root."""
 type Query {
   """Returns a post connection."""
   posts: PostConnection
 }
+

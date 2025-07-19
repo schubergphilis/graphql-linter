@@ -1,10 +1,9 @@
 """A blog."""
 type Blog {
-  Post_Title: String  # triggers object-fields-are-camel-cased
+  Post_Title: String
   """The author of the blog."""
   author: String
 }
-
 
 """Relay-compliant PageInfo object."""
 type PageInfo {
@@ -18,9 +17,9 @@ type PageInfo {
   endCursor: String
 }
 
-
 """Query root."""
 type Query {
   """Returns a blog."""
   blog: Blog
 }
+
