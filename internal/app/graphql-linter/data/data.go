@@ -1431,7 +1431,7 @@ func findMissingTypeDescriptions(doc *ast.Document, schemaString string) []Descr
 			name := doc.Input.ByteSliceString(obj.Name)
 			lineNum := findLineNumberByText(schemaString, "type "+name)
 			lineContent := getLineContent(schemaString, lineNum)
-			message := "object-types-have-descriptions: Object type '" + name + "' is missing a description"
+			message := "types-have-descriptions: Object type '" + name + "' is missing a description"
 			errors = append(errors, DescriptionError{
 				LineNum:     lineNum,
 				Message:     message,
@@ -1476,6 +1476,8 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findUnsortedTypeFields,
 		findUnsortedInterfaceFields,
 		findRelayPageInfoSpec,
+		findRelayConnectionTypesSpec,
+		findRelayConnectionArgumentsSpec,
 		findInputObjectValuesCamelCased,
 		findFieldsAreCamelCased,
 		findInputObjectFieldsSortedAlphabetically,
@@ -1602,6 +1604,88 @@ func findUnsortedInterfaceFields(doc *ast.Document, schemaString string) []Descr
 		)
 		if err != nil {
 			errors = append(errors, err...)
+		}
+	}
+
+	return errors
+}
+
+func findRelayConnectionTypesSpec(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(obj.Name)
+		if !strings.HasSuffix(typeName, "Connection") {
+			continue
+		}
+
+		hasPageInfo := false
+		for _, fieldRef := range obj.FieldsDefinition.Refs {
+			fieldDef := doc.FieldDefinitions[fieldRef]
+			fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+			if fieldName == "pageInfo" {
+				hasPageInfo = true
+
+				break
+			}
+		}
+
+		if !hasPageInfo {
+			lineNum := findLineNumberByText(schemaString, "type "+typeName)
+			lineContent := getLineContent(schemaString, lineNum)
+			message := fmt.Sprintf(
+				"relay-connection-types-spec: Connection `%s` is missing the following field: pageInfo.",
+				typeName,
+			)
+			errors = append(errors, DescriptionError{
+				LineNum:     lineNum,
+				Message:     message,
+				LineContent: lineContent,
+			})
+		}
+	}
+
+	return errors
+}
+
+func findRelayConnectionArgumentsSpec(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, fieldDef := range doc.FieldDefinitions {
+		fieldType := doc.Types[fieldDef.Type]
+		baseType := getBaseTypeName(doc, fieldType)
+
+		if !strings.HasSuffix(baseType, "Connection") {
+			continue
+		}
+
+		hasForwardArgs := false
+		hasBackwardArgs := false
+
+		for _, argRef := range fieldDef.ArgumentsDefinition.Refs {
+			argDef := doc.InputValueDefinitions[argRef]
+			argName := doc.Input.ByteSliceString(argDef.Name)
+
+			switch argName {
+			case "first", "after":
+				hasForwardArgs = true
+			case "last", "before":
+				hasBackwardArgs = true
+			}
+		}
+
+		if !hasForwardArgs && !hasBackwardArgs {
+			fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+			lineNum := findFieldDefinitionLine(schemaString, fieldName, "")
+			lineContent := getLineContent(schemaString, lineNum)
+			message := "relay-connection-arguments-spec: A field that returns a Connection Type must include forward" +
+				"pagination arguments (`first` and `after`), backward pagination arguments (`last` and `before`), or both as" +
+				"per the Relay spec."
+			errors = append(errors, DescriptionError{
+				LineNum:     lineNum,
+				Message:     message,
+				LineContent: lineContent,
+			})
 		}
 	}
 
