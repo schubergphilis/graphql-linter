@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/schubergphilis/graphql-linter/internal/pkg/constants"
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 	"github.com/stretchr/testify/require"
 )
@@ -108,7 +109,7 @@ func TestInvalidSchemas(t *testing.T) {
 	projectRoot, err := projectroot.FindProjectRoot()
 	require.NoError(t, err, "failed to determine project root")
 
-	baseDir := filepath.Join(projectRoot, "test/testdata/graphql/base/invalid")
+	baseDir := filepath.Join(projectRoot, constants.TestdataGraphqlDir, "base/invalid")
 	files, err := os.ReadDir(baseDir)
 	require.NoError(t, err, "failed to read directory")
 
