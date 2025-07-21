@@ -1,6 +1,7 @@
 package data
 
 import (
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -570,5 +571,171 @@ func TestValidateDataTypes(t *testing.T) {
 				t.Errorf("got %d errorLines, want %d", len(errorLines), test.wantErrLines)
 			}
 		})
+	}
+}
+
+func TestValidateDirectiveNames(t *testing.T) {
+	t.Parallel()
+
+	doc, _ := astparser.ParseGraphqlDocumentString("type Query { id: ID } directive @key on OBJECT")
+
+	tests := []struct {
+		name string
+		doc  *ast.Document
+		want bool
+	}{
+		{"valid directives", &doc, true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := validateDirectiveNames(test.doc)
+			if got != test.want {
+				t.Errorf("got %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestValidateDirectives(t *testing.T) {
+	t.Parallel()
+
+	doc, _ := astparser.ParseGraphqlDocumentString("type Query { id: ID } directive @key on OBJECT")
+	valid := map[string]bool{"key": true}
+
+	tests := []struct {
+		name       string
+		directives []int
+		want       bool
+	}{
+		{"valid", []int{}, true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := validateDirectives(&doc, test.directives, valid, "Query", "type")
+			if got != test.want {
+				t.Errorf("got %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestReportDirectiveError(t *testing.T) {
+	t.Parallel()
+	// Just ensure it doesn't panic
+	reportDirectiveError("invalid", "Query", "type")
+}
+
+func TestSuggestDirective(t *testing.T) {
+	t.Parallel()
+	suggestDirective("keey", "key")
+}
+
+func TestPrintAndValidateDescriptionErrors(t *testing.T) {
+	t.Parallel()
+
+	descriptionErrors := []DescriptionError{{LineNum: 1, Message: "error", LineContent: "type Query { id: ID }"}}
+
+	got := printAndValidateDescriptionErrors(descriptionErrors, "test.graphql")
+	if !got {
+		t.Errorf("expected true for errors present")
+	}
+
+	got = printAndValidateDescriptionErrors([]DescriptionError{}, "test.graphql")
+	if got {
+		t.Errorf("expected false for no errors")
+	}
+}
+
+func TestReadSchemaFile(t *testing.T) {
+	t.Parallel()
+
+	tempFile, err := os.CreateTemp(t.TempDir(), "schema*.graphql")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(tempFile.Name())
+
+	content := "type Query { id: ID }"
+	if _, err := tempFile.WriteString(content); err != nil {
+		t.Fatalf("failed to write to temp file: %v", err)
+	}
+
+	tempFile.Close()
+
+	got, ok := readSchemaFile(tempFile.Name())
+	if !ok || got != content {
+		t.Errorf("got %v, want %v", got, content)
+	}
+}
+
+func TestFilterSchemaComments(t *testing.T) {
+	t.Parallel()
+
+	schema := "// comment\ntype Query { id: ID }\n// another"
+	want := "type Query { id: ID }"
+
+	got := filterSchemaComments(schema)
+	if !strings.Contains(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestValidateFederationSchema(t *testing.T) {
+	t.Parallel()
+
+	got := validateFederationSchema("type Query { id: ID }")
+	if !got {
+		t.Errorf("expected federation schema to be valid")
+	}
+}
+
+func TestFindAndLogGraphQLSchemaFiles(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	file := dir + "/test.graphql"
+	if err := os.WriteFile(file, []byte("type Query { id: ID }"), 0o600); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	s := Store{TargetPath: dir, Verbose: false}
+
+	files, err := s.FindAndLogGraphQLSchemaFiles()
+	if err != nil || len(files) != 1 {
+		t.Errorf("expected 1 graphql file, got %v, err %v", files, err)
+	}
+}
+
+func TestLintSchemaFiles(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	file := dir + "/test.graphql"
+
+	schema := `"""Query root"""
+type Query { """ID field""" id: ID }`
+	if err := os.WriteFile(file, []byte(schema), 0o600); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	s := Store{Verbose: false}
+
+	total, errorFiles := s.LintSchemaFiles([]string{file})
+	if total != 0 || errorFiles != 0 {
+		t.Errorf("expected 0 errors, got %d, errorFiles %d", total, errorFiles)
+	}
+}
+
+func TestLoadConfig(t *testing.T) {
+	t.Parallel()
+
+	s := Store{Verbose: false}
+
+	config, err := s.LoadConfig()
+	if err != nil || config == nil {
+		t.Errorf("expected config, got err %v", err)
 	}
 }
