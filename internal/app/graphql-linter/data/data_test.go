@@ -685,7 +685,7 @@ func TestLintDescriptions(t *testing.T) {
 			t.Parallel()
 
 			doc, _ := astparser.ParseGraphqlDocumentString(test.schemaContent)
-			descriptionErrors, _, hasDeprecationReasonError := lintDescriptions(
+			descriptionErrors, hasDeprecationReasonError := lintDescriptions(
 				&doc,
 				test.schemaContent,
 			)
@@ -1086,7 +1086,7 @@ type Query { """ID field""" id: ID }`
 
 	s := Store{Verbose: false}
 
-	total, errorFiles := s.LintSchemaFiles([]string{file})
+	total, errorFiles, _ := s.LintSchemaFiles([]string{file})
 	if total != 1 || errorFiles != 1 {
 		t.Errorf("expected 1 error, got %d, errorFiles %d", total, errorFiles)
 	}
@@ -1210,7 +1210,7 @@ func TestLintSchemaFiles_Errors(t *testing.T) {
 
 	store := Store{Verbose: false}
 
-	total, errorFiles := store.LintSchemaFiles([]string{"/does/not/exist.graphql"})
+	total, errorFiles, _ := store.LintSchemaFiles([]string{"/does/not/exist.graphql"})
 	if total == 0 || errorFiles == 0 {
 		t.Errorf("expected errors for missing file")
 	}

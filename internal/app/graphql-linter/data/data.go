@@ -60,6 +60,7 @@ type Settings struct {
 }
 
 type DescriptionError struct {
+	FilePath    string
 	LineNum     int
 	Message     string
 	LineContent string
@@ -104,24 +105,61 @@ func (s Store) FindAndLogGraphQLSchemaFiles() ([]string, error) {
 	return schemaFiles, nil
 }
 
-func (s Store) LintSchemaFiles(schemaFiles []string) (int, int) {
+func (s Store) LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionError) {
 	totalErrors := 0
 	errorFilesCount := 0
+
+	var allErrors []DescriptionError
 
 	for _, schemaFile := range schemaFiles {
 		if s.Verbose {
 			log.Infof("=== Linting %s ===", schemaFile)
 		}
 
-		errCount := s.lintSchemaFile(schemaFile)
-		totalErrors += errCount
+		schemaString, ok := readSchemaFile(schemaFile)
+		if !ok {
+			allErrors = append(allErrors, DescriptionError{
+				FilePath:    schemaFile,
+				LineNum:     0,
+				Message:     "ERROR: failed to read schema file",
+				LineContent: "",
+			})
+			totalErrors++
+			errorFilesCount++
 
-		if errCount > 0 {
+			continue
+		}
+
+		filteredSchema := filterSchemaComments(schemaString)
+		doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
+		LogSchemaParseErrors(schemaString, &parseReport)
+
+		descriptionErrors, hasDeprecationReasonError := lintDescriptions(&doc, schemaString)
+		if len(descriptionErrors) > 0 || hasDeprecationReasonError {
+			for i := range descriptionErrors {
+				descriptionErrors[i].FilePath = schemaFile
+			}
+
+			allErrors = append(allErrors, descriptionErrors...)
+			totalErrors += len(descriptionErrors)
+			errorFilesCount++
+
+			continue
+		}
+
+		if !validateDirectiveNames(&doc) || !validateFederationSchema(filteredSchema) {
+			totalErrors++
+			errorFilesCount++
+		}
+
+		dataTypesValid, _ := s.validateDataTypes(&doc, schemaString, schemaFile)
+		if !dataTypesValid {
+			totalErrors++
 			errorFilesCount++
 		}
 	}
 
-	return totalErrors, errorFilesCount
+	return totalErrors, errorFilesCount, allErrors
 }
 
 func (s Store) LoadConfig() (*LinterConfig, error) {
@@ -241,7 +279,51 @@ func reportContextLines(
 	}
 }
 
-func (s Store) PrintReport(schemaFiles []string, totalErrors int, passedFiles int) {
+func printDetailedErrors(errors []DescriptionError) {
+	if len(errors) == 0 {
+		return
+	}
+
+	for _, err := range errors {
+		log.Errorf("%s:%d: %s\n  %s", err.FilePath, err.LineNum, err.Message, err.LineContent)
+	}
+}
+
+func printErrorTypeSummary(errors []DescriptionError) {
+	errorTypeCounts := make(map[string]int)
+
+	for _, err := range errors {
+		msg := err.Message
+
+		typeKey := msg
+		if idx := strings.Index(msg, ":"); idx != -1 {
+			typeKey = msg[:idx]
+		} else if idx := strings.Index(msg, " "); idx != -1 {
+			typeKey = msg[:idx]
+		}
+
+		errorTypeCounts[typeKey]++
+	}
+
+	if len(errorTypeCounts) == 0 {
+		return
+	}
+
+	log.Error("Error type summary:")
+
+	keys := make([]string, 0, len(errorTypeCounts))
+	for k := range errorTypeCounts {
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		log.Errorf("  %s: %d", k, errorTypeCounts[k])
+	}
+}
+
+func (s Store) PrintReport(schemaFiles []string, totalErrors int, passedFiles int, allErrors []DescriptionError) {
 	percentPassed := 0.0
 	if len(schemaFiles) > 0 {
 		percentPassed = float64(passedFiles) / float64(len(schemaFiles)) * percentMultiplier
@@ -252,6 +334,9 @@ func (s Store) PrintReport(schemaFiles []string, totalErrors int, passedFiles in
 		percentageFilesWithAtLeastOneError = float64(len(schemaFiles)-passedFiles) /
 			float64(len(schemaFiles)) * percentMultiplier
 	}
+
+	printDetailedErrors(allErrors)
+	printErrorTypeSummary(allErrors)
 
 	log.WithFields(log.Fields{
 		"passedFiles":   passedFiles,
@@ -699,80 +784,6 @@ func suggestDirective(directiveName, validName string) {
 		levenshteinDistance(directiveName, validName) <= levenshteinThreshold {
 		log.Errorf("  Did you mean '@%s'?", validName)
 	}
-}
-
-func printAndValidateDescriptionErrors(
-	descriptionErrors []DescriptionError,
-	schemaPath string,
-) bool {
-	if len(descriptionErrors) > 0 {
-		printDescriptionErrors(descriptionErrors, schemaPath)
-
-		return true
-	}
-
-	return false
-}
-
-func (s Store) lintSchemaFile(schemaPath string) int {
-	schemaString, ok := readSchemaFile(schemaPath)
-	if !ok {
-		return 1
-	}
-
-	filteredSchema := filterSchemaComments(schemaString)
-
-	log.Debugf("Parsing federation schema from: %s\n", schemaPath)
-	log.Debugf("Schema content length: %d bytes\n", len(schemaString))
-
-	doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
-	LogSchemaParseErrors(schemaString, &parseReport)
-	log.Debug("Schema parsed successfully!")
-
-	descriptionErrors, errorLines, hasDeprecationReasonError := lintDescriptions(
-		&doc,
-		schemaString,
-	)
-
-	var hasValidationErrors bool
-	if !validateDirectiveNames(&doc) {
-		hasValidationErrors = true
-	}
-
-	dataTypesValid, _ := s.validateDataTypes(&doc, schemaString, schemaPath)
-	if !dataTypesValid {
-		hasValidationErrors = true
-	}
-
-	if !validateFederationSchema(filteredSchema) {
-		hasValidationErrors = true
-	}
-
-	hasValidationErrors = printAndValidateDescriptionErrors(descriptionErrors, schemaPath) ||
-		hasValidationErrors
-
-	if hasDeprecationReasonError {
-		hasValidationErrors = true
-	}
-
-	if hasValidationErrors {
-		if len(errorLines) > 0 {
-			log.WithFields(log.Fields{
-				"numberOfErrors":                len(descriptionErrors),
-				"schemaPathIncludingLineNumber": schemaPath + fmt.Sprintf(":%d", errorLines[0]),
-			}).Error("schema linting FAILED with errors")
-		} else {
-			log.WithFields(log.Fields{
-				"schemaPath": schemaPath,
-			}).Error("schema linting FAILED with no specific errors reported")
-		}
-
-		return len(descriptionErrors)
-	}
-
-	log.Debugf("Schema linting PASSED: %s", schemaPath)
-
-	return 0
 }
 
 func readSchemaFile(schemaPath string) (string, bool) {
@@ -1372,9 +1383,8 @@ func findUncapitalizedDescriptions(doc *ast.Document, schemaString string) []Des
 	return errors
 }
 
-func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int, bool) {
+func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
-	errorLines := make([]int, 0, defaultErrorCapacity)
 	hasDeprecationReasonError := false
 
 	helpers := []func(*ast.Document, string) []DescriptionError{
@@ -1395,13 +1405,8 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 
 	for _, helper := range helpers {
 		errList := helper(doc, schemaString)
-
 		for _, err := range errList {
 			descriptionErrors = append(descriptionErrors, err)
-
-			if err.LineNum > 0 {
-				errorLines = append(errorLines, err.LineNum)
-			}
 
 			if strings.Contains(err.Message, "deprecations-have-a-reason") {
 				hasDeprecationReasonError = true
@@ -1409,13 +1414,7 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		}
 	}
 
-	return sortDescriptionErrors(descriptionErrors), errorLines, hasDeprecationReasonError
-}
-
-func printDescriptionErrors(errors []DescriptionError, schemaPath string) {
-	for _, err := range errors {
-		log.Errorf("%s:%d: %s\n  %s", schemaPath, err.LineNum, err.Message, err.LineContent)
-	}
+	return sortDescriptionErrors(descriptionErrors), hasDeprecationReasonError
 }
 
 func sortDescriptionErrors(errors []DescriptionError) []DescriptionError {
@@ -1634,7 +1633,7 @@ func findMissingArgumentDescriptions(doc *ast.Document, schemaString string) []D
 					lineNum := findLineNumberByText(schemaString, argName+":")
 					lineContent := getLineContent(schemaString, lineNum)
 					message := fmt.Sprintf(
-						"ERROR: Argument '%s' of field '%s' is missing a description",
+						"arguments-have-descriptions: Argument '%s' of field '%s' is missing a description",
 						argName,
 						fieldName,
 					)
