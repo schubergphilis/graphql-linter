@@ -121,7 +121,7 @@ func (s Store) LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionErr
 			allErrors = append(allErrors, DescriptionError{
 				FilePath:    schemaFile,
 				LineNum:     0,
-				Message:     "ERROR: failed to read schema file",
+				Message:     "failed-to-read-schema-file: failed to read schema file",
 				LineContent: "",
 			})
 			totalErrors++
@@ -756,7 +756,7 @@ func validateDirectives(
 
 func reportDirectiveError(directiveName, parentName, parentKind string) {
 	log.Errorf(
-		"ERROR: Invalid federation directive '@%s' on %s '%s'",
+		"invalid-federation-directive: Invalid federation directive '@%s' on %s '%s'",
 		directiveName,
 		parentKind,
 		parentName,
@@ -953,7 +953,7 @@ func validateFieldTypes(
 		indexSlice(len(doc.FieldDefinitions)),
 		func(i int) string { return doc.Input.ByteSliceString(doc.FieldDefinitions[i].Name) },
 		func(i int) ast.Type { return doc.Types[doc.FieldDefinitions[i].Type] },
-		"ERROR: Field",
+		"invalid-field-types: Field",
 	)
 }
 
@@ -970,7 +970,7 @@ func validateInputFieldTypes(
 		indexSlice(len(doc.InputValueDefinitions)),
 		func(i int) string { return doc.Input.ByteSliceString(doc.InputValueDefinitions[i].Name) },
 		func(i int) ast.Type { return doc.Types[doc.InputValueDefinitions[i].Type] },
-		"ERROR: Input field",
+		"invalid-input-field-types: Input field",
 	)
 }
 
@@ -981,7 +981,7 @@ func checkInvalidEnumValue(enumName, valueName, schemaContent string) (string, i
 
 	lineNum := findLineNumberByText(schemaContent, valueName)
 	log.Infof(
-		"ERROR: Enum '%s' has invalid value '%s' (line %d)\n",
+		"invalid-enum-value: Enum '%s' has invalid value '%s' (line %d)\n",
 		enumName,
 		valueName,
 		lineNum,
@@ -1009,7 +1009,7 @@ func (s Store) checkSuspiciousEnumValue(
 	}
 
 	log.Errorf(
-		"ERROR: Enum '%s' has suspicious value '%s' (line %d)\n",
+		"suspicious-enum-value: Enum '%s' has suspicious value '%s' (line %d)\n",
 		enumName,
 		valueName,
 		lineNum,
@@ -1145,7 +1145,7 @@ func findUnusedTypes(doc *ast.Document, schemaString string) []DescriptionError 
 		if !isUsed {
 			lineNum := findLineNumberByText(schemaString, "type "+name)
 			lineContent := getLineContent(schemaString, lineNum)
-			message := fmt.Sprintf("ERROR: Type '%s' is defined but not used", name)
+			message := fmt.Sprintf("defined-types-are-used: Type '%s' is defined but not used", name)
 			unusedTypeErrors = append(unusedTypeErrors, DescriptionError{
 				LineNum:     lineNum,
 				Message:     message,
@@ -1169,7 +1169,7 @@ func checkTypeDescription(
 	name := doc.Input.ByteSliceString(obj.Name)
 	lineNum := findLineNumberByText(schemaString, "type "+name)
 	lineContent := getLineContent(schemaString, lineNum)
-	message := fmt.Sprintf("ERROR: Object type '%s' is missing a description", name)
+	message := fmt.Sprintf("input-object-values-have-descriptions: Object type '%s' is missing a description", name)
 
 	return &DescriptionError{
 		LineNum:     lineNum,
@@ -1201,7 +1201,7 @@ func checkFieldDescription(
 
 	lineContent := getLineContent(schemaString, lineNum)
 	message := fmt.Sprintf(
-		"ERROR: Field '%s' in type '%s' is missing a description",
+		"fields-have-descriptions: Field '%s' in type '%s' is missing a description",
 		fieldName,
 		typeName,
 	)
@@ -1225,7 +1225,7 @@ func checkEnumDescription(
 	name := doc.Input.ByteSliceString(enum.Name)
 	lineNum := findLineNumberByText(schemaString, "enum "+name)
 	lineContent := getLineContent(schemaString, lineNum)
-	message := fmt.Sprintf("ERROR: Enum '%s' is missing a description", name)
+	message := fmt.Sprintf("enums-have-descriptions: Enum '%s' is missing a description", name)
 
 	return &DescriptionError{
 		LineNum:     lineNum,

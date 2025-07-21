@@ -64,3 +64,14 @@ graphql-schema-linter test/testdata/graphql/invalid/*
 ```zsh
 graphql-schema-linter test/testdata/graphql/valid/*
 ```
+
+- 05-enum-values-all-caps.graphql
+- 07-enum-values-sorted-alphabetically.graphql
+- 08-fields-are-camel-cased.graphql
+- 10-input-object-fields-sorted-alphabetically.graphql
+- 12-input-object-values-have-descriptions.graphql
+- 14-relay-connection-types-spec.graphql
+- 15-relay-connection-arguments-spec.graphql
+- 17-types-are-capitalized.graphql
+- 18-types-have-descriptions.graphql
+- 19-invalid-graphql-schema.graphql
