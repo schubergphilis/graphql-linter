@@ -1617,6 +1617,40 @@ func findFieldsAreCamelCased(doc *ast.Document, schemaString string) []Descripti
 	return errors
 }
 
+func checkSortedOrder(names []string,
+	minLength int,
+	schemaString,
+	searchPrefix,
+	itemName,
+	rulePrefix string,
+) *DescriptionError {
+	if len(names) < minLength {
+		return nil
+	}
+
+	sorted := make([]string, len(names))
+	copy(sorted, names)
+	sort.Strings(sorted)
+
+	if !equalStringSlices(names, sorted) {
+		lineNum := findLineNumberByText(schemaString, searchPrefix+itemName)
+		lineContent := getLineContent(schemaString, lineNum)
+		message := rulePrefix + ": The " + itemName +
+			" should be sorted in alphabetical order. Expected sorting: " + strings.Join(
+			sorted,
+			", ",
+		)
+
+		return &DescriptionError{
+			LineNum:     lineNum,
+			Message:     message,
+			LineContent: lineContent,
+		}
+	}
+
+	return nil
+}
+
 func findInputObjectFieldsSortedAlphabetically(
 	doc *ast.Document,
 	schemaString string,
@@ -1633,27 +1667,15 @@ func findInputObjectFieldsSortedAlphabetically(
 			fieldNames = append(fieldNames, doc.Input.ByteSliceString(fieldDef.Name))
 		}
 
-		if len(fieldNames) < minFieldsForSortCheck {
-			continue
-		}
-
-		sorted := make([]string, len(fieldNames))
-		copy(sorted, fieldNames)
-		sort.Strings(sorted)
-
-		if !equalStringSlices(fieldNames, sorted) {
-			lineNum := findLineNumberByText(schemaString, "input "+inputName)
-			lineContent := getLineContent(schemaString, lineNum)
-			message := "input-object-fields-sorted-alphabetically: The fields of input type '" + inputName +
-				"' should be sorted in alphabetical order. Expected sorting: " + strings.Join(
-				sorted,
-				", ",
-			)
-			errors = append(errors, DescriptionError{
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			})
+		if err := checkSortedOrder(
+			fieldNames,
+			minFieldsForSortCheck,
+			schemaString,
+			"input ",
+			"fields of input type '"+inputName+"'",
+			"input-object-fields-sorted-alphabetically",
+		); err != nil {
+			errors = append(errors, *err)
 		}
 	}
 
@@ -1732,27 +1754,15 @@ func findEnumValuesSortedAlphabetically(doc *ast.Document, schemaString string) 
 			valueNames = append(valueNames, doc.Input.ByteSliceString(valueDef.EnumValue))
 		}
 
-		if len(valueNames) < minEnumValuesForSortCheck {
-			continue
-		}
-
-		sorted := make([]string, len(valueNames))
-		copy(sorted, valueNames)
-		sort.Strings(sorted)
-
-		if !equalStringSlices(valueNames, sorted) {
-			lineNum := findLineNumberByText(schemaString, "enum "+enumName)
-			lineContent := getLineContent(schemaString, lineNum)
-			message := "enum-values-sorted-alphabetically: The enum '" + enumName +
-				"' should be sorted in alphabetical order. Expected sorting: " + strings.Join(
-				sorted,
-				", ",
-			)
-			errors = append(errors, DescriptionError{
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			})
+		if err := checkSortedOrder(
+			valueNames,
+			minEnumValuesForSortCheck,
+			schemaString,
+			"enum ",
+			enumName,
+			"enum-values-sorted-alphabetically",
+		); err != nil {
+			errors = append(errors, *err)
 		}
 	}
 
