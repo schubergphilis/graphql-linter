@@ -518,3 +518,57 @@ func TestLintDescriptions(t *testing.T) {
 func contains(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
+
+func TestValidateDataTypes(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		schemaContent string
+		wantValid     bool
+		wantErrLines  int
+	}{
+		{
+			name:          "valid types",
+			schemaContent: "type Query { id: ID name: String }",
+			wantValid:     true,
+			wantErrLines:  0,
+		},
+		{
+			name:          "undefined type",
+			schemaContent: "type Query { foo: Bar }",
+			wantValid:     false,
+			wantErrLines:  1,
+		},
+		{
+			name:          "valid enum",
+			schemaContent: "enum Status { ACTIVE INACTIVE } type Query { status: Status }",
+			wantValid:     true,
+			wantErrLines:  0,
+		},
+		{
+			name:          "input with undefined type",
+			schemaContent: "input FooInput { bar: Baz } type Query { foo(input: FooInput): String }",
+			wantValid:     false,
+			wantErrLines:  1,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			doc, _ := astparser.ParseGraphqlDocumentString(test.schemaContent)
+			s := Store{}
+
+			valid, errorLines := s.validateDataTypes(&doc, test.schemaContent, "test.graphql")
+			if valid != test.wantValid {
+				t.Errorf("got valid=%v, want %v", valid, test.wantValid)
+			}
+
+			if len(errorLines) != test.wantErrLines {
+				t.Errorf("got %d errorLines, want %d", len(errorLines), test.wantErrLines)
+			}
+		})
+	}
+}
