@@ -1307,6 +1307,68 @@ func findUncapitalizedDescriptions(doc *ast.Document, schemaString string) []Des
 	return errors
 }
 
+func findMissingEnumValueDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+			if !valueDef.Description.IsDefined {
+				valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+				lineNum := findLineNumberByText(schemaString, valueName)
+				lineContent := getLineContent(schemaString, lineNum)
+				message := "enum-values-have-descriptions: Enum value '" + enumName + "." + valueName + "' is missing a description."
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				})
+			}
+		}
+	}
+	return errors
+}
+
+func findMissingTypeDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+	for _, obj := range doc.ObjectTypeDefinitions {
+		if !obj.Description.IsDefined {
+			name := doc.Input.ByteSliceString(obj.Name)
+			lineNum := findLineNumberByText(schemaString, "type "+name)
+			lineContent := getLineContent(schemaString, lineNum)
+			message := "object-types-have-descriptions: Object type '" + name + "' is missing a description"
+			errors = append(errors, DescriptionError{
+				LineNum:     lineNum,
+				Message:     message,
+				LineContent: lineContent,
+			})
+		}
+	}
+	return errors
+}
+
+func findMissingFieldDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+	for _, obj := range doc.ObjectTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(obj.Name)
+		for _, fieldRef := range obj.FieldsDefinition.Refs {
+			fieldDef := doc.FieldDefinitions[fieldRef]
+			if !fieldDef.Description.IsDefined {
+				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+				lineNum := findFieldDefinitionLine(schemaString, fieldName, "")
+				lineContent := getLineContent(schemaString, lineNum)
+				message := "fields-have-descriptions: Field '" + typeName + "." + fieldName + "' is missing a description."
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				})
+			}
+		}
+	}
+	return errors
+}
+
 func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
 	hasDeprecationReasonError := false
@@ -1325,7 +1387,6 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findMissingTypeDescriptions,
 		findMissingFieldDescriptions,
 		findMissingArgumentDescriptions,
-		findMissingEnumDescriptions,
 		findMissingDeprecationReasons,
 		findEnumValuesSortedAlphabetically,
 	}
@@ -1531,21 +1592,37 @@ func findFieldsAreCamelCased(doc *ast.Document, schemaString string) []Descripti
 	return errors
 }
 
-func findMissingEnumValueDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
-	return nil
-}
-
-func findMissingTypeDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
-	return nil
-}
-
-func findMissingFieldDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
-	return nil
+func findInputObjectFieldsSortedAlphabetically(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+	for _, input := range doc.InputObjectTypeDefinitions {
+		inputName := doc.Input.ByteSliceString(input.Name)
+		var fieldNames []string
+		for _, fieldRef := range input.InputFieldsDefinition.Refs {
+			fieldDef := doc.InputValueDefinitions[fieldRef]
+			fieldNames = append(fieldNames, doc.Input.ByteSliceString(fieldDef.Name))
+		}
+		if len(fieldNames) < minFieldsForSortCheck {
+			continue
+		}
+		sorted := make([]string, len(fieldNames))
+		copy(sorted, fieldNames)
+		sort.Strings(sorted)
+		if !equalStringSlices(fieldNames, sorted) {
+			lineNum := findLineNumberByText(schemaString, "input "+inputName)
+			lineContent := getLineContent(schemaString, lineNum)
+			message := "input-object-fields-sorted-alphabetically: The fields of input type '" + inputName + "' should be sorted in alphabetical order. Expected sorting: " + strings.Join(sorted, ", ")
+			errors = append(errors, DescriptionError{
+				LineNum:     lineNum,
+				Message:     message,
+				LineContent: lineContent,
+			})
+		}
+	}
+	return errors
 }
 
 func findMissingArgumentDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
 	var errors []DescriptionError
-
 	for _, obj := range doc.ObjectTypeDefinitions {
 		for _, fieldRef := range obj.FieldsDefinition.Refs {
 			fieldDef := doc.FieldDefinitions[fieldRef]
@@ -1566,43 +1643,54 @@ func findMissingArgumentDescriptions(doc *ast.Document, schemaString string) []D
 			}
 		}
 	}
-
 	return errors
 }
 
-func findMissingEnumDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
-	return nil
-}
-
 func findMissingDeprecationReasons(doc *ast.Document, schemaString string) []DescriptionError {
-	return nil
+	var errors []DescriptionError
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+			for _, dirRef := range valueDef.Directives.Refs {
+				dir := doc.Directives[dirRef]
+				dirName := doc.Input.ByteSliceString(dir.Name)
+				if dirName == "deprecated" && len(dir.Arguments.Refs) == 0 {
+					lineNum := findLineNumberByText(schemaString, valueName)
+					lineContent := getLineContent(schemaString, lineNum)
+					message := "deprecations-have-a-reason: Deprecated enum value '" + enumName + "." + valueName + "' is missing a reason."
+					errors = append(errors, DescriptionError{
+						LineNum:     lineNum,
+						Message:     message,
+						LineContent: lineContent,
+					})
+				}
+			}
+		}
+	}
+	return errors
 }
 
-func findInputObjectFieldsSortedAlphabetically(doc *ast.Document, schemaString string) []DescriptionError {
+func findEnumValuesSortedAlphabetically(doc *ast.Document, schemaString string) []DescriptionError {
 	var errors []DescriptionError
-
-	for _, input := range doc.InputObjectTypeDefinitions {
-		inputName := doc.Input.ByteSliceString(input.Name)
-
-		var fieldNames []string
-
-		for _, fieldRef := range input.InputFieldsDefinition.Refs {
-			fieldDef := doc.InputValueDefinitions[fieldRef]
-			fieldNames = append(fieldNames, doc.Input.ByteSliceString(fieldDef.Name))
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+		var valueNames []string
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+			valueNames = append(valueNames, doc.Input.ByteSliceString(valueDef.EnumValue))
 		}
-
-		if len(fieldNames) < minFieldsForSortCheck {
+		if len(valueNames) < minEnumValuesForSortCheck {
 			continue
 		}
-
-		sorted := make([]string, len(fieldNames))
-		copy(sorted, fieldNames)
+		sorted := make([]string, len(valueNames))
+		copy(sorted, valueNames)
 		sort.Strings(sorted)
-
-		if !equalStringSlices(fieldNames, sorted) {
-			lineNum := findLineNumberByText(schemaString, "input "+inputName)
+		if !equalStringSlices(valueNames, sorted) {
+			lineNum := findLineNumberByText(schemaString, "enum "+enumName)
 			lineContent := getLineContent(schemaString, lineNum)
-			message := "input-object-fields-sorted-alphabetically: The fields of input type '" + inputName + "' should be sorted in alphabetical order. Expected sorting: " + strings.Join(sorted, ", ")
+			message := "enum-values-sorted-alphabetically: The enum '" + enumName + "' should be sorted in alphabetical order. Expected sorting: " + strings.Join(sorted, ", ")
 			errors = append(errors, DescriptionError{
 				LineNum:     lineNum,
 				Message:     message,
@@ -1610,7 +1698,6 @@ func findInputObjectFieldsSortedAlphabetically(doc *ast.Document, schemaString s
 			})
 		}
 	}
-
 	return errors
 }
 
@@ -1626,40 +1713,4 @@ func equalStringSlices(a, b []string) bool {
 	}
 
 	return true
-}
-
-func findEnumValuesSortedAlphabetically(doc *ast.Document, schemaString string) []DescriptionError {
-	var errors []DescriptionError
-
-	for _, enum := range doc.EnumTypeDefinitions {
-		enumName := doc.Input.ByteSliceString(enum.Name)
-
-		var valueNames []string
-
-		for _, valueRef := range enum.EnumValuesDefinition.Refs {
-			valueDef := doc.EnumValueDefinitions[valueRef]
-			valueNames = append(valueNames, doc.Input.ByteSliceString(valueDef.EnumValue))
-		}
-
-		if len(valueNames) < minEnumValuesForSortCheck {
-			continue
-		}
-
-		sorted := make([]string, len(valueNames))
-		copy(sorted, valueNames)
-		sort.Strings(sorted)
-
-		if !equalStringSlices(valueNames, sorted) {
-			lineNum := findLineNumberByText(schemaString, "enum "+enumName)
-			lineContent := getLineContent(schemaString, lineNum)
-			message := "enum-values-sorted-alphabetically: The enum '" + enumName + "' should be sorted in alphabetical order. Expected sorting: " + strings.Join(sorted, ", ")
-			errors = append(errors, DescriptionError{
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			})
-		}
-	}
-
-	return errors
 }
