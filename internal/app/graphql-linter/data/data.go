@@ -1394,6 +1394,7 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findRelayPageInfoSpec,
 		findInputObjectValuesCamelCased,
 		findMissingEnumValueDescriptions,
+		findEnumValuesAllCaps,
 		findUncapitalizedDescriptions,
 		findUnusedTypes,
 		findMissingTypeDescriptions,
@@ -1736,4 +1737,30 @@ func checkEnumValueDeprecationReason(
 	}
 
 	return nil
+}
+
+func findEnumValuesAllCaps(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+
+			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+			if valueName != strings.ToUpper(valueName) {
+				lineNum := findLineNumberByText(schemaString, valueName)
+				lineContent := getLineContent(schemaString, lineNum)
+				message := "enum-values-all-caps: The enum value `" + enumName + "." + valueName + "` should be uppercase."
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message + " enum-values-all-caps",
+					LineContent: lineContent,
+				})
+			}
+		}
+	}
+
+	return errors
 }
