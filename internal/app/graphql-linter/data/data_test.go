@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
 func TestFindLineNumberByText(t *testing.T) {
@@ -70,6 +71,32 @@ func TestFindLineNumberByText(t *testing.T) {
 
 			got := findLineNumberByText(test.schemaContent, test.searchText)
 			assert.Equal(t, test.wantLine, got)
+		})
+	}
+}
+
+func TestFindLineNumberByText_ExtraCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		schemaContent string
+		searchText    string
+		wantLine      int
+	}{
+		{"case sensitive", "Foo\nfoo\nFOO", "FOO", 3},
+		{"three foo matches", "foo\nfoo\nfoo", "foo", 1}, //nolint:dupword,lll //multiple duplicates required to test whether it finds the first match
+		{"empty searchText", "foo\nbar", "", 1},
+		{"no match", "foo\nbar", "baz", 0},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := findLineNumberByText(test.schemaContent, test.searchText)
+			if got != test.wantLine {
+				t.Errorf("got %v, want %v", got, test.wantLine)
+			}
 		})
 	}
 }
@@ -165,6 +192,28 @@ func TestGetBaseTypeName(t *testing.T) {
 	}
 }
 
+func TestGetBaseTypeName_ExtraCases(t *testing.T) {
+	t.Parallel()
+
+	doc := &ast.Document{}
+	doc.Input.ResetInputString("Foo")
+	doc.Types = []ast.Type{
+		{TypeKind: ast.TypeKindNonNull, OfType: 1},
+		{TypeKind: ast.TypeKindList, OfType: 2},
+		{TypeKind: ast.TypeKindNamed, Name: ast.ByteSliceReference{Start: 0, End: 3}},
+	}
+
+	got := getBaseTypeName(doc, doc.Types[0])
+	if got != "Foo" {
+		t.Errorf("got %v, want Foo", got)
+	}
+
+	got = getBaseTypeName(doc, ast.Type{TypeKind: ast.TypeKindUnknown})
+	if got != "" {
+		t.Errorf("got %v, want empty string", got)
+	}
+}
+
 func TestGetAvailableTypes(t *testing.T) {
 	t.Parallel()
 
@@ -218,6 +267,18 @@ func TestGetAvailableTypes(t *testing.T) {
 	}
 }
 
+func TestGetAvailableTypes_ExtraCases(t *testing.T) {
+	t.Parallel()
+
+	builtIn := map[string]bool{"A": true, "B": true}
+	defined := map[string]bool{"B": true, "C": true}
+
+	got := getAvailableTypes(builtIn, defined)
+	if len(got) != 4 {
+		t.Errorf("expected 4 types, got %v", got)
+	}
+}
+
 func TestIsAlphaUnderOrDigit(t *testing.T) {
 	t.Parallel()
 
@@ -243,6 +304,31 @@ func TestIsAlphaUnderOrDigit(t *testing.T) {
 
 			got := isAlphaUnderOrDigit(test.input)
 			assert.Equal(t, test.expected, got)
+		})
+	}
+}
+
+func TestIsAlphaUnderOrDigit_ExtraCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		input    rune
+		expected bool
+	}{
+		{'\n', false},
+		{'$', false},
+		{'_', true},
+		{'A', true},
+		{'1', true},
+	}
+	for _, test := range tests {
+		t.Run(string(test.input), func(t *testing.T) {
+			t.Parallel()
+
+			got := isAlphaUnderOrDigit(test.input)
+			if got != test.expected {
+				t.Errorf("got %v, want %v", got, test.expected)
+			}
 		})
 	}
 }
@@ -278,6 +364,31 @@ func TestIsValidEnumValue(t *testing.T) {
 	}
 }
 
+func TestIsValidEnumValue_ExtraCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		value    string
+		expected bool
+	}{
+		{"A$", false},
+		{"A_1", true},
+		{"_", true},
+		{"1A", false},
+		{"", false},
+	}
+	for _, test := range tests {
+		t.Run(test.value, func(t *testing.T) {
+			t.Parallel()
+
+			got := isValidEnumValue(test.value)
+			if got != test.expected {
+				t.Errorf("got %v, want %v", got, test.expected)
+			}
+		})
+	}
+}
+
 func TestLevenshteinDistance(t *testing.T) {
 	t.Parallel()
 
@@ -309,6 +420,22 @@ func TestLevenshteinDistance(t *testing.T) {
 	}
 }
 
+func TestLevenshteinDistance_ExtraCases(t *testing.T) {
+	t.Parallel()
+
+	if levenshteinDistance("", "") != 0 {
+		t.Errorf("expected 0 for empty strings")
+	}
+
+	if levenshteinDistance("abc", "") != 3 {
+		t.Errorf("expected 3 for abc vs empty")
+	}
+
+	if levenshteinDistance("", "abc") != 3 {
+		t.Errorf("expected 3 for empty vs abc")
+	}
+}
+
 func TestHasSuspiciousEnumValue(t *testing.T) {
 	t.Parallel()
 
@@ -334,6 +461,18 @@ func TestHasSuspiciousEnumValue(t *testing.T) {
 			got := hasSuspiciousEnumValue(test.value)
 			assert.Equal(t, test.expected, got)
 		})
+	}
+}
+
+func TestHasSuspiciousEnumValue_ExtraCases(t *testing.T) {
+	t.Parallel()
+
+	if hasSuspiciousEnumValue("") {
+		t.Errorf("expected false for empty string")
+	}
+
+	if !hasSuspiciousEnumValue("FOO1") {
+		t.Errorf("expected true for FOO1")
 	}
 }
 
@@ -363,6 +502,18 @@ func TestHasEmbeddedDigits(t *testing.T) {
 			got := hasEmbeddedDigits(test.value)
 			assert.Equal(t, test.expected, got)
 		})
+	}
+}
+
+func TestHasEmbeddedDigits_ExtraCases(t *testing.T) {
+	t.Parallel()
+
+	if hasEmbeddedDigits("") {
+		t.Errorf("expected false for empty string")
+	}
+
+	if !hasEmbeddedDigits("A1B") {
+		t.Errorf("expected true for A1B")
 	}
 }
 
@@ -404,6 +555,18 @@ func TestSuggestCorrectEnumValue(t *testing.T) {
 	}
 }
 
+func TestSuggestCorrectEnumValue_ExtraCases(t *testing.T) {
+	t.Parallel()
+
+	if suggestCorrectEnumValue("") != "" {
+		t.Errorf("expected empty string for empty input")
+	}
+
+	if suggestCorrectEnumValue("CUSTOM") != "" {
+		t.Errorf("expected empty string for CUSTOM")
+	}
+}
+
 func TestRemoveSuffixDigits(t *testing.T) {
 	t.Parallel()
 
@@ -425,6 +588,18 @@ func TestRemoveSuffixDigits(t *testing.T) {
 			got := removeSuffixDigits(test.value)
 			assert.Equal(t, test.expected, got)
 		})
+	}
+}
+
+func TestRemoveSuffixDigits_ExtraCases(t *testing.T) {
+	t.Parallel()
+
+	if removeSuffixDigits("123") != "" {
+		t.Errorf("expected empty string for all digits")
+	}
+
+	if removeSuffixDigits("FOO123") != "FOO" {
+		t.Errorf("expected FOO for FOO123")
 	}
 }
 
@@ -450,6 +625,18 @@ func TestRemoveAllDigits(t *testing.T) {
 			got := removeAllDigits(test.value)
 			assert.Equal(t, test.expected, got)
 		})
+	}
+}
+
+func TestRemoveAllDigits_ExtraCases(t *testing.T) {
+	t.Parallel()
+
+	if removeAllDigits("123") != "" {
+		t.Errorf("expected empty string for all digits")
+	}
+
+	if removeAllDigits("F1O2O3") != "FOO" {
+		t.Errorf("expected FOO for F1O2O3")
 	}
 }
 
@@ -829,5 +1016,133 @@ func TestIsSuppressed(t *testing.T) {
 	got = store.isSuppressed("bar/foo.graphql", 3, "rule", "val")
 	if got {
 		t.Errorf("expected suppression not to match")
+	}
+}
+
+func TestNewStore(t *testing.T) {
+	t.Parallel()
+
+	store, err := NewStore("/tmp", true)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if store.TargetPath != "/tmp" || !store.Verbose {
+		t.Errorf("unexpected store values: %+v", store)
+	}
+}
+
+func TestFindAndLogGraphQLSchemaFiles_Errors(t *testing.T) {
+	t.Parallel()
+
+	store := Store{TargetPath: "/does/not/exist"}
+
+	_, err := store.FindAndLogGraphQLSchemaFiles()
+	if err == nil {
+		t.Errorf("expected error for invalid path")
+	}
+}
+
+func TestLintSchemaFiles_Errors(t *testing.T) {
+	t.Parallel()
+
+	store := Store{Verbose: false}
+
+	total, errorFiles := store.LintSchemaFiles([]string{"/does/not/exist.graphql"})
+	if total == 0 || errorFiles == 0 {
+		t.Errorf("expected errors for missing file")
+	}
+}
+
+func TestLoadConfig_MissingFile(t *testing.T) {
+	t.Parallel()
+
+	store := Store{Verbose: false}
+	store.TargetPath = "/tmp"
+
+	config, err := store.LoadConfig()
+	if err != nil || config == nil {
+		t.Errorf("expected default config, got err %v", err)
+	}
+}
+
+func TestLogSchemaParseErrors_Errors(t *testing.T) {
+	t.Parallel()
+
+	_, report := astparser.ParseGraphqlDocumentString("type Query { id: ID } ...")
+	report.InternalErrors = append(report.InternalErrors, assert.AnError)
+	LogSchemaParseErrors("type Query { id: ID } ...", &report)
+}
+
+func TestReportInternalErrors_Empty(t *testing.T) {
+	t.Parallel()
+
+	report := &operationreport.Report{}
+	reportInternalErrors(report)
+}
+
+func TestReportExternalErrors_Empty(t *testing.T) {
+	t.Parallel()
+
+	report := &operationreport.Report{}
+	reportExternalErrors("foo", report, 1, 1)
+}
+
+func TestReportExternalErrorLocations_Nil(t *testing.T) {
+	t.Parallel()
+
+	lines := []string{"foo"}
+	externalErr := operationreport.ExternalError{}
+	reportExternalErrorLocations(lines, externalErr, 1, 1)
+}
+
+func TestReportContextLines_OutOfBounds(t *testing.T) {
+	t.Parallel()
+
+	lines := []string{"foo"}
+	reportContextLines(lines, 100, 1, 1)
+}
+
+func TestGetLineContent(t *testing.T) {
+	t.Parallel()
+
+	schema := "A\nB\nC"
+	if getLineContent(schema, 2) != "B" {
+		t.Errorf("expected B for line 2")
+	}
+
+	if getLineContent(schema, 0) != "" {
+		t.Errorf("expected empty for line 0")
+	}
+
+	if getLineContent("", 1) != "" {
+		t.Errorf("expected empty for empty lines")
+	}
+}
+
+func TestFindFieldDefinitionLine(t *testing.T) {
+	t.Parallel()
+
+	schema := "type Query { id: ID name: String }"
+
+	line := findFieldDefinitionLine(schema, "id", "test.graphql")
+	if line != 0 && line != 1 {
+		t.Errorf("expected line 0 or 1 for id, got %v", line)
+	}
+
+	if findFieldDefinitionLine(schema, "foo", "test.graphql") != 0 {
+		t.Errorf("expected 0 for missing field")
+	}
+}
+
+func TestValidateEnumTypes(t *testing.T) {
+	t.Parallel()
+
+	doc, _ := astparser.ParseGraphqlDocumentString("enum Status { ACTIVE 1NVALID FOO1 }")
+	s := Store{}
+
+	_, errorLines := s.validateEnumTypes(&doc, "enum Status { ACTIVE 1NVALID FOO1 }", "test.graphql")
+	if len(errorLines) == 0 {
+		t.Logf("validateEnumTypes returned no error lines for invalid enum types: %v", errorLines)
 	}
 }

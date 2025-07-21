@@ -33,7 +33,7 @@ jobs:
           test-timeout: 10m0s
         with:
           build-tags: ${{ matrix.args.build-tags }}
-          code-coverage-expected: 66.7
+          code-coverage-expected: 72.8
           code-coverage-timeout: ${{ env.test-timeout }}
           golang-unit-tests-exclusions: |-
             \(cmd\/.*\|graphql\-testdata\-generator\|mocks\)$\?
