@@ -1394,6 +1394,7 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findUnsortedInterfaceFields,
 		findRelayPageInfoSpec,
 		findInputObjectValuesCamelCased,
+		findFieldsAreCamelCased,
 		findMissingEnumValueDescriptions,
 		findUncapitalizedDescriptions,
 		findUnusedTypes,
@@ -1774,6 +1775,32 @@ func findEnumValuesSortedAlphabetically(doc *ast.Document, schemaString string) 
 				})
 
 				break
+			}
+		}
+	}
+
+	return errors
+}
+
+func findFieldsAreCamelCased(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(obj.Name)
+
+		for _, fieldRef := range obj.FieldsDefinition.Refs {
+			fieldDef := doc.FieldDefinitions[fieldRef]
+
+			fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+			if !isCamelCase(fieldName) {
+				lineNum := findFieldDefinitionLine(schemaString, fieldName, "")
+				lineContent := getLineContent(schemaString, lineNum)
+				message := "fields-are-camel-cased: The field '" + typeName + "." + fieldName + "' is not camel cased."
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				})
 			}
 		}
 	}

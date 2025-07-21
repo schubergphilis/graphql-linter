@@ -65,7 +65,6 @@ graphql-schema-linter test/testdata/graphql/invalid/*
 graphql-schema-linter test/testdata/graphql/valid/*
 ```
 
-- 08-fields-are-camel-cased.graphql
 - 10-input-object-fields-sorted-alphabetically.graphql
 - 12-input-object-values-have-descriptions.graphql
 - 14-relay-connection-types-spec.graphql
