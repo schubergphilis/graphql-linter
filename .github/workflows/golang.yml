@@ -28,12 +28,12 @@ jobs:
       TASK_X_REMOTE_TASKFILES: 1
     steps:
       - uses: actions/checkout@v4.2.2
-      - uses: schubergphilis/mcvs-golang-action@ctrl-click-coverage-path-mac
+      - uses: schubergphilis/mcvs-golang-action@v3.5.1
         env:
           test-timeout: 10m0s
         with:
           build-tags: ${{ matrix.args.build-tags }}
-          code-coverage-expected: 72.8
+          code-coverage-expected: 76.8
           code-coverage-timeout: ${{ env.test-timeout }}
           golang-unit-tests-exclusions: |-
             \(cmd\/.*\|graphql\-testdata\-generator\|mocks\)$\?

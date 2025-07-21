@@ -85,7 +85,12 @@ func TestFindLineNumberByText_ExtraCases(t *testing.T) {
 		wantLine      int
 	}{
 		{"case sensitive", "Foo\nfoo\nFOO", "FOO", 3},
-		{"three foo matches", "foo\nfoo\nfoo", "foo", 1}, //nolint:dupword,lll //multiple duplicates required to test whether it finds the first match
+		{
+			"three foo matches",
+			"foo\nfoo\nfoo", //nolint:dupword //multiple duplicates required to test whether it finds the first match
+			"foo",
+			1,
+		},
 		{"empty searchText", "foo\nbar", "", 1},
 		{"no match", "foo\nbar", "baz", 0},
 	}
@@ -1141,8 +1146,55 @@ func TestValidateEnumTypes(t *testing.T) {
 	doc, _ := astparser.ParseGraphqlDocumentString("enum Status { ACTIVE 1NVALID FOO1 }")
 	s := Store{}
 
-	_, errorLines := s.validateEnumTypes(&doc, "enum Status { ACTIVE 1NVALID FOO1 }", "test.graphql")
+	_, errorLines := s.validateEnumTypes(
+		&doc,
+		"enum Status { ACTIVE 1NVALID FOO1 }",
+		"test.graphql",
+	)
 	if len(errorLines) == 0 {
 		t.Logf("validateEnumTypes returned no error lines for invalid enum types: %v", errorLines)
+	}
+}
+
+func TestFindRelayConnectionArgumentSpec(t *testing.T) {
+	t.Parallel()
+
+	schema := "type Query { users(first: Int, after: String, last: Int, before: String): UserConnection } type" +
+		"UserConnection { edges: [UserEdge] } type UserEdge { node: User } type User { id: ID }"
+	doc, _ := astparser.ParseGraphqlDocumentString(schema)
+
+	errs := findRelayConnectionArgumentSpec(&doc, schema)
+	if len(errs) != 0 {
+		t.Errorf("expected no errors for valid connection argument spec, got %v", errs)
+	}
+
+	schemaMissing := "type Query { users: UserConnection } type UserConnection { edges: [UserEdge] } type UserEdge" +
+		"{ node: User } type User { id: ID }"
+	docMissing, _ := astparser.ParseGraphqlDocumentString(schemaMissing)
+
+	errsMissing := findRelayConnectionArgumentSpec(&docMissing, schemaMissing)
+	if len(errsMissing) == 0 {
+		t.Errorf("expected error for missing connection arguments")
+	}
+}
+
+func TestFindRelayConnectionTypesSpec(t *testing.T) {
+	t.Parallel()
+
+	schema := "type UserConnection { pageInfo: PageInfo edges: [UserEdge] } type PageInfo { hasNextPage: Boolean } type" +
+		"UserEdge { node: User } type User { id: ID }"
+	doc, _ := astparser.ParseGraphqlDocumentString(schema)
+
+	errs := findRelayConnectionTypesSpec(&doc, schema)
+	if len(errs) != 0 {
+		t.Errorf("expected no errors for valid connection types spec, got %v", errs)
+	}
+
+	schemaMissing := `type UserConnection { edges: [UserEdge] } type UserEdge { node: User } type User { id: ID }`
+	docMissing, _ := astparser.ParseGraphqlDocumentString(schemaMissing)
+
+	errsMissing := findRelayConnectionTypesSpec(&docMissing, schemaMissing)
+	if len(errsMissing) == 0 {
+		t.Errorf("expected error for missing pageInfo field")
 	}
 }
