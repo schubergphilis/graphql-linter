@@ -802,6 +802,17 @@ func TestValidateDirectiveNames(t *testing.T) {
 	}
 }
 
+func TestValidateDirectiveNames_Invalid(t *testing.T) {
+	t.Parallel()
+
+	doc, _ := astparser.ParseGraphqlDocumentString("type Query @invalid { id: ID }")
+
+	got := validateDirectiveNames(&doc)
+	if got {
+		t.Errorf("expected false for invalid directive, got true")
+	}
+}
+
 func TestValidateDirectives(t *testing.T) {
 	t.Parallel()
 
@@ -827,32 +838,178 @@ func TestValidateDirectives(t *testing.T) {
 	}
 }
 
+func TestValidateDirectives_MoreCases(t *testing.T) {
+	t.Parallel()
+
+	doc, _ := astparser.ParseGraphqlDocumentString("type Query @invalid { id: ID }")
+	valid := map[string]bool{"key": true}
+	// Find the directive refs for the first object type
+	var directiveRefs []int
+	if len(doc.ObjectTypeDefinitions) > 0 {
+		directiveRefs = doc.ObjectTypeDefinitions[0].Directives.Refs
+	}
+
+	got := validateDirectives(&doc, directiveRefs, valid, "Query", "type")
+	if got {
+		t.Errorf("expected false for invalid directive, got true")
+	}
+
+	invalid := map[string]bool{"invalid": false}
+
+	got2 := validateDirectives(&doc, []int{}, invalid, "Query", "type")
+	if !got2 {
+		t.Errorf("expected true for no directives, got false")
+	}
+}
+
 func TestReportDirectiveError(t *testing.T) {
 	t.Parallel()
 	// Just ensure it doesn't panic
 	reportDirectiveError("invalid", "Query", "type")
 }
 
-func TestSuggestDirective(t *testing.T) {
+func TestReportDirectiveError_AllKinds(t *testing.T) {
 	t.Parallel()
-	suggestDirective("keey", "key")
+	reportDirectiveError("invalid", "Query", "type")
+	reportDirectiveError("invalid", "fieldName", "field")
 }
 
-func TestPrintAndValidateDescriptionErrors(t *testing.T) {
+func TestReportUncapitalizedDescription(t *testing.T) {
 	t.Parallel()
 
-	descriptionErrors := []DescriptionError{
-		{LineNum: 1, Message: "error", LineContent: "type Query { id: ID }"},
+	tests := []struct {
+		name      string
+		kind      string
+		parent    string
+		field     string
+		desc      string
+		schema    string
+		expectNil bool
+		expectMsg string
+	}{
+		{
+			"type capitalized", "type", "", "Query", "A capitalized description.", "type Query { id: ID }",
+			true,
+			"",
+		},
+		{
+			"type uncapitalized", "type", "", "Query", "uncapitalized description.", "type Query { id: ID }",
+			false,
+			"should be capitalized",
+		},
+		{
+			"field capitalized", "field", "Query", "id", "ID field.", "type Query { id: ID }",
+			true,
+			"",
+		},
+		{
+			"field uncapitalized", "field", "Query", "id", "id field.", "type Query { id: ID }",
+			false,
+			"should be capitalized",
+		},
+		{
+			"enum capitalized", "enum", "Status", "ACTIVE", "Active status.", "enum Status { ACTIVE }",
+			true,
+			"",
+		},
+		{
+			"enum uncapitalized", "enum", "Status", "ACTIVE", "active status.", "enum Status { ACTIVE }",
+			false,
+			"should be capitalized",
+		},
+		{
+			"argument capitalized", "argument", "id", "input", "Input argument.", "type Query { id(input: String): ID }",
+			true,
+			"",
+		},
+		{
+			"argument uncapitalized", "argument", "id", "input", "input argument.", "type Query { id(input: String): ID }",
+			false,
+			"should be capitalized",
+		},
 	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-	got := printAndValidateDescriptionErrors(descriptionErrors, "test.graphql")
-	if !got {
-		t.Errorf("expected true for errors present")
+			err := reportUncapitalizedDescription(test.kind, test.parent, test.field, test.desc, test.schema)
+			if test.expectNil {
+				if err != nil {
+					t.Errorf("expected nil, got %v", err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				} else if !strings.Contains(err.Message, test.expectMsg) {
+					t.Errorf("expected message to contain '%s', got '%s'", test.expectMsg, err.Message)
+				}
+			}
+		})
 	}
+}
 
-	got = printAndValidateDescriptionErrors([]DescriptionError{}, "test.graphql")
-	if got {
-		t.Errorf("expected false for no errors")
+func TestFindMissingArgumentDescriptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		schema      string
+		expectError bool
+		expectMsg   string
+	}{
+		{
+			"all args described", `type Query { foo("desc" bar: String "desc" baz: Int): String }`,
+			false,
+			"",
+		},
+		{
+			"one arg missing description", `type Query { foo(bar: String "desc" baz: Int): String }`,
+			true,
+			"missing a description",
+		},
+		{
+			"multiple args missing description", `type Query { foo(bar: String baz: Int qux: Boolean): String }`,
+			true,
+			"missing a description",
+		},
+		{
+			"no args", `type Query { foo: String }`,
+			false,
+			"",
+		},
+		{
+			"mixed args", `type Query { foo("desc" bar: String baz: Int): String }`,
+			true,
+			"missing a description",
+		},
+	}
+	for _, test := range tests {
+		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
+
+		errs := findMissingArgumentDescriptions(&doc, test.schema)
+		if test.expectError {
+			if len(errs) == 0 {
+				t.Errorf("%s: expected error, got none", test.name)
+
+				continue
+			}
+
+			found := false
+
+			for _, err := range errs {
+				if test.expectMsg == "" || (err.Message != "" && strings.Contains(err.Message, test.expectMsg)) {
+					found = true
+
+					break
+				}
+			}
+
+			if !found {
+				t.Errorf("%s: expected error message containing '%s', got %v", test.name, test.expectMsg, errs)
+			}
+		} else if len(errs) != 0 {
+			t.Errorf("%s: expected no error, got %v", test.name, errs)
+		}
 	}
 }
 

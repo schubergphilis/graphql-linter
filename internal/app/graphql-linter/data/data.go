@@ -1255,15 +1255,18 @@ func reportUncapitalizedDescription(
 	case "field":
 		lineNum = findFieldDefinitionLine(schemaString, name, "")
 		lineContent = getLineContent(schemaString, lineNum)
-		message = "descriptions-are-capitalized: The description for field `" + parent + "." + name + "` should be capitalized."
+		message = "descriptions-are-capitalized: The description for field `" + parent + "." + name +
+			"` should be capitalized."
 	case "enum":
 		lineNum = findLineNumberByText(schemaString, name)
 		lineContent = getLineContent(schemaString, lineNum)
-		message = "descriptions-are-capitalized: The description for enum value `" + parent + "." + name + "` should be capitalized."
+		message = "descriptions-are-capitalized: The description for enum value `" + parent + "." + name +
+			"` should be capitalized."
 	case "argument":
 		lineNum = findLineNumberByText(schemaString, name+":")
 		lineContent = getLineContent(schemaString, lineNum)
-		message = "descriptions-are-capitalized: The description for argument `" + parent + "." + name + "` should be capitalized."
+		message = "descriptions-are-capitalized: The description for argument `" + parent + "." + name +
+			"` should be capitalized."
 	}
 
 	return &DescriptionError{
@@ -1279,7 +1282,10 @@ func uncapitalizedTypeDescriptions(doc *ast.Document, schemaString string) []Des
 	for _, obj := range doc.ObjectTypeDefinitions {
 		if obj.Description.IsDefined {
 			desc := doc.Input.ByteSliceString(obj.Description.Content)
-			if err := reportUncapitalizedDescription("type", "", doc.Input.ByteSliceString(obj.Name), desc, schemaString); err != nil {
+			if err := reportUncapitalizedDescription(
+				"type",
+				"",
+				doc.Input.ByteSliceString(obj.Name), desc, schemaString); err != nil {
 				errors = append(errors, *err)
 			}
 		}
@@ -1296,7 +1302,11 @@ func uncapitalizedFieldDescriptions(doc *ast.Document, schemaString string) []De
 			fieldDef := doc.FieldDefinitions[fieldRef]
 			if fieldDef.Description.IsDefined {
 				desc := doc.Input.ByteSliceString(fieldDef.Description.Content)
-				if err := reportUncapitalizedDescription("field", doc.Input.ByteSliceString(obj.Name), doc.Input.ByteSliceString(fieldDef.Name), desc, schemaString); err != nil {
+				if err := reportUncapitalizedDescription(
+					"field",
+					doc.Input.ByteSliceString(obj.Name),
+					doc.Input.ByteSliceString(fieldDef.Name),
+					desc, schemaString); err != nil {
 					errors = append(errors, *err)
 				}
 			}
