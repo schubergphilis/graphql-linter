@@ -18,13 +18,14 @@ import (
 )
 
 const (
-	levenshteinThreshold     = 2
-	linesAfterContext        = 3
-	linesBeforeContext       = 2
-	defaultErrorCapacity     = 32
-	minFieldsForSortCheck    = 2
-	percentMultiplier        = 100
-	descriptionErrorCapacity = 8
+	levenshteinThreshold      = 2
+	linesAfterContext         = 3
+	linesBeforeContext        = 2
+	defaultErrorCapacity      = 32
+	minFieldsForSortCheck     = 2
+	percentMultiplier         = 100
+	descriptionErrorCapacity  = 8
+	minEnumValuesForSortCheck = 2
 )
 
 type Storer interface {
@@ -1394,7 +1395,6 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findRelayPageInfoSpec,
 		findInputObjectValuesCamelCased,
 		findMissingEnumValueDescriptions,
-		findEnumValuesAllCaps,
 		findUncapitalizedDescriptions,
 		findUnusedTypes,
 		findMissingTypeDescriptions,
@@ -1402,6 +1402,7 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findMissingArgumentDescriptions,
 		findMissingEnumDescriptions,
 		findMissingDeprecationReasons,
+		findEnumValuesSortedAlphabetically,
 	}
 
 	for _, helper := range helpers {
@@ -1739,25 +1740,40 @@ func checkEnumValueDeprecationReason(
 	return nil
 }
 
-func findEnumValuesAllCaps(doc *ast.Document, schemaString string) []DescriptionError {
+func findEnumValuesSortedAlphabetically(doc *ast.Document, schemaString string) []DescriptionError {
 	var errors []DescriptionError
 
 	for _, enum := range doc.EnumTypeDefinitions {
 		enumName := doc.Input.ByteSliceString(enum.Name)
 
+		var valueNames []string
+
 		for _, valueRef := range enum.EnumValuesDefinition.Refs {
 			valueDef := doc.EnumValueDefinitions[valueRef]
+			valueNames = append(valueNames, doc.Input.ByteSliceString(valueDef.EnumValue))
+		}
 
-			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
-			if valueName != strings.ToUpper(valueName) {
-				lineNum := findLineNumberByText(schemaString, valueName)
+		if len(valueNames) < minEnumValuesForSortCheck {
+			continue
+		}
+
+		sorted := make([]string, len(valueNames))
+		copy(sorted, valueNames)
+		sort.Strings(sorted)
+
+		for i := range valueNames {
+			if valueNames[i] != sorted[i] {
+				lineNum := findLineNumberByText(schemaString, "enum "+enumName)
 				lineContent := getLineContent(schemaString, lineNum)
-				message := "enum-values-all-caps: The enum value `" + enumName + "." + valueName + "` should be uppercase."
+				message := "enum-values-sorted-alphabetically: The enum '" + enumName +
+					"' should be sorted in alphabetical order. Expected sorting: " + strings.Join(sorted, ", ")
 				errors = append(errors, DescriptionError{
 					LineNum:     lineNum,
-					Message:     message + " enum-values-all-caps",
+					Message:     message,
 					LineContent: lineContent,
 				})
+
+				break
 			}
 		}
 	}

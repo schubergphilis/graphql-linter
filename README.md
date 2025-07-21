@@ -65,8 +65,6 @@ graphql-schema-linter test/testdata/graphql/invalid/*
 graphql-schema-linter test/testdata/graphql/valid/*
 ```
 
-- 05-enum-values-all-caps.graphql
-- 07-enum-values-sorted-alphabetically.graphql
 - 08-fields-are-camel-cased.graphql
 - 10-input-object-fields-sorted-alphabetically.graphql
 - 12-input-object-values-have-descriptions.graphql
