@@ -1357,3 +1357,60 @@ func TestFindInputObjectValuesCamelCased(t *testing.T) {
 		}
 	}
 }
+
+func TestFindMissingEnumValueDescriptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		schema      string
+		expectError bool
+		expectMsg   string
+	}{
+		{
+			name:        "all enum values have descriptions",
+			schema:      `enum Color { "Red color." RED "Blue color." BLUE }`,
+			expectError: false,
+		},
+		{
+			name:        "missing description for one value",
+			schema:      `enum Color { RED "Blue color." BLUE }`,
+			expectError: true,
+			expectMsg:   "enum-values-have-descriptions",
+		},
+		{
+			name:        "all values missing descriptions",
+			schema:      `enum Status { ACTIVE INACTIVE }`,
+			expectError: true,
+			expectMsg:   "enum-values-have-descriptions",
+		},
+	}
+	for _, test := range tests {
+		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
+
+		errs := findMissingEnumValueDescriptions(&doc, test.schema)
+		if test.expectError {
+			if len(errs) == 0 {
+				t.Errorf("%s: expected error, got none", test.name)
+
+				continue
+			}
+
+			found := false
+
+			for _, err := range errs {
+				if test.expectMsg == "" || (err.Message != "" && strings.Contains(err.Message, test.expectMsg)) {
+					found = true
+
+					break
+				}
+			}
+
+			if !found {
+				t.Errorf("%s: expected error message containing '%s', got %v", test.name, test.expectMsg, errs)
+			}
+		} else if len(errs) != 0 {
+			t.Errorf("%s: expected no error, got %v", test.name, errs)
+		}
+	}
+}

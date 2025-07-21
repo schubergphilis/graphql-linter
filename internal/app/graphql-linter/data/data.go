@@ -1617,6 +1617,33 @@ func findInputObjectValuesCamelCased(doc *ast.Document, schemaString string) []D
 	return errors
 }
 
+func findMissingEnumValueDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+
+			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+			if !valueDef.Description.IsDefined {
+				lineNum := findLineNumberByText(schemaString, valueName)
+				lineContent := getLineContent(schemaString, lineNum)
+				message := "enum-values-have-descriptions: The enum value `" +
+					enumName + "." + valueName + "` is missing a description."
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				})
+			}
+		}
+	}
+
+	return errors
+}
+
 func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
 	errorLines := make([]int, 0, defaultErrorCapacity)
@@ -1628,6 +1655,7 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findUnsortedInterfaceFields,
 		findRelayPageInfoSpec,
 		findInputObjectValuesCamelCased,
+		findMissingEnumValueDescriptions,
 		findUnusedTypes,
 		findMissingTypeDescriptions,
 		findMissingFieldDescriptions,
