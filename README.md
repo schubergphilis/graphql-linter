@@ -65,8 +65,6 @@ graphql-schema-linter test/testdata/graphql/invalid/*
 graphql-schema-linter test/testdata/graphql/valid/*
 ```
 
-- 10-input-object-fields-sorted-alphabetically.graphql
-- 12-input-object-values-have-descriptions.graphql
 - 14-relay-connection-types-spec.graphql
 - 15-relay-connection-arguments-spec.graphql
 - 17-types-are-capitalized.graphql

@@ -1130,39 +1130,112 @@ func (s Store) validateDataTypes(
 	return true, errorLines
 }
 
-func findUnusedTypes(doc *ast.Document, schemaString string) []DescriptionError {
-	var unusedTypeErrors []DescriptionError
+func collectDefinedTypeNames(doc *ast.Document) map[string]bool {
+	definedTypes := make(map[string]bool)
 
 	for _, obj := range doc.ObjectTypeDefinitions {
 		name := doc.Input.ByteSliceString(obj.Name)
-		if name == "Query" || name == "Mutation" || name == "Subscription" {
+		if name != "Query" && name != "Mutation" && name != "Subscription" {
+			definedTypes[name] = false // false means unused
+		}
+	}
+	for _, input := range doc.InputObjectTypeDefinitions {
+		name := doc.Input.ByteSliceString(input.Name)
+		definedTypes[name] = false
+	}
+	for _, enum := range doc.EnumTypeDefinitions {
+		name := doc.Input.ByteSliceString(enum.Name)
+		definedTypes[name] = false
+	}
+	for _, iface := range doc.InterfaceTypeDefinitions {
+		name := doc.Input.ByteSliceString(iface.Name)
+		definedTypes[name] = false
+	}
+	for _, union := range doc.UnionTypeDefinitions {
+		name := doc.Input.ByteSliceString(union.Name)
+		definedTypes[name] = false
+	}
+	for _, scalar := range doc.ScalarTypeDefinitions {
+		name := doc.Input.ByteSliceString(scalar.Name)
+		definedTypes[name] = false
+	}
+
+	return definedTypes
+}
+
+func markUsedTypes(doc *ast.Document, definedTypes map[string]bool) {
+	// Check field types
+	for _, fieldDef := range doc.FieldDefinitions {
+		baseType := getBaseTypeName(doc, doc.Types[fieldDef.Type])
+		if _, exists := definedTypes[baseType]; exists {
+			definedTypes[baseType] = true
+		}
+	}
+
+	// Check input value types (arguments and input object fields)
+	for _, inputValue := range doc.InputValueDefinitions {
+		baseType := getBaseTypeName(doc, doc.Types[inputValue.Type])
+		if _, exists := definedTypes[baseType]; exists {
+			definedTypes[baseType] = true
+		}
+	}
+
+	// Check union member types
+	for _, union := range doc.UnionTypeDefinitions {
+		for _, memberRef := range union.UnionMemberTypes.Refs {
+			memberType := doc.Types[memberRef]
+			baseType := getBaseTypeName(doc, memberType)
+			if _, exists := definedTypes[baseType]; exists {
+				definedTypes[baseType] = true
+			}
+		}
+	}
+}
+
+func findTypeLineNumber(typeName, schemaString string) int {
+	searchTerms := []string{
+		"type " + typeName,
+		"input " + typeName,
+		"enum " + typeName,
+		"interface " + typeName,
+		"union " + typeName,
+		"scalar " + typeName,
+	}
+
+	for _, term := range searchTerms {
+		if lineNum := findLineNumberByText(schemaString, term); lineNum > 0 {
+			return lineNum
+		}
+	}
+
+	return 0
+}
+
+func findUnusedTypes(doc *ast.Document, schemaString string) []DescriptionError {
+	// Collect all defined type names
+	definedTypes := collectDefinedTypeNames(doc)
+
+	// Pre-allocate with estimated capacity
+	unusedTypeErrors := make([]DescriptionError, 0, len(definedTypes))
+
+	// Mark types as used
+	markUsedTypes(doc, definedTypes) // Report unused types
+	for typeName, isUsed := range definedTypes {
+		if isUsed {
 			continue
 		}
 
-		isUsed := false
-
-		for _, fieldDef := range doc.FieldDefinitions {
-			baseType := getBaseTypeName(doc, doc.Types[fieldDef.Type])
-			if baseType == name {
-				isUsed = true
-
-				break
-			}
-		}
-
-		if !isUsed {
-			lineNum := findLineNumberByText(schemaString, "type "+name)
-			lineContent := getLineContent(schemaString, lineNum)
-			message := fmt.Sprintf(
-				"defined-types-are-used: Type '%s' is defined but not used",
-				name,
-			)
-			unusedTypeErrors = append(unusedTypeErrors, DescriptionError{
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			})
-		}
+		lineNum := findTypeLineNumber(typeName, schemaString)
+		lineContent := getLineContent(schemaString, lineNum)
+		message := fmt.Sprintf(
+			"defined-types-are-used: Type '%s' is defined but not used",
+			typeName,
+		)
+		unusedTypeErrors = append(unusedTypeErrors, DescriptionError{
+			LineNum:     lineNum,
+			Message:     message,
+			LineContent: lineContent,
+		})
 	}
 
 	return unusedTypeErrors
@@ -1411,6 +1484,7 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findUnusedTypes,
 		findMissingTypeDescriptions,
 		findMissingFieldDescriptions,
+		findMissingInputObjectValueDescriptions,
 		findMissingArgumentDescriptions,
 		findMissingDeprecationReasons,
 		findEnumValuesSortedAlphabetically,
@@ -1676,6 +1750,33 @@ func findInputObjectFieldsSortedAlphabetically(
 			"input-object-fields-sorted-alphabetically",
 		); err != nil {
 			errors = append(errors, *err)
+		}
+	}
+
+	return errors
+}
+
+func findMissingInputObjectValueDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, input := range doc.InputObjectTypeDefinitions {
+		inputName := doc.Input.ByteSliceString(input.Name)
+		for _, fieldRef := range input.InputFieldsDefinition.Refs {
+			fieldDef := doc.InputValueDefinitions[fieldRef]
+			if !fieldDef.Description.IsDefined {
+				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+				lineNum := findLineNumberByText(schemaString, fieldName+":")
+				lineContent := getLineContent(schemaString, lineNum)
+				message := fmt.Sprintf(
+					"input-object-values-have-descriptions: The input value `%s.%s` is missing a description.",
+					inputName, fieldName,
+				)
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				})
+			}
 		}
 	}
 
