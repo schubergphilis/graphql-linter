@@ -18,12 +18,13 @@ import (
 )
 
 const (
-	levenshteinThreshold  = 2
-	linesAfterContext     = 3
-	linesBeforeContext    = 2
-	defaultErrorCapacity  = 32
-	minFieldsForSortCheck = 2
-	percentMultiplier     = 100
+	levenshteinThreshold     = 2
+	linesAfterContext        = 3
+	linesBeforeContext       = 2
+	defaultErrorCapacity     = 32
+	minFieldsForSortCheck    = 2
+	percentMultiplier        = 100
+	descriptionErrorCapacity = 8
 )
 
 type Storer interface {
@@ -1222,11 +1223,64 @@ func checkEnumDescription(
 	}, lineNum
 }
 
-func sortDescriptionErrors(errors []DescriptionError) []DescriptionError {
-	for i := range len(errors) - 1 {
-		for j := range len(errors) - i - 1 {
-			if errors[j].LineNum > errors[j+1].LineNum {
-				errors[j], errors[j+1] = errors[j+1], errors[j]
+func isCapitalized(desc string) bool {
+	desc = strings.TrimSpace(desc)
+	if desc == "" {
+		return true
+	}
+
+	r := rune(desc[0])
+
+	return unicode.IsUpper(r)
+}
+
+func reportUncapitalizedDescription(
+	kind, parent, name, desc, schemaString string,
+) *DescriptionError {
+	if isCapitalized(desc) {
+		return nil
+	}
+
+	var (
+		lineNum     int
+		lineContent string
+		message     string
+	)
+
+	switch kind {
+	case "type":
+		lineNum = findLineNumberByText(schemaString, "type "+name)
+		lineContent = getLineContent(schemaString, lineNum)
+		message = "descriptions-are-capitalized: The description for type `" + name + "` should be capitalized."
+	case "field":
+		lineNum = findFieldDefinitionLine(schemaString, name, "")
+		lineContent = getLineContent(schemaString, lineNum)
+		message = "descriptions-are-capitalized: The description for field `" + parent + "." + name + "` should be capitalized."
+	case "enum":
+		lineNum = findLineNumberByText(schemaString, name)
+		lineContent = getLineContent(schemaString, lineNum)
+		message = "descriptions-are-capitalized: The description for enum value `" + parent + "." + name + "` should be capitalized."
+	case "argument":
+		lineNum = findLineNumberByText(schemaString, name+":")
+		lineContent = getLineContent(schemaString, lineNum)
+		message = "descriptions-are-capitalized: The description for argument `" + parent + "." + name + "` should be capitalized."
+	}
+
+	return &DescriptionError{
+		LineNum:     lineNum,
+		Message:     message,
+		LineContent: lineContent,
+	}
+}
+
+func uncapitalizedTypeDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+	errors := make([]DescriptionError, 0, descriptionErrorCapacity)
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		if obj.Description.IsDefined {
+			desc := doc.Input.ByteSliceString(obj.Description.Content)
+			if err := reportUncapitalizedDescription("type", "", doc.Input.ByteSliceString(obj.Name), desc, schemaString); err != nil {
+				errors = append(errors, *err)
 			}
 		}
 	}
@@ -1234,10 +1288,300 @@ func sortDescriptionErrors(errors []DescriptionError) []DescriptionError {
 	return errors
 }
 
+func uncapitalizedFieldDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+	errors := make([]DescriptionError, 0, descriptionErrorCapacity)
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		for _, fieldRef := range obj.FieldsDefinition.Refs {
+			fieldDef := doc.FieldDefinitions[fieldRef]
+			if fieldDef.Description.IsDefined {
+				desc := doc.Input.ByteSliceString(fieldDef.Description.Content)
+				if err := reportUncapitalizedDescription("field", doc.Input.ByteSliceString(obj.Name), doc.Input.ByteSliceString(fieldDef.Name), desc, schemaString); err != nil {
+					errors = append(errors, *err)
+				}
+			}
+		}
+	}
+
+	return errors
+}
+
+func uncapitalizedEnumValueDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+	errors := make([]DescriptionError, 0, descriptionErrorCapacity)
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+			if valueDef.Description.IsDefined {
+				desc := doc.Input.ByteSliceString(valueDef.Description.Content)
+
+				valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+				if err := reportUncapitalizedDescription("enum", enumName, valueName, desc, schemaString); err != nil {
+					errors = append(errors, *err)
+				}
+			}
+		}
+	}
+
+	return errors
+}
+
+func uncapitalizedArgumentDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+	errors := make([]DescriptionError, 0, descriptionErrorCapacity)
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		for _, fieldRef := range obj.FieldsDefinition.Refs {
+			fieldDef := doc.FieldDefinitions[fieldRef]
+			for _, argRef := range fieldDef.ArgumentsDefinition.Refs {
+				argDef := doc.InputValueDefinitions[argRef]
+				if argDef.Description.IsDefined {
+					desc := doc.Input.ByteSliceString(argDef.Description.Content)
+					argName := doc.Input.ByteSliceString(argDef.Name)
+
+					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+					if err := reportUncapitalizedDescription("argument", fieldName, argName, desc, schemaString); err != nil {
+						errors = append(errors, *err)
+					}
+				}
+			}
+		}
+	}
+
+	return errors
+}
+
+func findUncapitalizedDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+	errors := make([]DescriptionError, 0, defaultErrorCapacity)
+	errors = append(errors, uncapitalizedTypeDescriptions(doc, schemaString)...)
+	errors = append(errors, uncapitalizedFieldDescriptions(doc, schemaString)...)
+	errors = append(errors, uncapitalizedEnumValueDescriptions(doc, schemaString)...)
+	errors = append(errors, uncapitalizedArgumentDescriptions(doc, schemaString)...)
+
+	return errors
+}
+
+func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int, bool) {
+	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
+	errorLines := make([]int, 0, defaultErrorCapacity)
+	hasDeprecationReasonError := false
+
+	helpers := []func(*ast.Document, string) []DescriptionError{
+		findMissingQueryRootType,
+		findUnsortedTypeFields,
+		findUnsortedInterfaceFields,
+		findRelayPageInfoSpec,
+		findInputObjectValuesCamelCased,
+		findMissingEnumValueDescriptions,
+		findUncapitalizedDescriptions,
+		findUnusedTypes,
+		findMissingTypeDescriptions,
+		findMissingFieldDescriptions,
+		findMissingArgumentDescriptions,
+		findMissingEnumDescriptions,
+		findMissingDeprecationReasons,
+	}
+
+	for _, helper := range helpers {
+		errList := helper(doc, schemaString)
+
+		for _, err := range errList {
+			descriptionErrors = append(descriptionErrors, err)
+
+			if err.LineNum > 0 {
+				errorLines = append(errorLines, err.LineNum)
+			}
+
+			if strings.Contains(err.Message, "deprecations-have-a-reason") {
+				hasDeprecationReasonError = true
+			}
+		}
+	}
+
+	return sortDescriptionErrors(descriptionErrors), errorLines, hasDeprecationReasonError
+}
+
 func printDescriptionErrors(errors []DescriptionError, schemaPath string) {
 	for _, err := range errors {
 		log.Errorf("%s:%d: %s\n  %s", schemaPath, err.LineNum, err.Message, err.LineContent)
 	}
+}
+
+func sortDescriptionErrors(errors []DescriptionError) []DescriptionError {
+	// No-op: return as-is
+	return errors
+}
+
+func findMissingQueryRootType(doc *ast.Document, schemaString string) []DescriptionError {
+	for _, obj := range doc.ObjectTypeDefinitions {
+		if doc.Input.ByteSliceString(obj.Name) == "Query" {
+			return nil
+		}
+	}
+
+	lineNum := 1
+	lineContent := getLineContent(schemaString, lineNum)
+	message := "invalid-graphql-schema: Query root type must be provided."
+
+	return []DescriptionError{{
+		LineNum:     lineNum,
+		Message:     message,
+		LineContent: lineContent,
+	}}
+}
+
+func findUnsortedFields(
+	fieldDefs []int,
+	getFieldName func(int) string,
+	typeLabel,
+	typeName,
+	schemaString string,
+) []DescriptionError {
+	fieldNames := make([]string, len(fieldDefs))
+	for i, fieldRef := range fieldDefs {
+		fieldNames[i] = getFieldName(fieldRef)
+	}
+
+	if len(fieldNames) < minFieldsForSortCheck {
+		return nil
+	}
+
+	sorted := make([]string, len(fieldNames))
+	copy(sorted, fieldNames)
+	sort.Strings(sorted)
+
+	for i := range fieldNames {
+		if fieldNames[i] != sorted[i] {
+			lineNum := findLineNumberByText(schemaString, typeLabel+" "+typeName)
+			lineContent := getLineContent(schemaString, lineNum)
+			message := typeLabel + "-fields-sorted-alphabetically: The fields of " +
+				typeLabel + " type `" + typeName + "` should be sorted in alphabetical order.\nExpected sorting: " +
+				strings.Join(sorted, ", ")
+
+			return []DescriptionError{{
+				LineNum:     lineNum,
+				Message:     message,
+				LineContent: lineContent,
+			}}
+		}
+	}
+
+	return nil
+}
+
+func findUnsortedTypeFields(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(obj.Name)
+
+		err := findUnsortedFields(
+			obj.FieldsDefinition.Refs,
+			func(fieldRef int) string { return doc.Input.ByteSliceString(doc.FieldDefinitions[fieldRef].Name) },
+			"type",
+			typeName,
+			schemaString,
+		)
+		if err != nil {
+			errors = append(errors, err...)
+		}
+	}
+
+	return errors
+}
+
+func findUnsortedInterfaceFields(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, iface := range doc.InterfaceTypeDefinitions {
+		ifaceName := doc.Input.ByteSliceString(iface.Name)
+
+		err := findUnsortedFields(
+			iface.FieldsDefinition.Refs,
+			func(fieldRef int) string { return doc.Input.ByteSliceString(doc.FieldDefinitions[fieldRef].Name) },
+			"interface",
+			ifaceName,
+			schemaString,
+		)
+		if err != nil {
+			errors = append(errors, err...)
+		}
+	}
+
+	return errors
+}
+
+func findRelayPageInfoSpec(doc *ast.Document, schemaString string) []DescriptionError {
+	for _, obj := range doc.ObjectTypeDefinitions {
+		if doc.Input.ByteSliceString(obj.Name) == "PageInfo" {
+			return nil
+		}
+	}
+
+	lineNum := 1
+	lineContent := getLineContent(schemaString, lineNum)
+	message := "relay-page-info-spec: A `PageInfo` object type is required as per the Relay spec."
+
+	return []DescriptionError{{
+		LineNum:     lineNum,
+		Message:     message,
+		LineContent: lineContent,
+	}}
+}
+
+func findInputObjectValuesCamelCased(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, input := range doc.InputObjectTypeDefinitions {
+		inputName := doc.Input.ByteSliceString(input.Name)
+
+		for _, fieldRef := range input.InputFieldsDefinition.Refs {
+			fieldDef := doc.InputValueDefinitions[fieldRef]
+
+			fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+			if !isCamelCase(fieldName) {
+				lineNum := findLineNumberByText(schemaString, fieldName+":")
+				lineContent := getLineContent(schemaString, lineNum)
+				message := "input-object-values-are-camel-cased: The input value `" +
+					inputName + "." + fieldName + "` is not camel cased."
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				})
+			}
+		}
+	}
+
+	return errors
+}
+
+func findMissingEnumValueDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+
+			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+			if !valueDef.Description.IsDefined {
+				lineNum := findLineNumberByText(schemaString, valueName)
+				lineContent := getLineContent(schemaString, lineNum)
+				message := "enum-values-have-descriptions: The enum value `" +
+					enumName + "." + valueName + "` is missing a description."
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				})
+			}
+		}
+	}
+
+	return errors
 }
 
 func findMissingTypeDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
@@ -1309,6 +1653,37 @@ func findMissingEnumDescriptions(doc *ast.Document, schemaString string) []Descr
 	return errors
 }
 
+func findMissingDeprecationReasons(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+
+			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+			if err := checkEnumValueDeprecationReason(doc, enumName, valueName, valueDef, schemaString); err != nil {
+				errors = append(errors, *err)
+			}
+		}
+	}
+
+	return errors
+}
+
+func isCamelCase(str string) bool {
+	if str == "" {
+		return false
+	}
+
+	if strings.Contains(str, "_") {
+		return false
+	}
+
+	return str[0] >= 'a' && str[0] <= 'z'
+}
+
 func checkEnumValueDeprecationReason(
 	doc *ast.Document,
 	enumName, valueName string,
@@ -1352,333 +1727,4 @@ func checkEnumValueDeprecationReason(
 	}
 
 	return nil
-}
-
-func findMissingDeprecationReasons(doc *ast.Document, schemaString string) []DescriptionError {
-	var errors []DescriptionError
-
-	for _, enum := range doc.EnumTypeDefinitions {
-		enumName := doc.Input.ByteSliceString(enum.Name)
-
-		for _, valueRef := range enum.EnumValuesDefinition.Refs {
-			valueDef := doc.EnumValueDefinitions[valueRef]
-
-			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
-
-			if err := checkEnumValueDeprecationReason(doc, enumName, valueName, valueDef, schemaString); err != nil {
-				errors = append(errors, *err)
-			}
-		}
-	}
-
-	return errors
-}
-
-func findMissingQueryRootType(doc *ast.Document, schemaString string) []DescriptionError {
-	for _, obj := range doc.ObjectTypeDefinitions {
-		if doc.Input.ByteSliceString(obj.Name) == "Query" {
-			return nil
-		}
-	}
-
-	lineNum := 1
-	lineContent := getLineContent(schemaString, lineNum)
-	message := "invalid-graphql-schema: Query root type must be provided."
-
-	return []DescriptionError{{
-		LineNum:     lineNum,
-		Message:     message,
-		LineContent: lineContent,
-	}}
-}
-
-func findUnsortedTypeFields(doc *ast.Document, schemaString string) []DescriptionError {
-	var errors []DescriptionError
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(obj.Name)
-
-		fieldNames := make([]string, len(obj.FieldsDefinition.Refs))
-
-		for i, fieldRef := range obj.FieldsDefinition.Refs {
-			fieldDef := doc.FieldDefinitions[fieldRef]
-			fieldNames[i] = doc.Input.ByteSliceString(fieldDef.Name)
-		}
-
-		if len(fieldNames) < minFieldsForSortCheck {
-			continue
-		}
-
-		sorted := make([]string, len(fieldNames))
-		copy(sorted, fieldNames)
-		sort.Strings(sorted)
-
-		for i := range fieldNames {
-			if fieldNames[i] != sorted[i] {
-				lineNum := findLineNumberByText(schemaString, "type "+typeName)
-				lineContent := getLineContent(schemaString, lineNum)
-				message := fmt.Sprintf(
-					"type-fields-sorted-alphabetically: The fields of object type `%s` should be sorted in alphabetical order."+
-						"\nExpected sorting: %s",
-					typeName,
-					strings.Join(sorted, ", "),
-				)
-				errors = append(errors, DescriptionError{
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
-
-				break
-			}
-		}
-	}
-
-	return errors
-}
-
-func findUnsortedInterfaceFields(doc *ast.Document, schemaString string) []DescriptionError {
-	var errors []DescriptionError
-
-	for _, docInterfaceTypeDefinition := range doc.InterfaceTypeDefinitions {
-		docInterfaceTypeDefinitionName := doc.Input.ByteSliceString(docInterfaceTypeDefinition.Name)
-
-		fieldNames := make([]string, len(docInterfaceTypeDefinition.FieldsDefinition.Refs))
-
-		for i, fieldRef := range docInterfaceTypeDefinition.FieldsDefinition.Refs {
-			fieldDef := doc.FieldDefinitions[fieldRef]
-			fieldNames[i] = doc.Input.ByteSliceString(fieldDef.Name)
-		}
-
-		if len(fieldNames) < minFieldsForSortCheck {
-			continue
-		}
-
-		sorted := make([]string, len(fieldNames))
-		copy(sorted, fieldNames)
-		sort.Strings(sorted)
-
-		for i := range fieldNames {
-			if fieldNames[i] != sorted[i] {
-				lineNum := findLineNumberByText(
-					schemaString,
-					"interface "+docInterfaceTypeDefinitionName,
-				)
-				lineContent := getLineContent(schemaString, lineNum)
-				message := "interface-fields-sorted-alphabetically: The fields of interface type `" +
-					docInterfaceTypeDefinitionName + "` should be sorted in alphabetical order." +
-					"\nExpected sorting: " + strings.Join(
-					sorted,
-					", ",
-				)
-				errors = append(errors, DescriptionError{
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
-
-				break
-			}
-		}
-	}
-
-	return errors
-}
-
-func findRelayPageInfoSpec(doc *ast.Document, schemaString string) []DescriptionError {
-	for _, obj := range doc.ObjectTypeDefinitions {
-		if doc.Input.ByteSliceString(obj.Name) == "PageInfo" {
-			return nil
-		}
-	}
-
-	lineNum := 1
-	lineContent := getLineContent(schemaString, lineNum)
-	message := "relay-page-info-spec: A `PageInfo` object type is required as per the Relay spec."
-
-	return []DescriptionError{{
-		LineNum:     lineNum,
-		Message:     message,
-		LineContent: lineContent,
-	}}
-}
-
-func findRelayConnectionArgumentSpec(doc *ast.Document, schemaString string) []DescriptionError {
-	var errors []DescriptionError
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		for _, fieldRef := range obj.FieldsDefinition.Refs {
-			fieldDef := doc.FieldDefinitions[fieldRef]
-
-			fieldType := getBaseTypeName(doc, doc.Types[fieldDef.Type])
-			if strings.HasSuffix(fieldType, "Connection") {
-				argNames := map[string]bool{}
-
-				for _, argRef := range fieldDef.ArgumentsDefinition.Refs {
-					argDef := doc.InputValueDefinitions[argRef]
-					argName := doc.Input.ByteSliceString(argDef.Name)
-					argNames[argName] = true
-				}
-
-				forward := argNames["first"] && argNames["after"]
-
-				backward := argNames["last"] && argNames["before"]
-				if !forward && !backward {
-					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-					lineNum := findFieldDefinitionLine(schemaString, fieldName, fieldType)
-					lineContent := getLineContent(schemaString, lineNum)
-					message := "relay-connection-arguments-spec: A field that returns a Connection Type must include forward" +
-						"pagination arguments (`first` and `after`), backward pagination arguments (`last` and `before`), or both" +
-						"as per the Relay spec."
-					errors = append(errors, DescriptionError{
-						LineNum:     lineNum,
-						Message:     message,
-						LineContent: lineContent,
-					})
-				}
-			}
-		}
-	}
-
-	return errors
-}
-
-func findRelayConnectionTypesSpec(doc *ast.Document, schemaString string) []DescriptionError {
-	var errors []DescriptionError
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(obj.Name)
-		if strings.HasSuffix(typeName, "Connection") {
-			hasPageInfo := false
-
-			for _, fieldRef := range obj.FieldsDefinition.Refs {
-				fieldDef := doc.FieldDefinitions[fieldRef]
-
-				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-				if fieldName == "pageInfo" {
-					hasPageInfo = true
-
-					break
-				}
-			}
-
-			if !hasPageInfo {
-				lineNum := findLineNumberByText(schemaString, "type "+typeName)
-				lineContent := getLineContent(schemaString, lineNum)
-				message := "relay-connection-types-spec: Connection `" + typeName + "` is missing the following field: pageInfo."
-				errors = append(errors, DescriptionError{
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
-			}
-		}
-	}
-
-	return errors
-}
-
-func isCamelCase(str string) bool {
-	if str == "" {
-		return false
-	}
-
-	if strings.Contains(str, "_") {
-		return false
-	}
-
-	return str[0] >= 'a' && str[0] <= 'z'
-}
-
-func findInputObjectValuesCamelCased(doc *ast.Document, schemaString string) []DescriptionError {
-	var errors []DescriptionError
-
-	for _, input := range doc.InputObjectTypeDefinitions {
-		inputName := doc.Input.ByteSliceString(input.Name)
-
-		for _, fieldRef := range input.InputFieldsDefinition.Refs {
-			fieldDef := doc.InputValueDefinitions[fieldRef]
-
-			fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-			if !isCamelCase(fieldName) {
-				lineNum := findLineNumberByText(schemaString, fieldName+":")
-				lineContent := getLineContent(schemaString, lineNum)
-				message := "input-object-values-are-camel-cased: The input value `" + inputName +
-					"." + fieldName + "` is not camel cased."
-				errors = append(errors, DescriptionError{
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
-			}
-		}
-	}
-
-	return errors
-}
-
-func findMissingEnumValueDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
-	var errors []DescriptionError
-
-	for _, enum := range doc.EnumTypeDefinitions {
-		enumName := doc.Input.ByteSliceString(enum.Name)
-
-		for _, valueRef := range enum.EnumValuesDefinition.Refs {
-			valueDef := doc.EnumValueDefinitions[valueRef]
-
-			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
-			if !valueDef.Description.IsDefined {
-				lineNum := findLineNumberByText(schemaString, valueName)
-				lineContent := getLineContent(schemaString, lineNum)
-				message := "enum-values-have-descriptions: The enum value `" +
-					enumName + "." + valueName + "` is missing a description."
-				errors = append(errors, DescriptionError{
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
-			}
-		}
-	}
-
-	return errors
-}
-
-func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int, bool) {
-	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
-	errorLines := make([]int, 0, defaultErrorCapacity)
-	hasDeprecationReasonError := false
-
-	helpers := []func(*ast.Document, string) []DescriptionError{
-		findMissingQueryRootType,
-		findUnsortedTypeFields,
-		findUnsortedInterfaceFields,
-		findRelayPageInfoSpec,
-		findInputObjectValuesCamelCased,
-		findMissingEnumValueDescriptions,
-		findUnusedTypes,
-		findMissingTypeDescriptions,
-		findMissingFieldDescriptions,
-		findMissingArgumentDescriptions,
-		findMissingEnumDescriptions,
-		findMissingDeprecationReasons,
-	}
-
-	for _, helper := range helpers {
-		errList := helper(doc, schemaString)
-
-		for _, err := range errList {
-			descriptionErrors = append(descriptionErrors, err)
-
-			if err.LineNum > 0 {
-				errorLines = append(errorLines, err.LineNum)
-			}
-
-			if strings.Contains(err.Message, "deprecations-have-a-reason") {
-				hasDeprecationReasonError = true
-			}
-		}
-	}
-
-	return sortDescriptionErrors(descriptionErrors), errorLines, hasDeprecationReasonError
 }

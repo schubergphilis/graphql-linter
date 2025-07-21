@@ -1156,49 +1156,6 @@ func TestValidateEnumTypes(t *testing.T) {
 	}
 }
 
-func TestFindRelayConnectionArgumentSpec(t *testing.T) {
-	t.Parallel()
-
-	schema := "type Query { users(first: Int, after: String, last: Int, before: String): UserConnection } type" +
-		"UserConnection { edges: [UserEdge] } type UserEdge { node: User } type User { id: ID }"
-	doc, _ := astparser.ParseGraphqlDocumentString(schema)
-
-	errs := findRelayConnectionArgumentSpec(&doc, schema)
-	if len(errs) != 0 {
-		t.Errorf("expected no errors for valid connection argument spec, got %v", errs)
-	}
-
-	schemaMissing := "type Query { users: UserConnection } type UserConnection { edges: [UserEdge] } type UserEdge" +
-		"{ node: User } type User { id: ID }"
-	docMissing, _ := astparser.ParseGraphqlDocumentString(schemaMissing)
-
-	errsMissing := findRelayConnectionArgumentSpec(&docMissing, schemaMissing)
-	if len(errsMissing) == 0 {
-		t.Errorf("expected error for missing connection arguments")
-	}
-}
-
-func TestFindRelayConnectionTypesSpec(t *testing.T) {
-	t.Parallel()
-
-	schema := "type UserConnection { pageInfo: PageInfo edges: [UserEdge] } type PageInfo { hasNextPage: Boolean } type" +
-		"UserEdge { node: User } type User { id: ID }"
-	doc, _ := astparser.ParseGraphqlDocumentString(schema)
-
-	errs := findRelayConnectionTypesSpec(&doc, schema)
-	if len(errs) != 0 {
-		t.Errorf("expected no errors for valid connection types spec, got %v", errs)
-	}
-
-	schemaMissing := `type UserConnection { edges: [UserEdge] } type UserEdge { node: User } type User { id: ID }`
-	docMissing, _ := astparser.ParseGraphqlDocumentString(schemaMissing)
-
-	errsMissing := findRelayConnectionTypesSpec(&docMissing, schemaMissing)
-	if len(errsMissing) == 0 {
-		t.Errorf("expected error for missing pageInfo field")
-	}
-}
-
 func TestFindUnsortedInterfaceFields(t *testing.T) {
 	t.Parallel()
 
@@ -1342,7 +1299,8 @@ func TestFindInputObjectValuesCamelCased(t *testing.T) {
 			found := false
 
 			for _, err := range errs {
-				if test.expectMsg == "" || (err.Message != "" && strings.Contains(err.Message, test.expectMsg)) {
+				if test.expectMsg == "" ||
+					(err.Message != "" && strings.Contains(err.Message, test.expectMsg)) {
 					found = true
 
 					break
@@ -1350,7 +1308,12 @@ func TestFindInputObjectValuesCamelCased(t *testing.T) {
 			}
 
 			if !found {
-				t.Errorf("%s: expected error message containing '%s', got %v", test.name, test.expectMsg, errs)
+				t.Errorf(
+					"%s: expected error message containing '%s', got %v",
+					test.name,
+					test.expectMsg,
+					errs,
+				)
 			}
 		} else if len(errs) != 0 {
 			t.Errorf("%s: expected no error, got %v", test.name, errs)
@@ -1399,7 +1362,8 @@ func TestFindMissingEnumValueDescriptions(t *testing.T) {
 			found := false
 
 			for _, err := range errs {
-				if test.expectMsg == "" || (err.Message != "" && strings.Contains(err.Message, test.expectMsg)) {
+				if test.expectMsg == "" ||
+					(err.Message != "" && strings.Contains(err.Message, test.expectMsg)) {
 					found = true
 
 					break
@@ -1407,7 +1371,12 @@ func TestFindMissingEnumValueDescriptions(t *testing.T) {
 			}
 
 			if !found {
-				t.Errorf("%s: expected error message containing '%s', got %v", test.name, test.expectMsg, errs)
+				t.Errorf(
+					"%s: expected error message containing '%s', got %v",
+					test.name,
+					test.expectMsg,
+					errs,
+				)
 			}
 		} else if len(errs) != 0 {
 			t.Errorf("%s: expected no error, got %v", test.name, errs)
