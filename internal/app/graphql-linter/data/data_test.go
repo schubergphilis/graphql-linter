@@ -1269,3 +1269,91 @@ func TestFindRelayPageInfoSpec(t *testing.T) {
 		}
 	}
 }
+
+func TestIsCamelCase(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"empty", "", false},
+		{"lowercase start", "fooBar", true},
+		{"uppercase start", "FooBar", false},
+		{"contains underscore", "foo_bar", false},
+		{"single lowercase", "a", true},
+		{"single uppercase", "A", false},
+		{"all lowercase", "foobar", true},
+		{"all uppercase", "FOOBAR", false},
+	}
+	for _, test := range tests {
+		got := isCamelCase(test.input)
+		if got != test.expected {
+			t.Errorf("%s: got %v, want %v", test.name, got, test.expected)
+		}
+	}
+}
+
+func TestFindInputObjectValuesCamelCased(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		schema      string
+		expectError bool
+		expectMsg   string
+	}{
+		{
+			name:        "all camel case",
+			schema:      `input Foo { fooBar: String }`,
+			expectError: false,
+		},
+		{
+			name:        "not camel case",
+			schema:      `input Bar { not_camel_case: String }`,
+			expectError: true,
+			expectMsg:   "input-object-values-are-camel-cased",
+		},
+		{
+			name:        "multiple fields, one invalid",
+			schema:      `input Baz { fooBar: String not_camel_case: Int }`,
+			expectError: true,
+			expectMsg:   "input-object-values-are-camel-cased",
+		},
+		{
+			name:        "single uppercase field",
+			schema:      `input Qux { FooBar: String }`,
+			expectError: true,
+			expectMsg:   "input-object-values-are-camel-cased",
+		},
+	}
+	for _, test := range tests {
+		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
+
+		errs := findInputObjectValuesCamelCased(&doc, test.schema)
+		if test.expectError {
+			if len(errs) == 0 {
+				t.Errorf("%s: expected error, got none", test.name)
+
+				continue
+			}
+
+			found := false
+
+			for _, err := range errs {
+				if test.expectMsg == "" || (err.Message != "" && strings.Contains(err.Message, test.expectMsg)) {
+					found = true
+
+					break
+				}
+			}
+
+			if !found {
+				t.Errorf("%s: expected error message containing '%s', got %v", test.name, test.expectMsg, errs)
+			}
+		} else if len(errs) != 0 {
+			t.Errorf("%s: expected no error, got %v", test.name, errs)
+		}
+	}
+}

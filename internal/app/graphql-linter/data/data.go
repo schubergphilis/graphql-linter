@@ -1460,7 +1460,10 @@ func findUnsortedInterfaceFields(doc *ast.Document, schemaString string) []Descr
 
 		for i := range fieldNames {
 			if fieldNames[i] != sorted[i] {
-				lineNum := findLineNumberByText(schemaString, "interface "+docInterfaceTypeDefinitionName)
+				lineNum := findLineNumberByText(
+					schemaString,
+					"interface "+docInterfaceTypeDefinitionName,
+				)
 				lineContent := getLineContent(schemaString, lineNum)
 				message := "interface-fields-sorted-alphabetically: The fields of interface type `" +
 					docInterfaceTypeDefinitionName + "` should be sorted in alphabetical order." +
@@ -1575,6 +1578,45 @@ func findRelayConnectionTypesSpec(doc *ast.Document, schemaString string) []Desc
 	return errors
 }
 
+func isCamelCase(str string) bool {
+	if str == "" {
+		return false
+	}
+
+	if strings.Contains(str, "_") {
+		return false
+	}
+
+	return str[0] >= 'a' && str[0] <= 'z'
+}
+
+func findInputObjectValuesCamelCased(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, input := range doc.InputObjectTypeDefinitions {
+		inputName := doc.Input.ByteSliceString(input.Name)
+
+		for _, fieldRef := range input.InputFieldsDefinition.Refs {
+			fieldDef := doc.InputValueDefinitions[fieldRef]
+
+			fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+			if !isCamelCase(fieldName) {
+				lineNum := findLineNumberByText(schemaString, fieldName+":")
+				lineContent := getLineContent(schemaString, lineNum)
+				message := "input-object-values-are-camel-cased: The input value `" + inputName +
+					"." + fieldName + "` is not camel cased."
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				})
+			}
+		}
+	}
+
+	return errors
+}
+
 func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, []int, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
 	errorLines := make([]int, 0, defaultErrorCapacity)
@@ -1585,6 +1627,7 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findUnsortedTypeFields,
 		findUnsortedInterfaceFields,
 		findRelayPageInfoSpec,
+		findInputObjectValuesCamelCased,
 		findUnusedTypes,
 		findMissingTypeDescriptions,
 		findMissingFieldDescriptions,
