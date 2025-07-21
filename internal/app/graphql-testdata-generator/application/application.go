@@ -35,12 +35,16 @@ func NewExecute() (Execute, error) {
 
 func (e Execute) Run() error {
 	baseExec := base.NewExecute(e.testdataBaseDir, e.testdataInvalidDir)
-	if err := baseExec.Run(); err != nil {
+
+	err := baseExec.Run()
+	if err != nil {
 		return fmt.Errorf("failed to run base executor: %w", err)
 	}
 
 	federationExec := federation.NewExecute(e.testdataBaseDir, e.testdataInvalidDir)
-	if err := federationExec.Run(); err != nil {
+
+	err = federationExec.Run()
+	if err != nil {
 		return fmt.Errorf("failed to run federation executor: %w", err)
 	}
 

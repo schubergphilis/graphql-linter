@@ -13,7 +13,9 @@ func createTestFile(t *testing.T, rootDir, relPath string) string {
 	t.Helper()
 
 	rootDirPath := filepath.Join(rootDir, relPath)
-	if err := os.MkdirAll(filepath.Dir(rootDirPath), 0o755); err != nil {
+
+	err := os.MkdirAll(filepath.Dir(rootDirPath), 0o755)
+	if err != nil {
 		t.Fatalf("mkdir error: %v", err)
 	}
 

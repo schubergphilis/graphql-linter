@@ -13,7 +13,8 @@ func main() {
 		log.WithError(err).Fatal("failed to construct CLIPresent")
 	}
 
-	if err := cliPresent.Run(); err != nil {
+	err = cliPresent.Run()
+	if err != nil {
 		log.WithError(err).Fatal("unable to run presentation layer")
 	}
 }

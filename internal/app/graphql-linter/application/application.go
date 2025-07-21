@@ -62,7 +62,12 @@ func (e Execute) Run() error {
 
 	totalErrors, errorFilesCount, dataDescriptionError := dataStore.LintSchemaFiles(schemaFiles)
 
-	dataStore.PrintReport(schemaFiles, totalErrors, len(schemaFiles)-errorFilesCount, dataDescriptionError)
+	dataStore.PrintReport(
+		schemaFiles,
+		totalErrors,
+		len(schemaFiles)-errorFilesCount,
+		dataDescriptionError,
+	)
 
 	return nil
 }

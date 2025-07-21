@@ -179,7 +179,8 @@ func (s Store) LoadConfig() (*LinterConfig, error) {
 		},
 	}
 
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	_, err = os.Stat(configPath)
+	if os.IsNotExist(err) {
 		log.Debugf("no config file found at %s. Using defaults", configPath)
 
 		return config, nil
@@ -324,7 +325,12 @@ func printErrorTypeSummary(errors []DescriptionError) {
 	}
 }
 
-func (s Store) PrintReport(schemaFiles []string, totalErrors int, passedFiles int, allErrors []DescriptionError) {
+func (s Store) PrintReport(
+	schemaFiles []string,
+	totalErrors int,
+	passedFiles int,
+	allErrors []DescriptionError,
+) {
 	percentPassed := 0.0
 	if len(schemaFiles) > 0 {
 		percentPassed = float64(passedFiles) / float64(len(schemaFiles)) * percentMultiplier
@@ -362,7 +368,7 @@ func (s Store) PrintReport(schemaFiles []string, totalErrors int, passedFiles in
 func findGraphQLFiles(rootPath string) ([]string, error) {
 	var files []string
 
-	if err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -384,7 +390,8 @@ func findGraphQLFiles(rootPath string) ([]string, error) {
 		}
 
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, fmt.Errorf("unable to walk dir for graphql files: %w", err)
 	}
 
@@ -1146,7 +1153,10 @@ func findUnusedTypes(doc *ast.Document, schemaString string) []DescriptionError 
 		if !isUsed {
 			lineNum := findLineNumberByText(schemaString, "type "+name)
 			lineContent := getLineContent(schemaString, lineNum)
-			message := fmt.Sprintf("defined-types-are-used: Type '%s' is defined but not used", name)
+			message := fmt.Sprintf(
+				"defined-types-are-used: Type '%s' is defined but not used",
+				name,
+			)
 			unusedTypeErrors = append(unusedTypeErrors, DescriptionError{
 				LineNum:     lineNum,
 				Message:     message,
@@ -1217,10 +1227,12 @@ func uncapitalizedTypeDescriptions(doc *ast.Document, schemaString string) []Des
 	for _, obj := range doc.ObjectTypeDefinitions {
 		if obj.Description.IsDefined {
 			desc := doc.Input.ByteSliceString(obj.Description.Content)
-			if err := reportUncapitalizedDescription(
+
+			err := reportUncapitalizedDescription(
 				"type",
 				"",
-				doc.Input.ByteSliceString(obj.Name), desc, schemaString); err != nil {
+				doc.Input.ByteSliceString(obj.Name), desc, schemaString)
+			if err != nil {
 				errors = append(errors, *err)
 			}
 		}
@@ -1237,11 +1249,13 @@ func uncapitalizedFieldDescriptions(doc *ast.Document, schemaString string) []De
 			fieldDef := doc.FieldDefinitions[fieldRef]
 			if fieldDef.Description.IsDefined {
 				desc := doc.Input.ByteSliceString(fieldDef.Description.Content)
-				if err := reportUncapitalizedDescription(
+
+				err := reportUncapitalizedDescription(
 					"field",
 					doc.Input.ByteSliceString(obj.Name),
 					doc.Input.ByteSliceString(fieldDef.Name),
-					desc, schemaString); err != nil {
+					desc, schemaString)
+				if err != nil {
 					errors = append(errors, *err)
 				}
 			}
@@ -1263,7 +1277,9 @@ func uncapitalizedEnumValueDescriptions(doc *ast.Document, schemaString string) 
 				desc := doc.Input.ByteSliceString(valueDef.Description.Content)
 
 				valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
-				if err := reportUncapitalizedDescription("enum", enumName, valueName, desc, schemaString); err != nil {
+
+				err := reportUncapitalizedDescription("enum", enumName, valueName, desc, schemaString)
+				if err != nil {
 					errors = append(errors, *err)
 				}
 			}
@@ -1286,7 +1302,9 @@ func uncapitalizedArgumentDescriptions(doc *ast.Document, schemaString string) [
 					argName := doc.Input.ByteSliceString(argDef.Name)
 
 					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-					if err := reportUncapitalizedDescription("argument", fieldName, argName, desc, schemaString); err != nil {
+
+					err := reportUncapitalizedDescription("argument", fieldName, argName, desc, schemaString)
+					if err != nil {
 						errors = append(errors, *err)
 					}
 				}
@@ -1309,6 +1327,7 @@ func findUncapitalizedDescriptions(doc *ast.Document, schemaString string) []Des
 
 func findMissingEnumValueDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
 	var errors []DescriptionError
+
 	for _, enum := range doc.EnumTypeDefinitions {
 		enumName := doc.Input.ByteSliceString(enum.Name)
 		for _, valueRef := range enum.EnumValuesDefinition.Refs {
@@ -1317,7 +1336,8 @@ func findMissingEnumValueDescriptions(doc *ast.Document, schemaString string) []
 				valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
 				lineNum := findLineNumberByText(schemaString, valueName)
 				lineContent := getLineContent(schemaString, lineNum)
-				message := "enum-values-have-descriptions: Enum value '" + enumName + "." + valueName + "' is missing a description."
+				message := "enum-values-have-descriptions: Enum value '" + enumName + "." + valueName +
+					"' is missing a description."
 				errors = append(errors, DescriptionError{
 					LineNum:     lineNum,
 					Message:     message,
@@ -1326,11 +1346,13 @@ func findMissingEnumValueDescriptions(doc *ast.Document, schemaString string) []
 			}
 		}
 	}
+
 	return errors
 }
 
 func findMissingTypeDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
 	var errors []DescriptionError
+
 	for _, obj := range doc.ObjectTypeDefinitions {
 		if !obj.Description.IsDefined {
 			name := doc.Input.ByteSliceString(obj.Name)
@@ -1344,11 +1366,13 @@ func findMissingTypeDescriptions(doc *ast.Document, schemaString string) []Descr
 			})
 		}
 	}
+
 	return errors
 }
 
 func findMissingFieldDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
 	var errors []DescriptionError
+
 	for _, obj := range doc.ObjectTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(obj.Name)
 		for _, fieldRef := range obj.FieldsDefinition.Refs {
@@ -1366,6 +1390,7 @@ func findMissingFieldDescriptions(doc *ast.Document, schemaString string) []Desc
 			}
 		}
 	}
+
 	return errors
 }
 
@@ -1592,25 +1617,38 @@ func findFieldsAreCamelCased(doc *ast.Document, schemaString string) []Descripti
 	return errors
 }
 
-func findInputObjectFieldsSortedAlphabetically(doc *ast.Document, schemaString string) []DescriptionError {
+func findInputObjectFieldsSortedAlphabetically(
+	doc *ast.Document,
+	schemaString string,
+) []DescriptionError {
 	var errors []DescriptionError
+
 	for _, input := range doc.InputObjectTypeDefinitions {
 		inputName := doc.Input.ByteSliceString(input.Name)
+
 		var fieldNames []string
+
 		for _, fieldRef := range input.InputFieldsDefinition.Refs {
 			fieldDef := doc.InputValueDefinitions[fieldRef]
 			fieldNames = append(fieldNames, doc.Input.ByteSliceString(fieldDef.Name))
 		}
+
 		if len(fieldNames) < minFieldsForSortCheck {
 			continue
 		}
+
 		sorted := make([]string, len(fieldNames))
 		copy(sorted, fieldNames)
 		sort.Strings(sorted)
+
 		if !equalStringSlices(fieldNames, sorted) {
 			lineNum := findLineNumberByText(schemaString, "input "+inputName)
 			lineContent := getLineContent(schemaString, lineNum)
-			message := "input-object-fields-sorted-alphabetically: The fields of input type '" + inputName + "' should be sorted in alphabetical order. Expected sorting: " + strings.Join(sorted, ", ")
+			message := "input-object-fields-sorted-alphabetically: The fields of input type '" + inputName +
+				"' should be sorted in alphabetical order. Expected sorting: " + strings.Join(
+				sorted,
+				", ",
+			)
 			errors = append(errors, DescriptionError{
 				LineNum:     lineNum,
 				Message:     message,
@@ -1618,11 +1656,13 @@ func findInputObjectFieldsSortedAlphabetically(doc *ast.Document, schemaString s
 			})
 		}
 	}
+
 	return errors
 }
 
 func findMissingArgumentDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
 	var errors []DescriptionError
+
 	for _, obj := range doc.ObjectTypeDefinitions {
 		for _, fieldRef := range obj.FieldsDefinition.Refs {
 			fieldDef := doc.FieldDefinitions[fieldRef]
@@ -1633,7 +1673,8 @@ func findMissingArgumentDescriptions(doc *ast.Document, schemaString string) []D
 					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
 					lineNum := findLineNumberByText(schemaString, argName+":")
 					lineContent := getLineContent(schemaString, lineNum)
-					message := "arguments-have-descriptions: The '" + argName + "' argument of '" + fieldName + "' is missing a description."
+					message := "arguments-have-descriptions: The '" + argName + "' argument of '" + fieldName +
+						"' is missing a description."
 					errors = append(errors, DescriptionError{
 						LineNum:     lineNum,
 						Message:     message,
@@ -1643,23 +1684,28 @@ func findMissingArgumentDescriptions(doc *ast.Document, schemaString string) []D
 			}
 		}
 	}
+
 	return errors
 }
 
 func findMissingDeprecationReasons(doc *ast.Document, schemaString string) []DescriptionError {
 	var errors []DescriptionError
+
 	for _, enum := range doc.EnumTypeDefinitions {
 		enumName := doc.Input.ByteSliceString(enum.Name)
 		for _, valueRef := range enum.EnumValuesDefinition.Refs {
 			valueDef := doc.EnumValueDefinitions[valueRef]
+
 			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
 			for _, dirRef := range valueDef.Directives.Refs {
 				dir := doc.Directives[dirRef]
+
 				dirName := doc.Input.ByteSliceString(dir.Name)
 				if dirName == "deprecated" && len(dir.Arguments.Refs) == 0 {
 					lineNum := findLineNumberByText(schemaString, valueName)
 					lineContent := getLineContent(schemaString, lineNum)
-					message := "deprecations-have-a-reason: Deprecated enum value '" + enumName + "." + valueName + "' is missing a reason."
+					message := "deprecations-have-a-reason: Deprecated enum value '" + enumName + "." +
+						valueName + "' is missing a reason."
 					errors = append(errors, DescriptionError{
 						LineNum:     lineNum,
 						Message:     message,
@@ -1669,28 +1715,39 @@ func findMissingDeprecationReasons(doc *ast.Document, schemaString string) []Des
 			}
 		}
 	}
+
 	return errors
 }
 
 func findEnumValuesSortedAlphabetically(doc *ast.Document, schemaString string) []DescriptionError {
 	var errors []DescriptionError
+
 	for _, enum := range doc.EnumTypeDefinitions {
 		enumName := doc.Input.ByteSliceString(enum.Name)
+
 		var valueNames []string
+
 		for _, valueRef := range enum.EnumValuesDefinition.Refs {
 			valueDef := doc.EnumValueDefinitions[valueRef]
 			valueNames = append(valueNames, doc.Input.ByteSliceString(valueDef.EnumValue))
 		}
+
 		if len(valueNames) < minEnumValuesForSortCheck {
 			continue
 		}
+
 		sorted := make([]string, len(valueNames))
 		copy(sorted, valueNames)
 		sort.Strings(sorted)
+
 		if !equalStringSlices(valueNames, sorted) {
 			lineNum := findLineNumberByText(schemaString, "enum "+enumName)
 			lineContent := getLineContent(schemaString, lineNum)
-			message := "enum-values-sorted-alphabetically: The enum '" + enumName + "' should be sorted in alphabetical order. Expected sorting: " + strings.Join(sorted, ", ")
+			message := "enum-values-sorted-alphabetically: The enum '" + enumName +
+				"' should be sorted in alphabetical order. Expected sorting: " + strings.Join(
+				sorted,
+				", ",
+			)
 			errors = append(errors, DescriptionError{
 				LineNum:     lineNum,
 				Message:     message,
@@ -1698,16 +1755,17 @@ func findEnumValuesSortedAlphabetically(doc *ast.Document, schemaString string) 
 			})
 		}
 	}
+
 	return errors
 }
 
-func equalStringSlices(a, b []string) bool {
-	if len(a) != len(b) {
+func equalStringSlices(sliceA, sliceB []string) bool {
+	if len(sliceA) != len(sliceB) {
 		return false
 	}
 
-	for i := range a {
-		if a[i] != b[i] {
+	for i := range sliceA {
+		if sliceA[i] != sliceB[i] {
 			return false
 		}
 	}

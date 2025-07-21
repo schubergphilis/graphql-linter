@@ -932,7 +932,13 @@ func TestReportUncapitalizedDescription(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := reportUncapitalizedDescription(test.kind, test.parent, test.field, test.desc, test.schema)
+			err := reportUncapitalizedDescription(
+				test.kind,
+				test.parent,
+				test.field,
+				test.desc,
+				test.schema,
+			)
 			if test.expectNil {
 				if err != nil {
 					t.Errorf("expected nil, got %v", err)
@@ -997,7 +1003,8 @@ func TestFindMissingArgumentDescriptions(t *testing.T) {
 			found := false
 
 			for _, err := range errs {
-				if test.expectMsg == "" || (err.Message != "" && strings.Contains(err.Message, test.expectMsg)) {
+				if test.expectMsg == "" ||
+					(err.Message != "" && strings.Contains(err.Message, test.expectMsg)) {
 					found = true
 
 					break
@@ -1005,7 +1012,12 @@ func TestFindMissingArgumentDescriptions(t *testing.T) {
 			}
 
 			if !found {
-				t.Errorf("%s: expected error message containing '%s', got %v", test.name, test.expectMsg, errs)
+				t.Errorf(
+					"%s: expected error message containing '%s', got %v",
+					test.name,
+					test.expectMsg,
+					errs,
+				)
 			}
 		} else if len(errs) != 0 {
 			t.Errorf("%s: expected no error, got %v", test.name, errs)
@@ -1023,7 +1035,9 @@ func TestReadSchemaFile(t *testing.T) {
 	defer os.Remove(tempFile.Name())
 
 	content := "type Query { id: ID }"
-	if _, err := tempFile.WriteString(content); err != nil {
+
+	_, err = tempFile.WriteString(content)
+	if err != nil {
 		t.Fatalf("failed to write to temp file: %v", err)
 	}
 
@@ -1061,7 +1075,9 @@ func TestFindAndLogGraphQLSchemaFiles(t *testing.T) {
 	dir := t.TempDir()
 
 	file := dir + "/test.graphql"
-	if err := os.WriteFile(file, []byte("type Query { id: ID }"), 0o600); err != nil {
+
+	err := os.WriteFile(file, []byte("type Query { id: ID }"), 0o600)
+	if err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -1080,7 +1096,9 @@ func TestLintSchemaFiles(t *testing.T) {
 
 	schema := `"""Query root"""
 type Query { """ID field""" id: ID }`
-	if err := os.WriteFile(file, []byte(schema), 0o600); err != nil {
+
+	err := os.WriteFile(file, []byte(schema), 0o600)
+	if err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 

@@ -24,7 +24,8 @@ func (c CLI) Run() error {
 		return fmt.Errorf("unable to create application execute: %w", err)
 	}
 
-	if err := applicationExecute.Run(); err != nil {
+	err = applicationExecute.Run()
+	if err != nil {
 		return fmt.Errorf("unable to run execute: %w", err)
 	}
 

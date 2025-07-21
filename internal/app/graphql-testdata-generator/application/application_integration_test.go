@@ -76,8 +76,8 @@ func checkLinterVersion(t *testing.T) {
 			"graphql-schema-linter@"+requiredLinterVersion,
 			"graphql",
 		)
-		installOut, installErr := installCmd.CombinedOutput()
 
+		installOut, installErr := installCmd.CombinedOutput()
 		if installErr != nil {
 			t.Fatalf(
 				"Failed to install graphql-schema-linter@%s: %v\n%s",
@@ -120,8 +120,8 @@ func TestInvalidSchemas(t *testing.T) {
 
 		filePath := filepath.Join(baseDir, file.Name())
 		cmd := exec.Command("graphql-schema-linter", "-f", "json", filePath)
-		output, err := cmd.CombinedOutput()
 
+		output, err := cmd.CombinedOutput()
 		if err == nil {
 			t.Errorf("Expected error for file, but linter passed: %s", file.Name())
 

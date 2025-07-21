@@ -54,7 +54,8 @@ func (c CLI) Run() error {
 		log.SetReportCaller(true)
 	}
 
-	if err := applicationExecute.Run(); err != nil {
+	err = applicationExecute.Run()
+	if err != nil {
 		return fmt.Errorf("unable to run execute: %w", err)
 	}
 
