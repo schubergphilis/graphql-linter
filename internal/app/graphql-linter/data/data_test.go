@@ -493,12 +493,16 @@ func TestLintDescriptions(t *testing.T) {
 			t.Parallel()
 
 			doc, _ := astparser.ParseGraphqlDocumentString(test.schemaContent)
-			descriptionErrors, _, hasDeprecationReasonError := lintDescriptions(&doc, test.schemaContent)
+			descriptionErrors, _, hasDeprecationReasonError := lintDescriptions(
+				&doc,
+				test.schemaContent,
+			)
 
 			found := false
 
 			for _, err := range descriptionErrors {
-				if test.errorSubstring == "" || (err.Message != "" && contains(err.Message, test.errorSubstring)) {
+				if test.errorSubstring == "" ||
+					(err.Message != "" && contains(err.Message, test.errorSubstring)) {
 					found = true
 
 					break
@@ -506,11 +510,19 @@ func TestLintDescriptions(t *testing.T) {
 			}
 
 			if !found {
-				t.Errorf("expected error containing '%s', but not found in errors: %v", test.errorSubstring, descriptionErrors)
+				t.Errorf(
+					"expected error containing '%s', but not found in errors: %v",
+					test.errorSubstring,
+					descriptionErrors,
+				)
 			}
 
 			if hasDeprecationReasonError != test.wantHasDeprecationReasonError {
-				t.Errorf("got hasDeprecationReasonError=%v, want %v", hasDeprecationReasonError, test.wantHasDeprecationReasonError)
+				t.Errorf(
+					"got hasDeprecationReasonError=%v, want %v",
+					hasDeprecationReasonError,
+					test.wantHasDeprecationReasonError,
+				)
 			}
 		})
 	}
@@ -637,7 +649,9 @@ func TestSuggestDirective(t *testing.T) {
 func TestPrintAndValidateDescriptionErrors(t *testing.T) {
 	t.Parallel()
 
-	descriptionErrors := []DescriptionError{{LineNum: 1, Message: "error", LineContent: "type Query { id: ID }"}}
+	descriptionErrors := []DescriptionError{
+		{LineNum: 1, Message: "error", LineContent: "type Query { id: ID }"},
+	}
 
 	got := printAndValidateDescriptionErrors(descriptionErrors, "test.graphql")
 	if !got {
@@ -737,5 +751,83 @@ func TestLoadConfig(t *testing.T) {
 	config, err := s.LoadConfig()
 	if err != nil || config == nil {
 		t.Errorf("expected config, got err %v", err)
+	}
+}
+
+func TestMatches(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		sup       Suppression
+		filePath  string
+		line      int
+		rule      string
+		value     string
+		wantMatch bool
+	}{
+		{"all empty", Suppression{}, "foo.graphql", 1, "rule", "value", true},
+		{
+			"file match",
+			Suppression{File: "foo.graphql"},
+			"bar/foo.graphql",
+			1,
+			"rule",
+			"value",
+			true,
+		},
+		{
+			"file no match",
+			Suppression{File: "baz.graphql"},
+			"foo.graphql",
+			1,
+			"rule",
+			"value",
+			false,
+		},
+		{"line match", Suppression{Line: 2}, "foo.graphql", 2, "rule", "value", true},
+		{"line no match", Suppression{Line: 3}, "foo.graphql", 2, "rule", "value", false},
+		{"rule match", Suppression{Rule: "myrule"}, "foo.graphql", 1, "myrule", "value", true},
+		{
+			"rule no match",
+			Suppression{Rule: "otherrule"},
+			"foo.graphql",
+			1,
+			"myrule",
+			"value",
+			false,
+		},
+		{"value match", Suppression{Value: "val"}, "foo.graphql", 1, "rule", "val", true},
+		{"value no match", Suppression{Value: "other"}, "foo.graphql", 1, "rule", "val", false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := test.sup.Matches(test.filePath, test.line, test.rule, test.value)
+			if got != test.wantMatch {
+				t.Errorf("got %v, want %v", got, test.wantMatch)
+			}
+		})
+	}
+}
+
+func TestIsSuppressed(t *testing.T) {
+	t.Parallel()
+
+	store := Store{
+		LinterConfig: &LinterConfig{
+			Suppressions: []Suppression{{File: "foo.graphql", Line: 2, Rule: "rule", Value: "val"}},
+		},
+	}
+
+	got := store.isSuppressed("bar/foo.graphql", 2, "rule", "val")
+	if !got {
+		t.Errorf("expected suppression to match")
+	}
+
+	got = store.isSuppressed("bar/foo.graphql", 3, "rule", "val")
+	if got {
+		t.Errorf("expected suppression not to match")
 	}
 }

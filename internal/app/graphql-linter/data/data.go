@@ -700,7 +700,10 @@ func suggestDirective(directiveName, validName string) {
 	}
 }
 
-func printAndValidateDescriptionErrors(descriptionErrors []DescriptionError, schemaPath string) bool {
+func printAndValidateDescriptionErrors(
+	descriptionErrors []DescriptionError,
+	schemaPath string,
+) bool {
 	if len(descriptionErrors) > 0 {
 		printDescriptionErrors(descriptionErrors, schemaPath)
 
@@ -744,7 +747,8 @@ func (s Store) lintSchemaFile(schemaPath string) int {
 		hasValidationErrors = true
 	}
 
-	hasValidationErrors = printAndValidateDescriptionErrors(descriptionErrors, schemaPath) || hasValidationErrors
+	hasValidationErrors = printAndValidateDescriptionErrors(descriptionErrors, schemaPath) ||
+		hasValidationErrors
 
 	if hasDeprecationReasonError {
 		hasValidationErrors = true
