@@ -2,10 +2,12 @@ package data
 
 import (
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
 func TestFindLineNumberByText(t *testing.T) {
@@ -448,4 +450,71 @@ func TestRemoveAllDigits(t *testing.T) {
 			assert.Equal(t, test.expected, got)
 		})
 	}
+}
+
+func TestLintDescriptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name                          string
+		schemaContent                 string
+		errorSubstring                string
+		wantHasDeprecationReasonError bool
+	}{
+		{
+			name:                          "missing Query root type",
+			schemaContent:                 "type User { id: ID }",
+			errorSubstring:                "invalid-graphql-schema",
+			wantHasDeprecationReasonError: false,
+		},
+		{
+			name:                          "all valid, no errors",
+			schemaContent:                 "type Query { id: ID }",
+			errorSubstring:                "Object type 'Query' is missing a description",
+			wantHasDeprecationReasonError: false,
+		},
+		{
+			name:                          "missing deprecation reason",
+			schemaContent:                 `enum Status {\n  ACTIVE\n  INACTIVE @deprecated\n}`,
+			errorSubstring:                "deprecations-have-a-reason",
+			wantHasDeprecationReasonError: true,
+		},
+		{
+			name:                          "missing type description",
+			schemaContent:                 "type Query { id: ID }\ntype Foo { bar: String }",
+			errorSubstring:                "Object type 'Foo' is missing a description",
+			wantHasDeprecationReasonError: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			doc, _ := astparser.ParseGraphqlDocumentString(test.schemaContent)
+			descriptionErrors, _, hasDeprecationReasonError := lintDescriptions(&doc, test.schemaContent)
+
+			found := false
+
+			for _, err := range descriptionErrors {
+				if test.errorSubstring == "" || (err.Message != "" && contains(err.Message, test.errorSubstring)) {
+					found = true
+
+					break
+				}
+			}
+
+			if !found {
+				t.Errorf("expected error containing '%s', but not found in errors: %v", test.errorSubstring, descriptionErrors)
+			}
+
+			if hasDeprecationReasonError != test.wantHasDeprecationReasonError {
+				t.Errorf("got hasDeprecationReasonError=%v, want %v", hasDeprecationReasonError, test.wantHasDeprecationReasonError)
+			}
+		})
+	}
+}
+
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
 }
