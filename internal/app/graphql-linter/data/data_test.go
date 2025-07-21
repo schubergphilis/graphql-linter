@@ -930,8 +930,8 @@ type Query { """ID field""" id: ID }`
 	s := Store{Verbose: false}
 
 	total, errorFiles := s.LintSchemaFiles([]string{file})
-	if total != 0 || errorFiles != 0 {
-		t.Errorf("expected 0 errors, got %d, errorFiles %d", total, errorFiles)
+	if total != 1 || errorFiles != 1 {
+		t.Errorf("expected 1 error, got %d, errorFiles %d", total, errorFiles)
 	}
 }
 
@@ -1196,5 +1196,76 @@ func TestFindRelayConnectionTypesSpec(t *testing.T) {
 	errsMissing := findRelayConnectionTypesSpec(&docMissing, schemaMissing)
 	if len(errsMissing) == 0 {
 		t.Errorf("expected error for missing pageInfo field")
+	}
+}
+
+func TestFindUnsortedInterfaceFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		schema        string
+		expectError   bool
+		expectMessage string
+	}{
+		{
+			name:        "sorted interface fields",
+			schema:      `interface Foo { a: String b: Int }`,
+			expectError: false,
+		},
+		{
+			name:          "unsorted interface fields",
+			schema:        `interface Bar { z: String a: Int }`,
+			expectError:   true,
+			expectMessage: "interface-fields-sorted-alphabetically",
+		},
+		{
+			name:        "single field interface",
+			schema:      `interface Baz { a: String }`,
+			expectError: false,
+		},
+	}
+	for _, test := range tests {
+		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
+
+		errs := findUnsortedInterfaceFields(&doc, test.schema)
+		if test.expectError {
+			assert.NotEmpty(t, errs, test.name)
+			assert.Contains(t, errs[0].Message, test.expectMessage)
+		} else {
+			assert.Empty(t, errs, test.name)
+		}
+	}
+}
+
+func TestFindRelayPageInfoSpec(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		schema      string
+		expectError bool
+	}{
+		{
+			name:        "PageInfo present",
+			schema:      `type PageInfo { hasNextPage: Boolean }`,
+			expectError: false,
+		},
+		{
+			name:        "PageInfo missing",
+			schema:      `type Query { id: ID }`,
+			expectError: true,
+		},
+	}
+	for _, test := range tests {
+		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
+
+		errs := findRelayPageInfoSpec(&doc, test.schema)
+		if test.expectError {
+			assert.NotEmpty(t, errs, test.name)
+			assert.Contains(t, errs[0].Message, "relay-page-info-spec")
+		} else {
+			assert.Empty(t, errs, test.name)
+		}
 	}
 }

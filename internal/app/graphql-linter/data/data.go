@@ -1437,6 +1437,69 @@ func findUnsortedTypeFields(doc *ast.Document, schemaString string) []Descriptio
 	return errors
 }
 
+func findUnsortedInterfaceFields(doc *ast.Document, schemaString string) []DescriptionError {
+	var errors []DescriptionError
+
+	for _, docInterfaceTypeDefinition := range doc.InterfaceTypeDefinitions {
+		docInterfaceTypeDefinitionName := doc.Input.ByteSliceString(docInterfaceTypeDefinition.Name)
+
+		fieldNames := make([]string, len(docInterfaceTypeDefinition.FieldsDefinition.Refs))
+
+		for i, fieldRef := range docInterfaceTypeDefinition.FieldsDefinition.Refs {
+			fieldDef := doc.FieldDefinitions[fieldRef]
+			fieldNames[i] = doc.Input.ByteSliceString(fieldDef.Name)
+		}
+
+		if len(fieldNames) < minFieldsForSortCheck {
+			continue
+		}
+
+		sorted := make([]string, len(fieldNames))
+		copy(sorted, fieldNames)
+		sort.Strings(sorted)
+
+		for i := range fieldNames {
+			if fieldNames[i] != sorted[i] {
+				lineNum := findLineNumberByText(schemaString, "interface "+docInterfaceTypeDefinitionName)
+				lineContent := getLineContent(schemaString, lineNum)
+				message := "interface-fields-sorted-alphabetically: The fields of interface type `" +
+					docInterfaceTypeDefinitionName + "` should be sorted in alphabetical order." +
+					"\nExpected sorting: " + strings.Join(
+					sorted,
+					", ",
+				)
+				errors = append(errors, DescriptionError{
+					LineNum:     lineNum,
+					Message:     message,
+					LineContent: lineContent,
+				})
+
+				break
+			}
+		}
+	}
+
+	return errors
+}
+
+func findRelayPageInfoSpec(doc *ast.Document, schemaString string) []DescriptionError {
+	for _, obj := range doc.ObjectTypeDefinitions {
+		if doc.Input.ByteSliceString(obj.Name) == "PageInfo" {
+			return nil
+		}
+	}
+
+	lineNum := 1
+	lineContent := getLineContent(schemaString, lineNum)
+	message := "relay-page-info-spec: A `PageInfo` object type is required as per the Relay spec."
+
+	return []DescriptionError{{
+		LineNum:     lineNum,
+		Message:     message,
+		LineContent: lineContent,
+	}}
+}
+
 func findRelayConnectionArgumentSpec(doc *ast.Document, schemaString string) []DescriptionError {
 	var errors []DescriptionError
 
@@ -1499,10 +1562,7 @@ func findRelayConnectionTypesSpec(doc *ast.Document, schemaString string) []Desc
 			if !hasPageInfo {
 				lineNum := findLineNumberByText(schemaString, "type "+typeName)
 				lineContent := getLineContent(schemaString, lineNum)
-				message := fmt.Sprintf(
-					"relay-connection-types-spec: Connection `%s` is missing the following field: pageInfo.",
-					typeName,
-				)
+				message := "relay-connection-types-spec: Connection `" + typeName + "` is missing the following field: pageInfo."
 				errors = append(errors, DescriptionError{
 					LineNum:     lineNum,
 					Message:     message,
@@ -1523,8 +1583,8 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 	helpers := []func(*ast.Document, string) []DescriptionError{
 		findMissingQueryRootType,
 		findUnsortedTypeFields,
-		findRelayConnectionArgumentSpec,
-		findRelayConnectionTypesSpec,
+		findUnsortedInterfaceFields,
+		findRelayPageInfoSpec,
 		findUnusedTypes,
 		findMissingTypeDescriptions,
 		findMissingFieldDescriptions,
