@@ -38,7 +38,12 @@ type Storer interface {
 	FindAndLogGraphQLSchemaFiles() ([]string, error)
 	LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionError)
 	LoadConfig() (*LinterConfig, error)
-	PrintReport(schemaFiles []string, totalErrors int, passedFiles int, allErrors []DescriptionError)
+	PrintReport(
+		schemaFiles []string,
+		totalErrors int,
+		passedFiles int,
+		allErrors []DescriptionError,
+	)
 }
 
 type Store struct {
@@ -150,106 +155,6 @@ func (s Store) PrintReport(
 	}
 
 	log.Infof("All %d schema file(s) passed linting successfully!", len(schemaFiles))
-}
-
-// --- Unexported helpers (funcorder compliance) ---
-
-func (s Store) collectUnsuppressedDataTypeErrors(doc *ast.Document, schemaString, schemaFile string) (int, []DescriptionError) {
-	unsuppressedDataTypeErrors := 0
-
-	var allErrors []DescriptionError
-
-	dataTypesValid, dataTypeErrorLines := s.validateDataTypes(doc, schemaString, schemaFile)
-	if !dataTypesValid {
-		for _, lineNum := range dataTypeErrorLines {
-			if !s.isSuppressed(schemaFile, lineNum, "defined-types-are-used", "") {
-				allErrors = append(allErrors, DescriptionError{
-					FilePath:    schemaFile,
-					LineNum:     lineNum,
-					Message:     "defined-types-are-used: Type is defined but not used",
-					LineContent: getLineContent(schemaString, lineNum),
-				})
-				unsuppressedDataTypeErrors++
-			}
-		}
-	}
-
-	return unsuppressedDataTypeErrors, allErrors
-}
-
-func (s Store) getUnsuppressedDescriptionErrors(descriptionErrors []DescriptionError, schemaFile string) []DescriptionError {
-	unsuppressed := make([]DescriptionError, 0, len(descriptionErrors))
-	for _, err := range descriptionErrors {
-		rule := err.Message
-		if idx := strings.Index(rule, ":"); idx != -1 {
-			rule = rule[:idx]
-		}
-
-		if !s.isSuppressed(schemaFile, err.LineNum, rule, "") {
-			unsuppressed = append(unsuppressed, err)
-		}
-	}
-
-	return unsuppressed
-}
-
-func (s Store) lintSingleSchemaFile(schemaFile string) (int, int, []DescriptionError) {
-	totalErrors := 0
-	errorFilesCount := 0
-
-	var allErrors []DescriptionError
-
-	if s.Verbose {
-		log.Infof("=== Linting %s ===", schemaFile)
-	}
-
-	schemaString, ok := readSchemaFile(schemaFile)
-	if !ok {
-		allErrors = append(allErrors, DescriptionError{
-			FilePath:    schemaFile,
-			LineNum:     0,
-			Message:     "failed-to-read-schema-file: failed to read schema file",
-			LineContent: "",
-		})
-		totalErrors++
-		errorFilesCount++
-
-		return totalErrors, errorFilesCount, allErrors
-	}
-
-	filteredSchema := filterSchemaComments(schemaString)
-	doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
-	LogSchemaParseErrors(schemaString, &parseReport)
-	descriptionErrors, hasUnsuppressedDeprecationReasonError := s.lintDescriptions(
-		&doc,
-		schemaString,
-		schemaFile,
-	)
-	unsuppressedDescriptionErrors := s.getUnsuppressedDescriptionErrors(descriptionErrors, schemaFile)
-
-	unsuppressedDataTypeErrors, dataTypeErrors := s.collectUnsuppressedDataTypeErrors(&doc, schemaString, schemaFile)
-	allErrors = append(allErrors, dataTypeErrors...)
-
-	unsuppressedDirectiveOrFederationError := !validateDirectiveNames(&doc) || !validateFederationSchema(filteredSchema)
-
-	if len(unsuppressedDescriptionErrors) > 0 || hasUnsuppressedDeprecationReasonError ||
-		unsuppressedDataTypeErrors > 0 ||
-		unsuppressedDirectiveOrFederationError {
-		for i := range unsuppressedDescriptionErrors {
-			unsuppressedDescriptionErrors[i].FilePath = schemaFile
-		}
-
-		allErrors = append(allErrors, unsuppressedDescriptionErrors...)
-
-		totalErrors += len(unsuppressedDescriptionErrors) + unsuppressedDataTypeErrors
-		if unsuppressedDirectiveOrFederationError {
-			totalErrors++
-		}
-
-		errorFilesCount++
-	}
-
-	return totalErrors, errorFilesCount, allErrors
 }
 
 func (s Store) LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionError) {
@@ -2124,4 +2029,139 @@ func equalStringSlices(sliceA, sliceB []string) bool {
 	}
 
 	return true
+}
+
+func (s Store) collectUnsuppressedDataTypeErrors(
+	doc *ast.Document,
+	schemaString, schemaFile string,
+) (int, []DescriptionError) {
+	unsuppressedDataTypeErrors := 0
+
+	var allErrors []DescriptionError
+
+	dataTypesValid, dataTypeErrorLines := s.validateDataTypes(doc, schemaString, schemaFile)
+	if !dataTypesValid {
+		for _, lineNum := range dataTypeErrorLines {
+			if !s.isSuppressed(schemaFile, lineNum, "defined-types-are-used", "") {
+				allErrors = append(allErrors, DescriptionError{
+					FilePath:    schemaFile,
+					LineNum:     lineNum,
+					Message:     "defined-types-are-used: Type is defined but not used",
+					LineContent: getLineContent(schemaString, lineNum),
+				})
+				unsuppressedDataTypeErrors++
+			}
+		}
+	}
+
+	return unsuppressedDataTypeErrors, allErrors
+}
+
+func (s Store) getUnsuppressedDescriptionErrors(
+	descriptionErrors []DescriptionError,
+	schemaFile string,
+) []DescriptionError {
+	unsuppressed := make([]DescriptionError, 0, len(descriptionErrors))
+	for _, err := range descriptionErrors {
+		rule := err.Message
+		if idx := strings.Index(rule, ":"); idx != -1 {
+			rule = rule[:idx]
+		}
+
+		if !s.isSuppressed(schemaFile, err.LineNum, rule, "") {
+			unsuppressed = append(unsuppressed, err)
+		}
+	}
+
+	return unsuppressed
+}
+
+func (s Store) lintSingleSchemaFile(schemaFile string) (int, int, []DescriptionError) {
+	if s.Verbose {
+		log.Infof("=== Linting %s ===", schemaFile)
+	}
+
+	schemaString, ok := s.readAndValidateSchemaFile(schemaFile)
+	if !ok {
+		return 1, 1, []DescriptionError{{
+			FilePath:    schemaFile,
+			LineNum:     0,
+			Message:     "failed-to-read-schema-file: failed to read schema file",
+			LineContent: "",
+		}}
+	}
+
+	filteredSchema, doc, parseReport := s.parseAndFilterSchema(schemaString)
+	LogSchemaParseErrors(schemaString, &parseReport)
+	descriptionErrors, hasUnsuppressedDeprecationReasonError := s.lintDescriptions(
+		&doc,
+		schemaString,
+		schemaFile,
+	)
+	unsuppressedDescriptionErrors := s.getUnsuppressedDescriptionErrors(
+		descriptionErrors,
+		schemaFile,
+	)
+	unsuppressedDataTypeErrors, dataTypeErrors := s.collectUnsuppressedDataTypeErrors(
+		&doc,
+		schemaString,
+		schemaFile,
+	)
+	allErrors := append([]DescriptionError{}, dataTypeErrors...)
+	unsuppressedDirectiveOrFederationError := !validateDirectiveNames(&doc) ||
+		!validateFederationSchema(filteredSchema)
+
+	totalErrors, errorFilesCount := s.summarizeLintResults(
+		len(unsuppressedDescriptionErrors),
+		hasUnsuppressedDeprecationReasonError,
+		unsuppressedDataTypeErrors,
+		unsuppressedDirectiveOrFederationError,
+	)
+	if totalErrors > 0 {
+		for i := range unsuppressedDescriptionErrors {
+			unsuppressedDescriptionErrors[i].FilePath = schemaFile
+		}
+
+		allErrors = append(allErrors, unsuppressedDescriptionErrors...)
+	}
+
+	return totalErrors, errorFilesCount, allErrors
+}
+
+func (s Store) readAndValidateSchemaFile(schemaFile string) (string, bool) {
+	schemaString, ok := readSchemaFile(schemaFile)
+
+	return schemaString, ok
+}
+
+func (s Store) parseAndFilterSchema(
+	schemaString string,
+) (string, ast.Document, operationreport.Report) {
+	filteredSchema := filterSchemaComments(schemaString)
+	doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
+
+	return filteredSchema, doc, parseReport
+}
+
+func (s Store) summarizeLintResults(
+	unsuppressedDescErrs int,
+	hasUnsuppressedDeprecationReasonError bool,
+	unsuppressedDataTypeErrors int,
+	unsuppressedDirectiveOrFederationError bool,
+) (int, int) {
+	totalErrors := 0
+	errorFilesCount := 0
+
+	if unsuppressedDescErrs > 0 || hasUnsuppressedDeprecationReasonError ||
+		unsuppressedDataTypeErrors > 0 ||
+		unsuppressedDirectiveOrFederationError {
+		totalErrors += unsuppressedDescErrs + unsuppressedDataTypeErrors
+		if unsuppressedDirectiveOrFederationError {
+			totalErrors++
+		}
+
+		errorFilesCount++
+	}
+
+	return totalErrors, errorFilesCount
 }
