@@ -65,8 +65,5 @@ graphql-schema-linter test/testdata/graphql/invalid/*
 graphql-schema-linter test/testdata/graphql/valid/*
 ```
 
-- 14-relay-connection-types-spec.graphql
 - 15-relay-connection-arguments-spec.graphql
 - 17-types-are-capitalized.graphql
-- 18-types-have-descriptions.graphql
-- 19-invalid-graphql-schema.graphql

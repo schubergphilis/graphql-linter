@@ -26,6 +26,10 @@ const (
 	percentMultiplier         = 100
 	descriptionErrorCapacity  = 8
 	minEnumValuesForSortCheck = 2
+
+	RootQueryType        = "Query"
+	RootMutationType     = "Mutation"
+	RootSubscriptionType = "Subscription"
 )
 
 type Storer interface {
@@ -1135,7 +1139,7 @@ func collectDefinedTypeNames(doc *ast.Document) map[string]bool {
 
 	for _, obj := range doc.ObjectTypeDefinitions {
 		name := doc.Input.ByteSliceString(obj.Name)
-		if name != "Query" && name != "Mutation" && name != "Subscription" {
+		if name != RootQueryType && name != RootMutationType && name != RootSubscriptionType {
 			definedTypes[name] = false // false means unused
 		}
 	}
@@ -1474,11 +1478,34 @@ func findMissingFieldDescriptions(doc *ast.Document, schemaString string) []Desc
 	return errors
 }
 
+func findTypesAreCapitalized(doc *ast.Document, schemaString string) []DescriptionError {
+	errors := make([]DescriptionError, 0)
+	for _, obj := range doc.ObjectTypeDefinitions {
+		typeName := doc.Input.ByteSliceString(obj.Name)
+		if typeName == RootQueryType || typeName == RootMutationType || typeName == RootSubscriptionType {
+			continue
+		}
+		if len(typeName) == 0 || !unicode.IsUpper(rune(typeName[0])) {
+			lineNum := findLineNumberByText(schemaString, "type "+typeName)
+			lineContent := getLineContent(schemaString, lineNum)
+			message := "types-are-capitalized: The object type '" + typeName + "' should start with a capital letter."
+			errors = append(errors, DescriptionError{
+				LineNum:     lineNum,
+				Message:     message,
+				LineContent: lineContent,
+			})
+		}
+	}
+
+	return errors
+}
+
 func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
 	hasDeprecationReasonError := false
 
 	helpers := []func(*ast.Document, string) []DescriptionError{
+		findTypesAreCapitalized,
 		findMissingQueryRootType,
 		findUnsortedTypeFields,
 		findUnsortedInterfaceFields,
