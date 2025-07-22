@@ -36,9 +36,9 @@ const (
 
 type Storer interface {
 	FindAndLogGraphQLSchemaFiles() ([]string, error)
-	LintSchemaFiles(schemaFiles []string) int
-	LoadConfig(configPath string) (*LinterConfig, error)
-	PrintReport(schemaFiles []string, totalErrors int)
+	LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionError)
+	LoadConfig() (*LinterConfig, error)
+	PrintReport(schemaFiles []string, totalErrors int, passedFiles int, allErrors []DescriptionError)
 }
 
 type Store struct {
@@ -112,6 +112,146 @@ func (s Store) FindAndLogGraphQLSchemaFiles() ([]string, error) {
 	return schemaFiles, nil
 }
 
+func (s Store) PrintReport(
+	schemaFiles []string,
+	totalErrors int,
+	passedFiles int,
+	allErrors []DescriptionError,
+) {
+	percentPassed := 0.0
+	if len(schemaFiles) > 0 {
+		percentPassed = float64(passedFiles) / float64(len(schemaFiles)) * percentMultiplier
+	}
+
+	percentageFilesWithAtLeastOneError := 0.0
+	if len(schemaFiles) > 0 {
+		percentageFilesWithAtLeastOneError = float64(len(schemaFiles)-passedFiles) /
+			float64(len(schemaFiles)) * percentMultiplier
+	}
+
+	printDetailedErrors(allErrors)
+	printErrorTypeSummary(allErrors)
+
+	log.WithFields(log.Fields{
+		"passedFiles":   passedFiles,
+		"totalFiles":    len(schemaFiles),
+		"percentPassed": fmt.Sprintf("%.2f%%", percentPassed),
+	}).Info("linting summary")
+
+	if totalErrors > 0 {
+		log.WithFields(log.Fields{
+			"filesWithAtLeastOneError": len(schemaFiles) - passedFiles,
+			"percentage":               fmt.Sprintf("%.2f%%", percentageFilesWithAtLeastOneError),
+		}).Error("files with at least one error")
+
+		log.Fatalf("totalErrors: %d", totalErrors)
+
+		return
+	}
+
+	log.Infof("All %d schema file(s) passed linting successfully!", len(schemaFiles))
+}
+
+// --- Unexported helpers (funcorder compliance) ---
+
+func (s Store) collectUnsuppressedDataTypeErrors(doc *ast.Document, schemaString, schemaFile string) (int, []DescriptionError) {
+	unsuppressedDataTypeErrors := 0
+
+	var allErrors []DescriptionError
+
+	dataTypesValid, dataTypeErrorLines := s.validateDataTypes(doc, schemaString, schemaFile)
+	if !dataTypesValid {
+		for _, lineNum := range dataTypeErrorLines {
+			if !s.isSuppressed(schemaFile, lineNum, "defined-types-are-used", "") {
+				allErrors = append(allErrors, DescriptionError{
+					FilePath:    schemaFile,
+					LineNum:     lineNum,
+					Message:     "defined-types-are-used: Type is defined but not used",
+					LineContent: getLineContent(schemaString, lineNum),
+				})
+				unsuppressedDataTypeErrors++
+			}
+		}
+	}
+
+	return unsuppressedDataTypeErrors, allErrors
+}
+
+func (s Store) getUnsuppressedDescriptionErrors(descriptionErrors []DescriptionError, schemaFile string) []DescriptionError {
+	unsuppressed := make([]DescriptionError, 0, len(descriptionErrors))
+	for _, err := range descriptionErrors {
+		rule := err.Message
+		if idx := strings.Index(rule, ":"); idx != -1 {
+			rule = rule[:idx]
+		}
+
+		if !s.isSuppressed(schemaFile, err.LineNum, rule, "") {
+			unsuppressed = append(unsuppressed, err)
+		}
+	}
+
+	return unsuppressed
+}
+
+func (s Store) lintSingleSchemaFile(schemaFile string) (int, int, []DescriptionError) {
+	totalErrors := 0
+	errorFilesCount := 0
+
+	var allErrors []DescriptionError
+
+	if s.Verbose {
+		log.Infof("=== Linting %s ===", schemaFile)
+	}
+
+	schemaString, ok := readSchemaFile(schemaFile)
+	if !ok {
+		allErrors = append(allErrors, DescriptionError{
+			FilePath:    schemaFile,
+			LineNum:     0,
+			Message:     "failed-to-read-schema-file: failed to read schema file",
+			LineContent: "",
+		})
+		totalErrors++
+		errorFilesCount++
+
+		return totalErrors, errorFilesCount, allErrors
+	}
+
+	filteredSchema := filterSchemaComments(schemaString)
+	doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
+	LogSchemaParseErrors(schemaString, &parseReport)
+	descriptionErrors, hasUnsuppressedDeprecationReasonError := s.lintDescriptions(
+		&doc,
+		schemaString,
+		schemaFile,
+	)
+	unsuppressedDescriptionErrors := s.getUnsuppressedDescriptionErrors(descriptionErrors, schemaFile)
+
+	unsuppressedDataTypeErrors, dataTypeErrors := s.collectUnsuppressedDataTypeErrors(&doc, schemaString, schemaFile)
+	allErrors = append(allErrors, dataTypeErrors...)
+
+	unsuppressedDirectiveOrFederationError := !validateDirectiveNames(&doc) || !validateFederationSchema(filteredSchema)
+
+	if len(unsuppressedDescriptionErrors) > 0 || hasUnsuppressedDeprecationReasonError ||
+		unsuppressedDataTypeErrors > 0 ||
+		unsuppressedDirectiveOrFederationError {
+		for i := range unsuppressedDescriptionErrors {
+			unsuppressedDescriptionErrors[i].FilePath = schemaFile
+		}
+
+		allErrors = append(allErrors, unsuppressedDescriptionErrors...)
+
+		totalErrors += len(unsuppressedDescriptionErrors) + unsuppressedDataTypeErrors
+		if unsuppressedDirectiveOrFederationError {
+			totalErrors++
+		}
+
+		errorFilesCount++
+	}
+
+	return totalErrors, errorFilesCount, allErrors
+}
+
 func (s Store) LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionError) {
 	totalErrors := 0
 	errorFilesCount := 0
@@ -119,55 +259,11 @@ func (s Store) LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionErr
 	var allErrors []DescriptionError
 
 	for _, schemaFile := range schemaFiles {
-		if s.Verbose {
-			log.Infof("=== Linting %s ===", schemaFile)
-		}
+		errCount, fileErrCount, fileErrors := s.lintSingleSchemaFile(schemaFile)
+		totalErrors += errCount
+		errorFilesCount += fileErrCount
 
-		schemaString, ok := readSchemaFile(schemaFile)
-		if !ok {
-			allErrors = append(allErrors, DescriptionError{
-				FilePath:    schemaFile,
-				LineNum:     0,
-				Message:     "failed-to-read-schema-file: failed to read schema file",
-				LineContent: "",
-			})
-			totalErrors++
-			errorFilesCount++
-
-			continue
-		}
-
-		filteredSchema := filterSchemaComments(schemaString)
-		doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
-		LogSchemaParseErrors(schemaString, &parseReport)
-
-		descriptionErrors, hasDeprecationReasonError := s.lintDescriptions(
-			&doc,
-			schemaString,
-			schemaFile,
-		)
-		if len(descriptionErrors) > 0 || hasDeprecationReasonError {
-			for i := range descriptionErrors {
-				descriptionErrors[i].FilePath = schemaFile
-			}
-
-			allErrors = append(allErrors, descriptionErrors...)
-			totalErrors += len(descriptionErrors)
-			errorFilesCount++
-
-			continue
-		}
-
-		if !validateDirectiveNames(&doc) || !validateFederationSchema(filteredSchema) {
-			totalErrors++
-			errorFilesCount++
-		}
-
-		dataTypesValid, _ := s.validateDataTypes(&doc, schemaString, schemaFile)
-		if !dataTypesValid {
-			totalErrors++
-			errorFilesCount++
-		}
+		allErrors = append(allErrors, fileErrors...)
 	}
 
 	return totalErrors, errorFilesCount, allErrors
@@ -333,46 +429,6 @@ func printErrorTypeSummary(errors []DescriptionError) {
 	for _, k := range keys {
 		log.Errorf("  %s: %d", k, errorTypeCounts[k])
 	}
-}
-
-func (s Store) PrintReport(
-	schemaFiles []string,
-	totalErrors int,
-	passedFiles int,
-	allErrors []DescriptionError,
-) {
-	percentPassed := 0.0
-	if len(schemaFiles) > 0 {
-		percentPassed = float64(passedFiles) / float64(len(schemaFiles)) * percentMultiplier
-	}
-
-	percentageFilesWithAtLeastOneError := 0.0
-	if len(schemaFiles) > 0 {
-		percentageFilesWithAtLeastOneError = float64(len(schemaFiles)-passedFiles) /
-			float64(len(schemaFiles)) * percentMultiplier
-	}
-
-	printDetailedErrors(allErrors)
-	printErrorTypeSummary(allErrors)
-
-	log.WithFields(log.Fields{
-		"passedFiles":   passedFiles,
-		"totalFiles":    len(schemaFiles),
-		"percentPassed": fmt.Sprintf("%.2f%%", percentPassed),
-	}).Info("linting summary")
-
-	if totalErrors > 0 {
-		log.WithFields(log.Fields{
-			"filesWithAtLeastOneError": len(schemaFiles) - passedFiles,
-			"percentage":               fmt.Sprintf("%.2f%%", percentageFilesWithAtLeastOneError),
-		}).Error("files with at least one error")
-
-		log.Fatalf("totalErrors: %d", totalErrors)
-
-		return
-	}
-
-	log.Infof("All %d schema file(s) passed linting successfully!", len(schemaFiles))
 }
 
 func findGraphQLFiles(rootPath string) ([]string, error) {
@@ -646,7 +702,10 @@ func getLineContent(schemaContent string, lineNum int) string {
 
 func (sup Suppression) Matches(filePath string, line int, rule string, value string) bool {
 	normalizedSuppressionFile := strings.ReplaceAll(sup.File, "\\", "/")
-	fileMatches := sup.File == "" || strings.HasSuffix(filePath, normalizedSuppressionFile)
+	normalizedFilePath := strings.ReplaceAll(filePath, "\\", "/")
+
+	fileMatches := sup.File == "" ||
+		strings.HasSuffix(normalizedFilePath, normalizedSuppressionFile)
 	lineMatches := sup.Line == 0 || sup.Line == line
 	ruleMatches := sup.Rule == "" || sup.Rule == rule
 
@@ -659,7 +718,7 @@ func (sup Suppression) Matches(filePath string, line int, rule string, value str
 }
 
 func (s Store) isSuppressed(filePath string, line int, rule string, value string) bool {
-	if s.LinterConfig == nil {
+	if s.LinterConfig == nil || len(s.LinterConfig.Suppressions) == 0 {
 		return false
 	}
 
@@ -1531,7 +1590,7 @@ func (s Store) lintDescriptions(
 	schemaPath string,
 ) ([]DescriptionError, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
-	hasDeprecationReasonError := false
+	hasUnsuppressedDeprecationReasonError := false
 
 	helpers := []func(*ast.Document, string) []DescriptionError{
 		findTypesAreCapitalized,
@@ -1560,7 +1619,15 @@ func (s Store) lintDescriptions(
 			descriptionErrors = append(descriptionErrors, err)
 
 			if strings.Contains(err.Message, "deprecations-have-a-reason") {
-				hasDeprecationReasonError = true
+				// Check if this specific deprecation error is suppressed
+				rule := err.Message
+				if idx := strings.Index(rule, ":"); idx != -1 {
+					rule = rule[:idx]
+				}
+
+				if !s.isSuppressed(schemaPath, err.LineNum, rule, "") {
+					hasUnsuppressedDeprecationReasonError = true
+				}
 			}
 		}
 	}
@@ -1569,7 +1636,7 @@ func (s Store) lintDescriptions(
 	enumSortErrors := s.findEnumValuesSortedAlphabetically(doc, schemaString, schemaPath)
 	descriptionErrors = append(descriptionErrors, enumSortErrors...)
 
-	return sortDescriptionErrors(descriptionErrors), hasDeprecationReasonError
+	return sortDescriptionErrors(descriptionErrors), hasUnsuppressedDeprecationReasonError
 }
 
 func sortDescriptionErrors(errors []DescriptionError) []DescriptionError {
