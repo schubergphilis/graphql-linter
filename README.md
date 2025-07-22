@@ -23,7 +23,7 @@ federation support is added.
 ```zsh
 ARCH=$(uname -m | awk '{if ($1=="x86_64") print "amd64"; else if ($1=="arm64" || $1=="aarch64") print "arm64"; else { print "Unsupported architecture: " $1 > "/dev/stderr"; exit 1 }}')
 OS=$(uname | tr '[:upper:]' '[:lower:]')
-VERSION=v0.1.0-rc.11
+VERSION=v0.1.0
 curl --fail -L https://github.com/schubergphilis/graphql-linter/releases/download/${VERSION}/graphql-linter-${VERSION}-${OS}-${ARCH} \
 -o graphql-linter && \
 chmod +x graphql-linter && \
@@ -33,7 +33,7 @@ chmod +x graphql-linter && \
 ### Golang
 
 ```zsh
-go install github.com/schubergphilis/graphql-linter/cmd/graphql-linter@v0.1.0-rc.11 && \
+go install github.com/schubergphilis/graphql-linter/cmd/graphql-linter@v0.1.0 && \
 graphql-linter --version
 ```
 
