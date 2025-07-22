@@ -200,7 +200,7 @@ func TestOutput(t *testing.T) {
 			"files with at least one error",
 			"filesWithAtLeastOneError=19",
 			"percentage=\"100.00%\"",
-			"totalErrors: 55",
+			"totalErrors: 57",
 			"exit status 1",
 		}
 		allLines := sections["all"]

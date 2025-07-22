@@ -66,4 +66,3 @@ graphql-schema-linter test/testdata/graphql/valid/*
 ```
 
 - 15-relay-connection-arguments-spec.graphql
-- 17-types-are-capitalized.graphql
