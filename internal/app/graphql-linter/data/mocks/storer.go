@@ -92,7 +92,7 @@ func (_c *Storer_FindAndLogGraphQLSchemaFiles_Call) RunAndReturn(run func() ([]s
 }
 
 // LintSchemaFiles provides a mock function for the type Storer
-func (_mock *Storer) LintSchemaFiles(schemaFiles []string) int {
+func (_mock *Storer) LintSchemaFiles(schemaFiles []string) (int, int, []data.DescriptionError) {
 	ret := _mock.Called(schemaFiles)
 
 	if len(ret) == 0 {
@@ -100,12 +100,29 @@ func (_mock *Storer) LintSchemaFiles(schemaFiles []string) int {
 	}
 
 	var r0 int
+	var r1 int
+	var r2 []data.DescriptionError
+	if returnFunc, ok := ret.Get(0).(func([]string) (int, int, []data.DescriptionError)); ok {
+		return returnFunc(schemaFiles)
+	}
 	if returnFunc, ok := ret.Get(0).(func([]string) int); ok {
 		r0 = returnFunc(schemaFiles)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func([]string) int); ok {
+		r1 = returnFunc(schemaFiles)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+	if returnFunc, ok := ret.Get(2).(func([]string) []data.DescriptionError); ok {
+		r2 = returnFunc(schemaFiles)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).([]data.DescriptionError)
+		}
+	}
+	return r0, r1, r2
 }
 
 // Storer_LintSchemaFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LintSchemaFiles'
@@ -126,19 +143,19 @@ func (_c *Storer_LintSchemaFiles_Call) Run(run func(schemaFiles []string)) *Stor
 	return _c
 }
 
-func (_c *Storer_LintSchemaFiles_Call) Return(n int) *Storer_LintSchemaFiles_Call {
-	_c.Call.Return(n)
+func (_c *Storer_LintSchemaFiles_Call) Return(n int, n1 int, descriptionErrors []data.DescriptionError) *Storer_LintSchemaFiles_Call {
+	_c.Call.Return(n, n1, descriptionErrors)
 	return _c
 }
 
-func (_c *Storer_LintSchemaFiles_Call) RunAndReturn(run func(schemaFiles []string) int) *Storer_LintSchemaFiles_Call {
+func (_c *Storer_LintSchemaFiles_Call) RunAndReturn(run func(schemaFiles []string) (int, int, []data.DescriptionError)) *Storer_LintSchemaFiles_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // LoadConfig provides a mock function for the type Storer
-func (_mock *Storer) LoadConfig(configPath string) (*data.LinterConfig, error) {
-	ret := _mock.Called(configPath)
+func (_mock *Storer) LoadConfig() (*data.LinterConfig, error) {
+	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for LoadConfig")
@@ -146,18 +163,18 @@ func (_mock *Storer) LoadConfig(configPath string) (*data.LinterConfig, error) {
 
 	var r0 *data.LinterConfig
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (*data.LinterConfig, error)); ok {
-		return returnFunc(configPath)
+	if returnFunc, ok := ret.Get(0).(func() (*data.LinterConfig, error)); ok {
+		return returnFunc()
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) *data.LinterConfig); ok {
-		r0 = returnFunc(configPath)
+	if returnFunc, ok := ret.Get(0).(func() *data.LinterConfig); ok {
+		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*data.LinterConfig)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(configPath)
+	if returnFunc, ok := ret.Get(1).(func() error); ok {
+		r1 = returnFunc()
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -170,14 +187,13 @@ type Storer_LoadConfig_Call struct {
 }
 
 // LoadConfig is a helper method to define mock.On call
-//   - configPath
-func (_e *Storer_Expecter) LoadConfig(configPath interface{}) *Storer_LoadConfig_Call {
-	return &Storer_LoadConfig_Call{Call: _e.mock.On("LoadConfig", configPath)}
+func (_e *Storer_Expecter) LoadConfig() *Storer_LoadConfig_Call {
+	return &Storer_LoadConfig_Call{Call: _e.mock.On("LoadConfig")}
 }
 
-func (_c *Storer_LoadConfig_Call) Run(run func(configPath string)) *Storer_LoadConfig_Call {
+func (_c *Storer_LoadConfig_Call) Run(run func()) *Storer_LoadConfig_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		run()
 	})
 	return _c
 }
@@ -187,14 +203,14 @@ func (_c *Storer_LoadConfig_Call) Return(linterConfig *data.LinterConfig, err er
 	return _c
 }
 
-func (_c *Storer_LoadConfig_Call) RunAndReturn(run func(configPath string) (*data.LinterConfig, error)) *Storer_LoadConfig_Call {
+func (_c *Storer_LoadConfig_Call) RunAndReturn(run func() (*data.LinterConfig, error)) *Storer_LoadConfig_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // PrintReport provides a mock function for the type Storer
-func (_mock *Storer) PrintReport(schemaFiles []string, totalErrors int) {
-	_mock.Called(schemaFiles, totalErrors)
+func (_mock *Storer) PrintReport(schemaFiles []string, totalErrors int, passedFiles int, allErrors []data.DescriptionError) {
+	_mock.Called(schemaFiles, totalErrors, passedFiles, allErrors)
 	return
 }
 
@@ -206,13 +222,15 @@ type Storer_PrintReport_Call struct {
 // PrintReport is a helper method to define mock.On call
 //   - schemaFiles
 //   - totalErrors
-func (_e *Storer_Expecter) PrintReport(schemaFiles interface{}, totalErrors interface{}) *Storer_PrintReport_Call {
-	return &Storer_PrintReport_Call{Call: _e.mock.On("PrintReport", schemaFiles, totalErrors)}
+//   - passedFiles
+//   - allErrors
+func (_e *Storer_Expecter) PrintReport(schemaFiles interface{}, totalErrors interface{}, passedFiles interface{}, allErrors interface{}) *Storer_PrintReport_Call {
+	return &Storer_PrintReport_Call{Call: _e.mock.On("PrintReport", schemaFiles, totalErrors, passedFiles, allErrors)}
 }
 
-func (_c *Storer_PrintReport_Call) Run(run func(schemaFiles []string, totalErrors int)) *Storer_PrintReport_Call {
+func (_c *Storer_PrintReport_Call) Run(run func(schemaFiles []string, totalErrors int, passedFiles int, allErrors []data.DescriptionError)) *Storer_PrintReport_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]string), args[1].(int))
+		run(args[0].([]string), args[1].(int), args[2].(int), args[3].([]data.DescriptionError))
 	})
 	return _c
 }
@@ -222,7 +240,7 @@ func (_c *Storer_PrintReport_Call) Return() *Storer_PrintReport_Call {
 	return _c
 }
 
-func (_c *Storer_PrintReport_Call) RunAndReturn(run func(schemaFiles []string, totalErrors int)) *Storer_PrintReport_Call {
+func (_c *Storer_PrintReport_Call) RunAndReturn(run func(schemaFiles []string, totalErrors int, passedFiles int, allErrors []data.DescriptionError)) *Storer_PrintReport_Call {
 	_c.Run(run)
 	return _c
 }
