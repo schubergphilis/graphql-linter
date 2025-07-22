@@ -184,9 +184,8 @@ func checkRequiredSubstrings(t *testing.T, blockName string, block []string, req
 	}
 }
 
+//nolint:paralleltest //must not run in parallel as it conflicts with TestSuppressAllScenarios.
 func TestOutput(t *testing.T) {
-	t.Parallel()
-
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		t.Fatalf("failed to find project root: %v", err)
@@ -205,8 +204,6 @@ func TestOutput(t *testing.T) {
 	sections := parseSections(outputStr)
 
 	t.Run("Error type summary block", func(t *testing.T) {
-		t.Parallel()
-
 		required := []string{
 			"Error type summary:",
 			"arguments-have-descriptions: 2",
@@ -232,8 +229,6 @@ func TestOutput(t *testing.T) {
 	})
 
 	t.Run("Summary block", func(t *testing.T) {
-		t.Parallel()
-
 		required := []string{
 			"linting summary",
 			"passedFiles=0",
@@ -257,8 +252,6 @@ func TestOutput(t *testing.T) {
 	})
 
 	t.Run("Error file lines format", func(t *testing.T) {
-		t.Parallel()
-
 		lines := sections["errors"]
 		for _, line := range lines {
 			// Look for lines with a file path and line number: .../somefile.graphql:<number>:
@@ -717,9 +710,8 @@ func writeSuppressionsYAML(suppressions []SuppressionEntry, yamlPath string) err
 	return nil
 }
 
+//nolint:paralleltest //must not run in parallel as it conflicts with TestOutput.
 func TestSuppressAllScenarios(t *testing.T) {
-	t.Parallel()
-
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		t.Fatalf("failed to find project root: %v", err)
