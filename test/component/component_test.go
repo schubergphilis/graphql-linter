@@ -73,3 +73,145 @@ func TestVersion(t *testing.T) {
 		t.Errorf("expected version output to contain v4.5.6, got: %s", output)
 	}
 }
+
+func TestOutput(t *testing.T) {
+	t.Parallel()
+
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		t.Fatalf("failed to find project root: %v", err)
+	}
+	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
+	targetPath := filepath.Join(projectRoot, "test", "testdata", "graphql", "base", "invalid")
+	cmd := exec.Command("go", "run", mainPath, "-targetPath", targetPath)
+	output, err := cmd.CombinedOutput()
+	outputStr := string(output)
+
+	if err == nil {
+		t.Errorf("expected non-zero exit status, got nil error")
+	}
+
+	// Parse output into sections for easier debugging
+	sections := map[string][]string{
+		"all":              strings.Split(outputStr, "\n"),
+		"summary":          {},
+		"errorTypeSummary": {},
+		"errors":           {},
+	}
+	inErrorTypeSummary := false
+	for _, line := range sections["all"] {
+		if strings.Contains(line, "Error type summary:") {
+			inErrorTypeSummary = true
+			sections["errorTypeSummary"] = append(sections["errorTypeSummary"], line)
+			continue
+		}
+		if inErrorTypeSummary {
+			if strings.TrimSpace(line) == "" || (!strings.Contains(line, ":") && !strings.Contains(line, "summary")) {
+				inErrorTypeSummary = false
+				continue
+			}
+			sections["errorTypeSummary"] = append(sections["errorTypeSummary"], line)
+			continue
+		}
+		if strings.Contains(line, "summary") || strings.Contains(line, "filesWithAtLeastOneError") || strings.Contains(line, "passedFiles=") {
+			sections["summary"] = append(sections["summary"], line)
+		}
+		if strings.Contains(line, "level=error") || strings.Contains(line, "level=fatal") {
+			sections["errors"] = append(sections["errors"], line)
+		}
+	}
+
+	t.Run("Error type summary block", func(t *testing.T) {
+		required := []string{
+			"Error type summary:",
+			"arguments-have-descriptions: 2",
+			"defined-types-are-used: 10",
+			"deprecations-have-a-reason: 1",
+			"descriptions-are-capitalized: 2",
+			"enum-values-have-descriptions: 2",
+			"enum-values-sorted-alphabetically: 3",
+			"fields-are-camel-cased: 1",
+			"fields-have-descriptions: 2",
+			"input-object-fields-sorted-alphabetically: 2",
+			"input-object-values-are-camel-cased: 1",
+			"input-object-values-have-descriptions: 1",
+			"interface-fields-sorted-alphabetically: 1",
+			"invalid-graphql-schema: 1",
+			"relay-connection-arguments-spec: 2",
+			"relay-connection-types-spec: 1",
+			"relay-page-info-spec: 11",
+			"type-fields-sorted-alphabetically: 9",
+			"types-have-descriptions: 3",
+		}
+		lines := sections["errorTypeSummary"]
+		for _, substr := range required {
+			found := false
+			for _, line := range lines {
+				if strings.Contains(line, substr) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("required error type summary substring not found: %q\nBlock:\n%s", substr, strings.Join(lines, "\n"))
+			}
+		}
+	})
+
+	t.Run("Summary block", func(t *testing.T) {
+		required := []string{
+			"linting summary",
+			"passedFiles=0",
+			"percentPassed=\"0.00%\"",
+			"totalFiles=19",
+			"files with at least one error",
+			"filesWithAtLeastOneError=19",
+			"percentage=\"100.00%\"",
+			"totalErrors: 55",
+			"exit status 1",
+		}
+		// Extract the summary block: from Error type summary to end
+		allLines := sections["all"]
+		startIdx := -1
+		for i, l := range allLines {
+			if startIdx == -1 && strings.Contains(l, "Error type summary:") {
+				startIdx = i
+				break
+			}
+		}
+		var summaryBlock []string
+		if startIdx != -1 {
+			summaryBlock = allLines[startIdx:]
+		} else {
+			summaryBlock = append(sections["summary"], sections["errors"]...)
+		}
+
+		for _, substr := range required {
+			found := false
+			for _, line := range summaryBlock {
+				if strings.Contains(line, substr) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("required summary substring not found: %q\nSummary block:\n%s", substr, strings.Join(summaryBlock, "\n"))
+			}
+		}
+	})
+
+	t.Run("Error file lines format", func(t *testing.T) {
+		lines := sections["errors"]
+		for _, line := range lines {
+			// Look for lines with a file path and line number: .../somefile.graphql:<number>:
+			idx := strings.Index(line, ".graphql:")
+			if idx > 0 {
+				suffix := line[idx+len(".graphql:"):]
+				// Check if it starts with a number
+				if len(suffix) == 0 || suffix[0] < '0' || suffix[0] > '9' {
+					t.Errorf("error line does not have valid file:line format: %q", line)
+				}
+			}
+		}
+	})
+}
