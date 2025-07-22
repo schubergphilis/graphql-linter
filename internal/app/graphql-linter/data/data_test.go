@@ -685,11 +685,12 @@ func TestLintDescriptions(t *testing.T) {
 			t.Parallel()
 
 			doc, _ := astparser.ParseGraphqlDocumentString(test.schemaContent)
-			descriptionErrors, hasDeprecationReasonError := lintDescriptions(
+			s := Store{}
+			descriptionErrors, hasDeprecationReasonError := s.lintDescriptions(
 				&doc,
 				test.schemaContent,
+				"test.graphql",
 			)
-
 			found := false
 
 			for _, err := range descriptionErrors {

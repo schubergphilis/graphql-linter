@@ -30,6 +30,8 @@ const (
 	RootQueryType        = "Query"
 	RootMutationType     = "Mutation"
 	RootSubscriptionType = "Subscription"
+
+	splitNParts = 2
 )
 
 type Storer interface {
@@ -139,7 +141,11 @@ func (s Store) LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionErr
 		doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
 		LogSchemaParseErrors(schemaString, &parseReport)
 
-		descriptionErrors, hasDeprecationReasonError := lintDescriptions(&doc, schemaString)
+		descriptionErrors, hasDeprecationReasonError := s.lintDescriptions(
+			&doc,
+			schemaString,
+			schemaFile,
+		)
 		if len(descriptionErrors) > 0 || hasDeprecationReasonError {
 			for i := range descriptionErrors {
 				descriptionErrors[i].FilePath = schemaFile
@@ -643,7 +649,11 @@ func (sup Suppression) Matches(filePath string, line int, rule string, value str
 	fileMatches := sup.File == "" || strings.HasSuffix(filePath, normalizedSuppressionFile)
 	lineMatches := sup.Line == 0 || sup.Line == line
 	ruleMatches := sup.Rule == "" || sup.Rule == rule
-	valueMatches := sup.Value == "" || sup.Value == value
+
+	valueMatches := true
+	if sup.Value != "" {
+		valueMatches = sup.Value == value
+	}
 
 	return fileMatches && lineMatches && ruleMatches && valueMatches
 }
@@ -1362,7 +1372,13 @@ func uncapitalizedEnumValueDescriptions(doc *ast.Document, schemaString string) 
 
 				valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
 
-				err := reportUncapitalizedDescription("enum", enumName, valueName, desc, schemaString)
+				err := reportUncapitalizedDescription(
+					"enum",
+					enumName,
+					valueName,
+					desc,
+					schemaString,
+				)
 				if err != nil {
 					errors = append(errors, *err)
 				}
@@ -1387,7 +1403,13 @@ func uncapitalizedArgumentDescriptions(doc *ast.Document, schemaString string) [
 
 					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
 
-					err := reportUncapitalizedDescription("argument", fieldName, argName, desc, schemaString)
+					err := reportUncapitalizedDescription(
+						"argument",
+						fieldName,
+						argName,
+						desc,
+						schemaString,
+					)
 					if err != nil {
 						errors = append(errors, *err)
 					}
@@ -1480,11 +1502,14 @@ func findMissingFieldDescriptions(doc *ast.Document, schemaString string) []Desc
 
 func findTypesAreCapitalized(doc *ast.Document, schemaString string) []DescriptionError {
 	errors := make([]DescriptionError, 0)
+
 	for _, obj := range doc.ObjectTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(obj.Name)
-		if typeName == RootQueryType || typeName == RootMutationType || typeName == RootSubscriptionType {
+		if typeName == RootQueryType || typeName == RootMutationType ||
+			typeName == RootSubscriptionType {
 			continue
 		}
+
 		if len(typeName) == 0 || !unicode.IsUpper(rune(typeName[0])) {
 			lineNum := findLineNumberByText(schemaString, "type "+typeName)
 			lineContent := getLineContent(schemaString, lineNum)
@@ -1500,7 +1525,11 @@ func findTypesAreCapitalized(doc *ast.Document, schemaString string) []Descripti
 	return errors
 }
 
-func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionError, bool) {
+func (s Store) lintDescriptions(
+	doc *ast.Document,
+	schemaString string,
+	schemaPath string,
+) ([]DescriptionError, bool) {
 	descriptionErrors := make([]DescriptionError, 0, defaultErrorCapacity)
 	hasDeprecationReasonError := false
 
@@ -1523,7 +1552,6 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 		findMissingInputObjectValueDescriptions,
 		findMissingArgumentDescriptions,
 		findMissingDeprecationReasons,
-		findEnumValuesSortedAlphabetically,
 	}
 
 	for _, helper := range helpers {
@@ -1536,6 +1564,10 @@ func lintDescriptions(doc *ast.Document, schemaString string) ([]DescriptionErro
 			}
 		}
 	}
+
+	// Handle enum values sorted alphabetically separately since it requires Store receiver
+	enumSortErrors := s.findEnumValuesSortedAlphabetically(doc, schemaString, schemaPath)
+	descriptionErrors = append(descriptionErrors, enumSortErrors...)
 
 	return sortDescriptionErrors(descriptionErrors), hasDeprecationReasonError
 }
@@ -1876,7 +1908,10 @@ func findInputObjectFieldsSortedAlphabetically(
 	return errors
 }
 
-func findMissingInputObjectValueDescriptions(doc *ast.Document, schemaString string) []DescriptionError {
+func findMissingInputObjectValueDescriptions(
+	doc *ast.Document,
+	schemaString string,
+) []DescriptionError {
 	var errors []DescriptionError
 
 	for _, input := range doc.InputObjectTypeDefinitions {
@@ -1889,7 +1924,8 @@ func findMissingInputObjectValueDescriptions(doc *ast.Document, schemaString str
 				lineContent := getLineContent(schemaString, lineNum)
 				message := fmt.Sprintf(
 					"input-object-values-have-descriptions: The input value `%s.%s` is missing a description.",
-					inputName, fieldName,
+					inputName,
+					fieldName,
 				)
 				errors = append(errors, DescriptionError{
 					LineNum:     lineNum,
@@ -1962,7 +1998,11 @@ func findMissingDeprecationReasons(doc *ast.Document, schemaString string) []Des
 	return errors
 }
 
-func findEnumValuesSortedAlphabetically(doc *ast.Document, schemaString string) []DescriptionError {
+func (s Store) findEnumValuesSortedAlphabetically(
+	doc *ast.Document,
+	schemaString string,
+	schemaPath string,
+) []DescriptionError {
 	var errors []DescriptionError
 
 	for _, enum := range doc.EnumTypeDefinitions {
@@ -1983,7 +2023,22 @@ func findEnumValuesSortedAlphabetically(doc *ast.Document, schemaString string) 
 			enumName,
 			"enum-values-sorted-alphabetically",
 		); err != nil {
-			errors = append(errors, *err)
+			// Extract the error message part after the colon for suppression value matching
+			messageParts := strings.SplitN(err.Message, ": ", splitNParts)
+
+			suppressionValue := ""
+			if len(messageParts) > 1 {
+				suppressionValue = messageParts[1]
+			}
+
+			if !s.isSuppressed(
+				schemaPath,
+				err.LineNum,
+				"enum-values-sorted-alphabetically",
+				suppressionValue,
+			) {
+				errors = append(errors, *err)
+			}
 		}
 	}
 
