@@ -74,6 +74,77 @@ func TestVersion(t *testing.T) {
 	}
 }
 
+func extractSummaryBlock(allLines []string) []string {
+	startIdx := -1
+	for i, l := range allLines {
+		if startIdx == -1 && strings.Contains(l, "Error type summary:") {
+			startIdx = i
+
+			break
+		}
+	}
+	if startIdx != -1 {
+		return allLines[startIdx:]
+	}
+
+	return nil
+}
+
+func parseSections(outputStr string) map[string][]string {
+	sections := map[string][]string{
+		"all":              strings.Split(outputStr, "\n"),
+		"summary":          {},
+		"errorTypeSummary": {},
+		"errors":           {},
+	}
+	inErrorTypeSummary := false
+	for _, line := range sections["all"] {
+		if strings.Contains(line, "Error type summary:") {
+			inErrorTypeSummary = true
+			sections["errorTypeSummary"] = append(sections["errorTypeSummary"], line)
+
+			continue
+		}
+		if inErrorTypeSummary {
+			if strings.TrimSpace(line) == "" {
+				inErrorTypeSummary = false
+
+				continue
+			}
+			sections["errorTypeSummary"] = append(sections["errorTypeSummary"], line)
+
+			continue
+		}
+		if strings.Contains(line, "summary") ||
+			strings.Contains(line, "filesWithAtLeastOneError") ||
+			strings.Contains(line, "passedFiles=") {
+			sections["summary"] = append(sections["summary"], line)
+		}
+		if strings.Contains(line, "level=error") || strings.Contains(line, "level=fatal") {
+			sections["errors"] = append(sections["errors"], line)
+		}
+	}
+
+	return sections
+}
+
+func checkRequiredSubstrings(t *testing.T, blockName string, block []string, required []string) {
+	t.Helper()
+	for _, substr := range required {
+		found := false
+		for _, line := range block {
+			if strings.Contains(line, substr) {
+				found = true
+
+				break
+			}
+		}
+		if !found {
+			t.Errorf("required %s substring not found: %q\nBlock:\n%s", blockName, substr, strings.Join(block, "\n"))
+		}
+	}
+}
+
 func TestOutput(t *testing.T) {
 	t.Parallel()
 
@@ -91,37 +162,10 @@ func TestOutput(t *testing.T) {
 		t.Errorf("expected non-zero exit status, got nil error")
 	}
 
-	// Parse output into sections for easier debugging
-	sections := map[string][]string{
-		"all":              strings.Split(outputStr, "\n"),
-		"summary":          {},
-		"errorTypeSummary": {},
-		"errors":           {},
-	}
-	inErrorTypeSummary := false
-	for _, line := range sections["all"] {
-		if strings.Contains(line, "Error type summary:") {
-			inErrorTypeSummary = true
-			sections["errorTypeSummary"] = append(sections["errorTypeSummary"], line)
-			continue
-		}
-		if inErrorTypeSummary {
-			if strings.TrimSpace(line) == "" || (!strings.Contains(line, ":") && !strings.Contains(line, "summary")) {
-				inErrorTypeSummary = false
-				continue
-			}
-			sections["errorTypeSummary"] = append(sections["errorTypeSummary"], line)
-			continue
-		}
-		if strings.Contains(line, "summary") || strings.Contains(line, "filesWithAtLeastOneError") || strings.Contains(line, "passedFiles=") {
-			sections["summary"] = append(sections["summary"], line)
-		}
-		if strings.Contains(line, "level=error") || strings.Contains(line, "level=fatal") {
-			sections["errors"] = append(sections["errors"], line)
-		}
-	}
+	sections := parseSections(outputStr)
 
 	t.Run("Error type summary block", func(t *testing.T) {
+		t.Parallel()
 		required := []string{
 			"Error type summary:",
 			"arguments-have-descriptions: 2",
@@ -143,22 +187,11 @@ func TestOutput(t *testing.T) {
 			"type-fields-sorted-alphabetically: 9",
 			"types-have-descriptions: 3",
 		}
-		lines := sections["errorTypeSummary"]
-		for _, substr := range required {
-			found := false
-			for _, line := range lines {
-				if strings.Contains(line, substr) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("required error type summary substring not found: %q\nBlock:\n%s", substr, strings.Join(lines, "\n"))
-			}
-		}
+		checkRequiredSubstrings(t, "error type summary", sections["errorTypeSummary"], required)
 	})
 
 	t.Run("Summary block", func(t *testing.T) {
+		t.Parallel()
 		required := []string{
 			"linting summary",
 			"passedFiles=0",
@@ -170,37 +203,17 @@ func TestOutput(t *testing.T) {
 			"totalErrors: 55",
 			"exit status 1",
 		}
-		// Extract the summary block: from Error type summary to end
 		allLines := sections["all"]
-		startIdx := -1
-		for i, l := range allLines {
-			if startIdx == -1 && strings.Contains(l, "Error type summary:") {
-				startIdx = i
-				break
-			}
+		summaryBlock := extractSummaryBlock(allLines)
+		if summaryBlock == nil {
+			summaryBlock = append([]string{}, sections["summary"]...)
+			summaryBlock = append(summaryBlock, sections["errors"]...)
 		}
-		var summaryBlock []string
-		if startIdx != -1 {
-			summaryBlock = allLines[startIdx:]
-		} else {
-			summaryBlock = append(sections["summary"], sections["errors"]...)
-		}
-
-		for _, substr := range required {
-			found := false
-			for _, line := range summaryBlock {
-				if strings.Contains(line, substr) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("required summary substring not found: %q\nSummary block:\n%s", substr, strings.Join(summaryBlock, "\n"))
-			}
-		}
+		checkRequiredSubstrings(t, "summary", summaryBlock, required)
 	})
 
 	t.Run("Error file lines format", func(t *testing.T) {
+		t.Parallel()
 		lines := sections["errors"]
 		for _, line := range lines {
 			// Look for lines with a file path and line number: .../somefile.graphql:<number>:

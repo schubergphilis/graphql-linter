@@ -1139,22 +1139,27 @@ func collectDefinedTypeNames(doc *ast.Document) map[string]bool {
 			definedTypes[name] = false // false means unused
 		}
 	}
+
 	for _, input := range doc.InputObjectTypeDefinitions {
 		name := doc.Input.ByteSliceString(input.Name)
 		definedTypes[name] = false
 	}
+
 	for _, enum := range doc.EnumTypeDefinitions {
 		name := doc.Input.ByteSliceString(enum.Name)
 		definedTypes[name] = false
 	}
+
 	for _, iface := range doc.InterfaceTypeDefinitions {
 		name := doc.Input.ByteSliceString(iface.Name)
 		definedTypes[name] = false
 	}
+
 	for _, union := range doc.UnionTypeDefinitions {
 		name := doc.Input.ByteSliceString(union.Name)
 		definedTypes[name] = false
 	}
+
 	for _, scalar := range doc.ScalarTypeDefinitions {
 		name := doc.Input.ByteSliceString(scalar.Name)
 		definedTypes[name] = false
@@ -1184,6 +1189,7 @@ func markUsedTypes(doc *ast.Document, definedTypes map[string]bool) {
 	for _, union := range doc.UnionTypeDefinitions {
 		for _, memberRef := range union.UnionMemberTypes.Refs {
 			memberType := doc.Types[memberRef]
+
 			baseType := getBaseTypeName(doc, memberType)
 			if _, exists := definedTypes[baseType]; exists {
 				definedTypes[baseType] = true
@@ -1220,6 +1226,7 @@ func findUnusedTypes(doc *ast.Document, schemaString string) []DescriptionError 
 
 	// Mark types as used
 	markUsedTypes(doc, definedTypes) // Report unused types
+
 	for typeName, isUsed := range definedTypes {
 		if isUsed {
 			continue
@@ -1620,8 +1627,10 @@ func findRelayConnectionTypesSpec(doc *ast.Document, schemaString string) []Desc
 		}
 
 		hasPageInfo := false
+
 		for _, fieldRef := range obj.FieldsDefinition.Refs {
 			fieldDef := doc.FieldDefinitions[fieldRef]
+
 			fieldName := doc.Input.ByteSliceString(fieldDef.Name)
 			if fieldName == "pageInfo" {
 				hasPageInfo = true
