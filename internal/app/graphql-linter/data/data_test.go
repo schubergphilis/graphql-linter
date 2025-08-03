@@ -15,64 +15,52 @@ import (
 func TestFindLineNumberByText(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name          string
-		schemaContent string
-		searchText    string
-		wantLine      int
-	}{
+	tests := []LineTestCase{
 		{
-			name:          "text on first line",
-			schemaContent: "enum Color {\nRED\nGREEN\n}",
-			searchText:    "enum",
-			wantLine:      1,
+			Name:          "text on first line",
+			SchemaContent: "enum Color {\nRED\nGREEN\n}",
+			SearchText:    "enum",
+			WantLine:      1,
 		},
 		{
-			name:          "text on second line",
-			schemaContent: "enum Color {\nRED\nGREEN\n}",
-			searchText:    "RED",
-			wantLine:      2,
+			Name:          "text on second line",
+			SchemaContent: "enum Color {\nRED\nGREEN\n}",
+			SearchText:    "RED",
+			WantLine:      2,
 		},
 		{
-			name:          "text on third line",
-			schemaContent: "enum Color {\nRED\nGREEN\n}",
-			searchText:    "GREEN",
-			wantLine:      3,
+			Name:          "text on third line",
+			SchemaContent: "enum Color {\nRED\nGREEN\n}",
+			SearchText:    "GREEN",
+			WantLine:      3,
 		},
 		{
-			name:          "text not found",
-			schemaContent: "enum Color {\nRED\nGREEN\n}",
-			searchText:    "BLUE",
-			wantLine:      0,
+			Name:          "text not found",
+			SchemaContent: "enum Color {\nRED\nGREEN\n}",
+			SearchText:    "BLUE",
+			WantLine:      0,
 		},
 		{
-			name:          "multiple matches, returns first",
-			schemaContent: "A\nB\nA\nC",
-			searchText:    "A",
-			wantLine:      1,
+			Name:          "multiple matches, returns first",
+			SchemaContent: "A\nB\nA\nC",
+			SearchText:    "A",
+			WantLine:      1,
 		},
 		{
-			name:          "empty schemaContent",
-			schemaContent: "",
-			searchText:    "anything",
-			wantLine:      0,
+			Name:          "empty schemaContent",
+			SchemaContent: "",
+			SearchText:    "anything",
+			WantLine:      0,
 		},
 		{
-			name:          "empty searchText matches first line",
-			schemaContent: "foo\nbar",
-			searchText:    "",
-			wantLine:      1,
+			Name:          "empty searchText matches first line",
+			SchemaContent: "foo\nbar",
+			SearchText:    "",
+			WantLine:      1,
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := findLineNumberByText(test.schemaContent, test.searchText)
-			assert.Equal(t, test.wantLine, got)
-		})
-	}
+	runLineTableTest(t, tests, findLineNumberByText)
 }
 
 func TestFindLineNumberByText_ExtraCases(t *testing.T) {
@@ -109,56 +97,50 @@ func TestFindLineNumberByText_ExtraCases(t *testing.T) {
 func TestGetBaseTypeName(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name     string
-		input    string
-		types    []ast.Type
-		typeRef  ast.Type
-		expected string
-	}{
+	tests := []BaseTypeTestCase{
 		{
-			name:  "Named type",
-			input: "String",
-			typeRef: ast.Type{
+			Name:  "Named type",
+			Input: "String",
+			TypeRef: ast.Type{
 				TypeKind: ast.TypeKindNamed,
 				Name:     ast.ByteSliceReference{Start: 0, End: 6}, // "String"
 			},
-			expected: "String",
+			Expected: "String",
 		},
 		{
-			name:  "List of Named type",
-			input: "Int",
-			types: []ast.Type{
+			Name:  "List of Named type",
+			Input: "Int",
+			Types: []ast.Type{
 				{
 					TypeKind: ast.TypeKindNamed,
 					Name:     ast.ByteSliceReference{Start: 0, End: 3}, // "Int"
 				},
 			},
-			typeRef: ast.Type{
+			TypeRef: ast.Type{
 				TypeKind: ast.TypeKindList,
 				OfType:   0,
 			},
-			expected: "Int",
+			Expected: "Int",
 		},
 		{
-			name:  "NonNull of Named type",
-			input: "Boolean",
-			types: []ast.Type{
+			Name:  "NonNull of Named type",
+			Input: "Boolean",
+			Types: []ast.Type{
 				{
 					TypeKind: ast.TypeKindNamed,
 					Name:     ast.ByteSliceReference{Start: 0, End: 7}, // "Boolean"
 				},
 			},
-			typeRef: ast.Type{
+			TypeRef: ast.Type{
 				TypeKind: ast.TypeKindNonNull,
 				OfType:   0,
 			},
-			expected: "Boolean",
+			Expected: "Boolean",
 		},
 		{
-			name:  "NonNull of List of Named type",
-			input: "ID",
-			types: []ast.Type{
+			Name:  "NonNull of List of Named type",
+			Input: "ID",
+			Types: []ast.Type{
 				{
 					TypeKind: ast.TypeKindList,
 					OfType:   1,
@@ -168,33 +150,23 @@ func TestGetBaseTypeName(t *testing.T) {
 					Name:     ast.ByteSliceReference{Start: 0, End: 2}, // "ID"
 				},
 			},
-			typeRef: ast.Type{
+			TypeRef: ast.Type{
 				TypeKind: ast.TypeKindNonNull,
 				OfType:   0,
 			},
-			expected: "ID",
+			Expected: "ID",
 		},
 		{
-			name:  "Unknown type kind",
-			input: "",
-			typeRef: ast.Type{
+			Name:  "Unknown type kind",
+			Input: "",
+			TypeRef: ast.Type{
 				TypeKind: ast.TypeKindUnknown,
 			},
-			expected: "",
+			Expected: "",
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			doc := &ast.Document{}
-			doc.Input.ResetInputString(test.input)
-			doc.Types = test.types
-			got := getBaseTypeName(doc, test.typeRef)
-			assert.Equal(t, test.expected, got)
-		})
-	}
+	runBaseTypeTableTest(t, tests)
 }
 
 func TestGetBaseTypeName_ExtraCases(t *testing.T) {
@@ -341,11 +313,7 @@ func TestIsAlphaUnderOrDigit_ExtraCases(t *testing.T) {
 func TestIsValidEnumValue(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name     string
-		value    string
-		expected bool
-	}{
+	tests := []BoolTestCase{
 		{"empty", "", false},
 		{"starts with letter", "A", true},
 		{"starts with underscore", "_A", true},
@@ -359,14 +327,7 @@ func TestIsValidEnumValue(t *testing.T) {
 		{"underscore and digits", "_123", true},
 		{"invalid symbol", "A$", false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := isValidEnumValue(test.value)
-			assert.Equal(t, test.expected, got)
-		})
-	}
+	runBoolTableTest(t, tests, isValidEnumValue)
 }
 
 func TestIsValidEnumValue_ExtraCases(t *testing.T) {
@@ -397,12 +358,7 @@ func TestIsValidEnumValue_ExtraCases(t *testing.T) {
 func TestLevenshteinDistance(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name     string
-		source   string
-		target   string
-		expected int
-	}{
+	tests := []DistanceTestCase{
 		{"identical", "kitten", "kitten", 0},
 		{"one substitution", "kitten", "sitten", 1},
 		{"one insertion", "kitten", "kittens", 1},
@@ -415,14 +371,7 @@ func TestLevenshteinDistance(t *testing.T) {
 		{"unicode", "café", "coffee", 4},
 		{"longer", "intention", "execution", 5},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := levenshteinDistance(test.source, test.target)
-			assert.Equal(t, test.expected, got)
-		})
-	}
+	runDistanceTableTest(t, tests, levenshteinDistance)
 }
 
 func TestLevenshteinDistance_ExtraCases(t *testing.T) {
@@ -683,46 +632,15 @@ func TestLintDescriptions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-
-			doc, _ := astparser.ParseGraphqlDocumentString(test.schemaContent)
-			s := Store{}
-			descriptionErrors, hasDeprecationReasonError := s.lintDescriptions(
-				&doc,
+			runLintDescriptionsTest(
+				t,
+				test.name,
 				test.schemaContent,
-				"test.graphql",
+				test.errorSubstring,
+				test.wantHasDeprecationReasonError,
 			)
-			found := false
-
-			for _, err := range descriptionErrors {
-				if test.errorSubstring == "" ||
-					(err.Message != "" && contains(err.Message, test.errorSubstring)) {
-					found = true
-
-					break
-				}
-			}
-
-			if !found {
-				t.Errorf(
-					"expected error containing '%s', but not found in errors: %v",
-					test.errorSubstring,
-					descriptionErrors,
-				)
-			}
-
-			if hasDeprecationReasonError != test.wantHasDeprecationReasonError {
-				t.Errorf(
-					"got hasDeprecationReasonError=%v, want %v",
-					hasDeprecationReasonError,
-					test.wantHasDeprecationReasonError,
-				)
-			}
 		})
 	}
-}
-
-func contains(s, substr string) bool {
-	return strings.Contains(s, substr)
 }
 
 func TestValidateDataTypes(t *testing.T) {
@@ -763,18 +681,13 @@ func TestValidateDataTypes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-
-			doc, _ := astparser.ParseGraphqlDocumentString(test.schemaContent)
-			s := Store{}
-
-			valid, errorLines := s.validateDataTypes(&doc, test.schemaContent, "test.graphql")
-			if valid != test.wantValid {
-				t.Errorf("got valid=%v, want %v", valid, test.wantValid)
-			}
-
-			if len(errorLines) != test.wantErrLines {
-				t.Errorf("got %d errorLines, want %d", len(errorLines), test.wantErrLines)
-			}
+			runValidateDataTypesTest(
+				t,
+				test.name,
+				test.schemaContent,
+				test.wantValid,
+				test.wantErrLines,
+			)
 		})
 	}
 }
@@ -1029,22 +942,12 @@ func TestFindMissingArgumentDescriptions(t *testing.T) {
 func TestReadSchemaFile(t *testing.T) {
 	t.Parallel()
 
-	tempFile, err := os.CreateTemp(t.TempDir(), "schema*.graphql")
-	if err != nil {
-		t.Fatalf("failed to create temp file: %v", err)
-	}
-	defer os.Remove(tempFile.Name())
-
 	content := "type Query { id: ID }"
 
-	_, err = tempFile.WriteString(content)
-	if err != nil {
-		t.Fatalf("failed to write to temp file: %v", err)
-	}
+	tempFile := createTempSchemaFile(t, content)
+	defer os.Remove(tempFile)
 
-	tempFile.Close()
-
-	got, ok := readSchemaFile(tempFile.Name())
+	got, ok := readSchemaFile(tempFile)
 	if !ok || got != content {
 		t.Errorf("got %v, want %v", got, content)
 	}
@@ -1073,20 +976,17 @@ func TestValidateFederationSchema(t *testing.T) {
 
 func TestFindAndLogGraphQLSchemaFiles(t *testing.T) {
 	t.Parallel()
-	dir := t.TempDir()
 
-	file := dir + "/test.graphql"
-
-	err := os.WriteFile(file, []byte("type Query { id: ID }"), 0o600)
-	if err != nil {
-		t.Fatalf("failed to write test file: %v", err)
+	files := map[string]string{
+		"test.graphql": "type Query { id: ID }",
 	}
+	dir := createTestDirectory(t, files)
 
 	s := Store{TargetPath: dir, Verbose: false}
 
-	files, err := s.FindAndLogGraphQLSchemaFiles()
-	if err != nil || len(files) != 1 {
-		t.Errorf("expected 1 graphql file, got %v, err %v", files, err)
+	foundFiles, err := s.FindAndLogGraphQLSchemaFiles()
+	if err != nil || len(foundFiles) != 1 {
+		t.Errorf("expected 1 graphql file, got %v, err %v", foundFiles, err)
 	}
 }
 
@@ -1103,7 +1003,7 @@ type Query { """ID field""" id: ID }`
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
-	s := Store{Verbose: false}
+	s := createTestStore(false, nil)
 
 	total, errorFiles, _ := s.LintSchemaFiles([]string{file})
 	if total != 1 || errorFiles != 1 {
@@ -1114,7 +1014,7 @@ type Query { """ID field""" id: ID }`
 func TestLoadConfig(t *testing.T) {
 	t.Parallel()
 
-	s := Store{Verbose: false}
+	s := createTestStore(false, nil)
 
 	config, err := s.LoadConfig()
 	if err != nil || config == nil {
@@ -1183,11 +1083,9 @@ func TestMatches(t *testing.T) {
 func TestIsSuppressed(t *testing.T) {
 	t.Parallel()
 
-	store := Store{
-		LinterConfig: &LinterConfig{
-			Suppressions: []Suppression{{File: "foo.graphql", Line: 2, Rule: "rule", Value: "val"}},
-		},
-	}
+	store := createTestStore(false, createSuppressionConfig([]Suppression{
+		{File: "foo.graphql", Line: 2, Rule: "rule", Value: "val"},
+	}))
 
 	got := store.isSuppressed("bar/foo.graphql", 2, "rule", "val")
 	if !got {
