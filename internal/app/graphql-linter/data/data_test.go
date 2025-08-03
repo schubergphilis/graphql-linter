@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	federationpkg "github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -1065,7 +1066,7 @@ func TestFilterSchemaComments(t *testing.T) {
 func TestValidateFederationSchema(t *testing.T) {
 	t.Parallel()
 
-	got := validateFederationSchema("type Query { id: ID }")
+	got := federationpkg.ValidateFederationSchema("type Query { id: ID }")
 	if !got {
 		t.Errorf("expected federation schema to be valid")
 	}

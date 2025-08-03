@@ -8,11 +8,11 @@ import (
 	"strings"
 	"unicode"
 
+	federationpkg "github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 	log "github.com/sirupsen/logrus"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/federation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"gopkg.in/yaml.v3"
 )
@@ -796,40 +796,6 @@ func filterSchemaComments(schemaString string) string {
 	}
 
 	return strings.Join(filteredLines, "\n")
-}
-
-func validateFederationSchema(filteredSchema string) bool {
-	var report operationreport.Report
-
-	federationSchema, federationErr := federation.BuildFederationSchema(
-		filteredSchema,
-		filteredSchema,
-	)
-	if federationErr != nil {
-		log.Infof("Federation schema build failed: %v\n", federationErr)
-
-		return false
-	}
-
-	_ = federationSchema
-
-	if report.HasErrors() {
-		log.Error("Federation validation errors:")
-
-		for _, internalErr := range report.InternalErrors {
-			log.Errorf("  - %v\n", internalErr)
-		}
-
-		for _, externalErr := range report.ExternalErrors {
-			log.Errorf("  - %s\n", externalErr.Message)
-		}
-
-		return false
-	}
-
-	log.Debug("Federation schema validation passed")
-
-	return true
 }
 
 func collectDefinedTypes(doc *ast.Document) map[string]bool {
@@ -2109,7 +2075,7 @@ func (s Store) lintSingleSchemaFile(schemaFile string) (int, int, []DescriptionE
 	)
 	allErrors := append([]DescriptionError{}, dataTypeErrors...)
 	unsuppressedDirectiveOrFederationError := !validateDirectiveNames(&doc) ||
-		!validateFederationSchema(filteredSchema)
+		!federationpkg.ValidateFederationSchema(filteredSchema)
 
 	totalErrors, errorFilesCount := s.summarizeLintResults(
 		len(unsuppressedDescriptionErrors),
