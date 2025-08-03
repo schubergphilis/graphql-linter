@@ -1096,8 +1096,9 @@ func TestLintSchemaFiles(t *testing.T) {
 	dir := t.TempDir()
 	file := dir + "/test.graphql"
 
-	schema := `"""Query root"""
-type Query { """ID field""" id: ID }`
+	// Use a schema that will fail our current basic validation (missing Query type)
+	schema := `"""User type"""
+type User { """ID field""" id: ID }`
 
 	err := os.WriteFile(file, []byte(schema), 0o600)
 	if err != nil {

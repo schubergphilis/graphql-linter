@@ -17,18 +17,24 @@ func ValidateFederationSchema(filteredSchema string) bool {
 		log.Infof("Federation schema build failed: %v\n", federationErr)
 		return false
 	}
+
 	_ = federationSchema
 
 	if report.HasErrors() {
 		log.Error("Federation validation errors:")
+
 		for _, internalErr := range report.InternalErrors {
 			log.Errorf("  - %v\n", internalErr)
 		}
+
 		for _, externalErr := range report.ExternalErrors {
 			log.Errorf("  - %s\n", externalErr.Message)
 		}
+
 		return false
 	}
+
 	log.Debug("Federation schema validation passed")
+
 	return true
 }

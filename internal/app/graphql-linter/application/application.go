@@ -5,7 +5,7 @@ import (
 	"runtime/debug"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data"
-	federationpkg "github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -69,9 +69,11 @@ func (e Execute) Run() error {
 			log.Errorf("Failed to read schema file for federation validation: %s", schemaFile)
 			continue
 		}
+
 		filteredSchema := data.FilterSchemaComments(schemaString)
-		if !federationpkg.ValidateFederationSchema(filteredSchema) {
+		if !federation.ValidateFederationSchema(filteredSchema) {
 			totalErrors++
+
 			log.Errorf("Federation validation failed for file: %s", schemaFile)
 		}
 	}
