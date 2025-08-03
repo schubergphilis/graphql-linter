@@ -6,7 +6,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
-// ValidateFederationSchema validates a filtered GraphQL schema for Apollo Federation compliance.
 func ValidateFederationSchema(filteredSchema string) bool {
 	var report operationreport.Report
 

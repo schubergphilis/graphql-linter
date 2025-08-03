@@ -8,7 +8,6 @@ import (
 	"strings"
 	"unicode"
 
-	federationpkg "github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 	log "github.com/sirupsen/logrus"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -2042,6 +2041,14 @@ func (s Store) getUnsuppressedDescriptionErrors(
 	return unsuppressed
 }
 
+func (s Store) ReadAndValidateSchemaFile(schemaFile string) (string, bool) {
+	return readSchemaFile(schemaFile)
+}
+
+func FilterSchemaComments(schemaString string) string {
+	return filterSchemaComments(schemaString)
+}
+
 func (s Store) lintSingleSchemaFile(schemaFile string) (int, int, []DescriptionError) {
 	if s.Verbose {
 		log.Infof("=== Linting %s ===", schemaFile)
@@ -2057,7 +2064,7 @@ func (s Store) lintSingleSchemaFile(schemaFile string) (int, int, []DescriptionE
 		}}
 	}
 
-	filteredSchema, doc, parseReport := s.parseAndFilterSchema(schemaString)
+	_, doc, parseReport := s.parseAndFilterSchema(schemaString)
 	LogSchemaParseErrors(schemaString, &parseReport)
 	descriptionErrors, hasUnsuppressedDeprecationReasonError := s.lintDescriptions(
 		&doc,
@@ -2074,8 +2081,7 @@ func (s Store) lintSingleSchemaFile(schemaFile string) (int, int, []DescriptionE
 		schemaFile,
 	)
 	allErrors := append([]DescriptionError{}, dataTypeErrors...)
-	unsuppressedDirectiveOrFederationError := !validateDirectiveNames(&doc) ||
-		!federationpkg.ValidateFederationSchema(filteredSchema)
+	unsuppressedDirectiveOrFederationError := !validateDirectiveNames(&doc)
 
 	totalErrors, errorFilesCount := s.summarizeLintResults(
 		len(unsuppressedDescriptionErrors),
@@ -2105,7 +2111,6 @@ func (s Store) parseAndFilterSchema(
 ) (string, ast.Document, operationreport.Report) {
 	filteredSchema := filterSchemaComments(schemaString)
 	doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
-
 	return filteredSchema, doc, parseReport
 }
 
