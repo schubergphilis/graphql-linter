@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	federationpkg "github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -1066,7 +1065,7 @@ func TestFilterSchemaComments(t *testing.T) {
 func TestValidateFederationSchema(t *testing.T) {
 	t.Parallel()
 
-	got := federationpkg.ValidateFederationSchema("type Query { id: ID }")
+	got := validateFederationSchema("type Query { id: ID }")
 	if !got {
 		t.Errorf("expected federation schema to be valid")
 	}
@@ -1096,9 +1095,8 @@ func TestLintSchemaFiles(t *testing.T) {
 	dir := t.TempDir()
 	file := dir + "/test.graphql"
 
-	// Use a schema that will fail our current basic validation (missing Query type)
-	schema := `"""User type"""
-type User { """ID field""" id: ID }`
+	schema := `"""Query root"""
+type Query { """ID field""" id: ID }`
 
 	err := os.WriteFile(file, []byte(schema), 0o600)
 	if err != nil {

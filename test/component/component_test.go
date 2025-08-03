@@ -197,33 +197,49 @@ func TestOutput(t *testing.T) {
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 
-	// Since actual linting is not implemented, expect zero exit status
-	if err != nil {
-		t.Logf("Current implementation shows: %v\nOutput:\n%s", err, outputStr)
-		// For now, we'll handle both cases as the implementation evolves
+	if err == nil {
+		t.Errorf("expected non-zero exit status, got nil error")
 	}
 
 	sections := parseSections(outputStr)
 
 	t.Run("Error type summary block", func(t *testing.T) {
-		// Since the actual linting is not implemented yet, we expect no error type summary
-		// TODO: Update this when actual GraphQL linting is implemented
-		if strings.Contains(outputStr, "Error type summary:") {
-			t.Logf("Error type summary found (implementation pending): %s", outputStr)
+		required := []string{
+			"Error type summary:",
+			"arguments-have-descriptions: 2",
+			"defined-types-are-used: 10",
+			"deprecations-have-a-reason: 1",
+			"descriptions-are-capitalized: 2",
+			"enum-values-have-descriptions: 2",
+			"enum-values-sorted-alphabetically: 3",
+			"fields-are-camel-cased: 1",
+			"fields-have-descriptions: 2",
+			"input-object-fields-sorted-alphabetically: 2",
+			"input-object-values-are-camel-cased: 1",
+			"input-object-values-have-descriptions: 1",
+			"interface-fields-sorted-alphabetically: 1",
+			"invalid-graphql-schema: 1",
+			"relay-connection-arguments-spec: 2",
+			"relay-connection-types-spec: 1",
+			"relay-page-info-spec: 11",
+			"type-fields-sorted-alphabetically: 9",
+			"types-have-descriptions: 3",
 		}
+		checkRequiredSubstrings(t, "error type summary", sections["errorTypeSummary"], required)
 	})
 
 	t.Run("Summary block", func(t *testing.T) {
-		// Updated for current implementation - some files may fail basic validation
 		required := []string{
 			"linting summary",
+			"passedFiles=0",
+			"percentPassed=\"0.00%\"",
 			"totalFiles=19",
+			"files with at least one error",
+			"filesWithAtLeastOneError=19",
+			"percentage=\"100.00%\"",
+			"totalErrors: 57",
+			"exit status 1",
 		}
-		// Check that we have some reasonable pass rate (could be 18/19 or 19/19)
-		if !strings.Contains(outputStr, "passedFiles=18") && !strings.Contains(outputStr, "passedFiles=19") {
-			t.Errorf("expected passedFiles to be 18 or 19, but got different value. Output:\n%s", outputStr)
-		}
-
 		allLines := sections["all"]
 
 		summaryBlock := extractSummaryBlock(allLines)
@@ -694,139 +710,7 @@ func writeSuppressionsYAML(suppressions []SuppressionEntry, yamlPath string) err
 	return nil
 }
 
-//nolint:paralleltest //must not run in parallel as it conflicts with TestOutput and TestValidGraphQL.
-func TestValidGraphQL(t *testing.T) {
-	projectRoot, err := projectroot.FindProjectRoot()
-	if err != nil {
-		t.Fatalf("failed to find project root: %v", err)
-	}
-
-	// Create a temporary directory for valid GraphQL schemas
-	validDir := filepath.Join(projectRoot, "test", "testdata", "graphql", "valid")
-	err = os.MkdirAll(validDir, 0o755)
-	if err != nil {
-		t.Fatalf("failed to create valid test directory: %v", err)
-	}
-	defer os.RemoveAll(validDir)
-
-	// Create valid GraphQL schema files
-	validSchemas := map[string]string{
-		"01-valid-basic.graphql": `"""Root query type"""
-type Query {
-  """Get user by ID"""
-  user(
-    """User ID argument"""
-    id: ID!
-  ): User
-}
-
-"""User type with proper descriptions"""
-type User {
-  """User ID field"""
-  id: ID!
-  """User name field"""
-  name: String!
-}`,
-		"02-valid-enum.graphql": `"""Root query type"""
-type Query {
-  """Get status"""
-  status: Status
-}
-
-"""Status enumeration"""
-enum Status {
-  """Active status"""
-  ACTIVE
-  """Inactive status"""
-  INACTIVE
-}`,
-		"03-valid-input.graphql": `"""Root query type"""
-type Query {
-  """Create user mutation"""
-  createUser(
-    """User input data"""
-    input: UserInput!
-  ): User
-}
-
-"""User input type"""
-input UserInput {
-  """User email field"""
-  email: String!
-  """User first name"""
-  firstName: String!
-}
-
-"""User type"""
-type User {
-  """User email"""
-  email: String!
-  """User first name"""
-  firstName: String!
-}`,
-	}
-
-	// Write the valid schema files
-	for filename, content := range validSchemas {
-		filePath := filepath.Join(validDir, filename)
-		err = os.WriteFile(filePath, []byte(content), 0o644)
-		if err != nil {
-			t.Fatalf("failed to write valid schema file %s: %v", filename, err)
-		}
-	}
-
-	// Run the linter on valid schemas
-	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
-	cmd := exec.Command("go", "run", mainPath, "-targetPath", validDir)
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
-	// Valid schemas should result in zero exit status
-	if err != nil {
-		t.Fatalf("expected zero exit status for valid schemas, got error: %v\nOutput:\n%s", err, outputStr)
-	}
-
-	t.Run("No error type summary for valid schemas", func(t *testing.T) {
-		if strings.Contains(outputStr, "Error type summary:") {
-			t.Errorf("expected no error type summary for valid schemas, but found one. Output:\n%s", outputStr)
-		}
-	})
-
-	t.Run("No files with errors for valid schemas", func(t *testing.T) {
-		if strings.Contains(outputStr, "files with at least one error") {
-			t.Errorf("expected no files with errors for valid schemas, but found some. Output:\n%s", outputStr)
-		}
-	})
-
-	t.Run("Summary shows all files passed", func(t *testing.T) {
-		// Check basic success patterns - don't hard-code file counts as they may vary
-		if !strings.Contains(outputStr, "linting summary") {
-			t.Errorf("expected linting summary in output")
-		}
-
-		if !strings.Contains(outputStr, "percentPassed=\"100.00%\"") {
-			t.Errorf("expected 100%% pass rate for valid schemas")
-		}
-
-		if !strings.Contains(outputStr, "schema file(s) passed linting successfully!") {
-			t.Errorf("expected success message for valid schemas")
-		}
-	})
-
-	t.Run("No totalErrors output for valid schemas", func(t *testing.T) {
-		if strings.Contains(outputStr, "totalErrors:") {
-			t.Errorf("expected no totalErrors output for valid schemas, but found one. Output:\n%s", outputStr)
-		}
-	})
-
-	t.Run("Success message is present", func(t *testing.T) {
-		if !strings.Contains(outputStr, "schema file(s) passed linting successfully!") {
-			t.Errorf("expected success message for valid schemas, but not found. Output:\n%s", outputStr)
-		}
-	})
-}
-
-//nolint:paralleltest //must not run in parallel as it conflicts with TestOutput and TestValidGraphQL.
+//nolint:paralleltest //must not run in parallel as it conflicts with TestOutput.
 func TestSuppressAllScenarios(t *testing.T) {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
@@ -850,15 +734,24 @@ func TestSuppressAllScenarios(t *testing.T) {
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 
-	// Since full suppression support isn't implemented yet, we expect some improvement
-	// but not necessarily zero errors
 	if err != nil {
-		t.Logf("Current suppression implementation shows: %v\nOutput:\n%s", err, outputStr)
-		// TODO: Update expectation when full suppression support is implemented
+		t.Fatalf("expected zero exit status, got error: %v\nOutput:\n%s", err, outputStr)
 	}
 
-	// At minimum, check that the tool runs and processes files
-	if !strings.Contains(outputStr, "linting summary") {
-		t.Errorf("expected linting summary in output, but not found. Output:\n%s", outputStr)
+	if strings.Contains(outputStr, "Error type summary:") {
+		t.Errorf("expected no error type summary, but found one. Output:\n%s", outputStr)
+	}
+
+	if strings.Contains(outputStr, "files with at least one error") {
+		t.Errorf("expected no files with errors, but found some. Output:\n%s", outputStr)
+	}
+
+	if strings.Contains(outputStr, "totalErrors:") {
+		t.Errorf("expected totalErrors to be zero, but found errors. Output:\n%s", outputStr)
+	}
+
+	if !strings.Contains(outputStr, "passedFiles=") ||
+		!strings.Contains(outputStr, "percentPassed=\"100.00%\"") {
+		t.Errorf("expected all files to pass, but did not. Output:\n%s", outputStr)
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/fileutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -68,7 +67,7 @@ func TestFindGraphQLFiles(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := fileutil.FindGraphQLFiles(tmpDir)
+			got, err := findGraphQLFiles(tmpDir)
 			require.NoError(t, err)
 
 			assert.ElementsMatch(t, test.expectFiles, got)

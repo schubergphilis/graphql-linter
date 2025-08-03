@@ -1,0 +1,19 @@
+"Hello"
+type Query {
+  "Hola"
+  hello: String!
+  "Metadata to support paginated queries."
+  pageInfo: PageInfo!
+}
+
+"Pagination information for a connection, following the Relay specification: https://relay.dev/graphql/connections.htm"
+type PageInfo {
+  "The cursor corresponding to the last node in the connection."
+  endCursor: String!
+  "True if there are more pages after this connection."
+  hasNextPage: Boolean!
+  "True if there are pages prior to this connection."
+  hasPreviousPage: Boolean!
+  "The cursor corresponding to the first node in the connection."
+  startCursor: String!
+}
