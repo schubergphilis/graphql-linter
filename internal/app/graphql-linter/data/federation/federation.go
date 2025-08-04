@@ -1,18 +1,41 @@
 package federation
 
 import (
-	"strings"
-
 	log "github.com/sirupsen/logrus"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/federation"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
-// ValidateFederationSchema checks if the schema string contains federation directives.
-func ValidateFederationSchema(schema string) bool {
-	// This is a placeholder implementation. Replace with actual federation validation logic as needed.
-	if strings.Contains(schema, "@key") || strings.Contains(schema, "@external") {
-		log.Debug("Federation directives detected in schema.")
-		return true
+func ValidateFederationSchema(filteredSchema string) bool {
+	var report operationreport.Report
+
+	federationSchema, federationErr := federation.BuildFederationSchema(
+		filteredSchema,
+		filteredSchema,
+	)
+	if federationErr != nil {
+		log.Infof("Federation schema build failed: %v\n", federationErr)
+
+		return false
 	}
-	log.Debug("No federation directives detected in schema.")
-	return true // or false if you want to fail when federation directives are missing
+
+	_ = federationSchema
+
+	if report.HasErrors() {
+		log.Error("Federation validation errors:")
+
+		for _, internalErr := range report.InternalErrors {
+			log.Errorf("  - %v\n", internalErr)
+		}
+
+		for _, externalErr := range report.ExternalErrors {
+			log.Errorf("  - %s\n", externalErr.Message)
+		}
+
+		return false
+	}
+
+	log.Debug("Federation schema validation passed")
+
+	return true
 }

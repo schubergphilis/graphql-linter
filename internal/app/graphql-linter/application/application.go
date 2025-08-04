@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data"
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -58,6 +59,18 @@ func (e Execute) Run() error {
 	schemaFiles, err := dataStore.FindAndLogGraphQLSchemaFiles()
 	if err != nil {
 		return fmt.Errorf("schema file discovery failed: %w", err)
+	}
+
+	for _, schemaFile := range schemaFiles {
+		schemaString, ok := dataStore.ReadAndValidateSchemaFile(schemaFile)
+		if !ok {
+			return fmt.Errorf("failed to read schema file: %s", schemaFile)
+		}
+
+		filteredSchema := data.FilterSchemaComments(schemaString)
+		if !federation.ValidateFederationSchema(filteredSchema) {
+			return fmt.Errorf("federation validation failed for: %s", schemaFile)
+		}
 	}
 
 	totalErrors, errorFilesCount, dataDescriptionError := dataStore.LintSchemaFiles(schemaFiles)
