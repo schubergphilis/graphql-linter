@@ -1045,8 +1045,10 @@ func (s Store) validateDataTypes(
 	definedTypes := collectDefinedTypes(doc)
 	hasErrors := false
 
-	var errorLines []int
-	var enumDescErrors []DescriptionError
+	var (
+		errorLines     []int
+		enumDescErrors []DescriptionError
+	)
 
 	fieldErrors, fieldErrorLines := validateFieldTypes(
 		doc,
@@ -1876,8 +1878,7 @@ func findMissingInputObjectValueDescriptions(
 				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
 				lineNum := findLineNumberByText(schemaString, fieldName+":")
 				lineContent := getLineContent(schemaString, lineNum)
-				message := fmt.Sprintf(
-					"input-object-values-have-descriptions: The input value `%s.%s` is missing a description.",
+				message := fmt.Sprintf("input-object-values-have-descriptions: The input value `%s.%s` is missing a description.",
 					inputName,
 					fieldName,
 				)
