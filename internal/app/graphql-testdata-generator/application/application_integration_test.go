@@ -4,6 +4,7 @@ package application
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -53,6 +54,7 @@ func parseLinterOutput(t *testing.T, output []byte, fileName string) []string {
 	err := json.Unmarshal(output, &result)
 	require.NoError(t, err, "Failed to parse linter JSON output for "+fileName)
 
+	fmt.Println("=========== Linter Output ===========", result.Errors)
 	rules := make([]string, 0, len(result.Errors))
 	for _, e := range result.Errors {
 		rules = append(rules, e.Rule)
@@ -118,6 +120,8 @@ func TestInvalidSchemas(t *testing.T) {
 			continue
 		}
 
+		fmt.Println("CP0.0 =============> Testing file:", file.Name())
+
 		filePath := filepath.Join(baseDir, file.Name())
 		cmd := exec.Command("graphql-schema-linter", "-f", "json", filePath)
 
@@ -129,7 +133,11 @@ func TestInvalidSchemas(t *testing.T) {
 		}
 
 		errorName := validateErrorName(t, file.Name())
+		fmt.Println("CP0.1 =============>", errorName)
+
 		rules := parseLinterOutput(t, output, file.Name())
+		fmt.Println("CP0.2 =============>", rules)
+
 		found := slices.Contains(rules, errorName)
 
 		if !found {

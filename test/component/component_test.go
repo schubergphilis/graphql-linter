@@ -222,6 +222,7 @@ func TestOutput(t *testing.T) {
 			"relay-connection-arguments-spec: 2",
 			"relay-connection-types-spec: 1",
 			"relay-page-info-spec: 11",
+			"suspicious-enum-value: 1",
 			"type-fields-sorted-alphabetically: 9",
 			"types-have-descriptions: 3",
 		}
@@ -233,11 +234,11 @@ func TestOutput(t *testing.T) {
 			"linting summary",
 			"passedFiles=0",
 			"percentPassed=\"0.00%\"",
-			"totalFiles=19",
+			"totalFiles=20",
 			"files with at least one error",
-			"filesWithAtLeastOneError=19",
+			"filesWithAtLeastOneError=20",
 			"percentage=\"100.00%\"",
-			"totalErrors: 57",
+			"totalErrors: 69",
 			"exit status 1",
 		}
 		allLines := sections["all"]

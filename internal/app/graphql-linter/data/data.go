@@ -963,7 +963,7 @@ func (s Store) checkSuspiciousEnumValue(
 	}
 
 	lineNum := findLineNumberByText(schemaContent, valueName)
-	if s.isSuppressed(schemaPath, lineNum, "suspicious_enum_value", valueName) {
+	if s.isSuppressed(schemaPath, lineNum, "suspicious-enum-value", valueName) {
 		return "", 0
 	}
 
@@ -988,10 +988,11 @@ func (s Store) validateEnumTypes(
 	doc *ast.Document,
 	schemaContent string,
 	schemaPath string,
-) ([]string, []int) {
+) ([]string, []int, []DescriptionError) {
 	var (
 		errors     []string
 		errorLines []int
+		descErrors []DescriptionError
 	)
 
 	for _, enumDef := range doc.EnumTypeDefinitions {
@@ -1001,32 +1002,39 @@ func (s Store) validateEnumTypes(
 			valueDef := doc.EnumValueDefinitions[valueRef]
 			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
 
-			if err, line := checkInvalidEnumValue(enumName, valueName, schemaContent); err != "" {
-				errors = append(errors, valueName)
-
+			// Check for invalid enum values
+			if errValue, line := checkInvalidEnumValue(enumName, valueName, schemaContent); errValue != "" {
+				errors = append(errors, errValue)
 				if line > 0 {
 					errorLines = append(errorLines, line)
 				}
 			}
 
-			if err, line := s.checkSuspiciousEnumValue(enumName, valueName, schemaContent, schemaPath); err != "" {
-				errors = append(errors, valueName)
-
+			// Check for suspicious enum values
+			if errValue, line := s.checkSuspiciousEnumValue(enumName, valueName, schemaContent, schemaPath); errValue != "" {
+				errors = append(errors, errValue)
 				if line > 0 {
 					errorLines = append(errorLines, line)
+					// Create a DescriptionError for suspicious enum values
+					descErrors = append(descErrors, DescriptionError{
+						FilePath:    schemaPath,
+						LineNum:     line,
+						Message:     fmt.Sprintf("suspicious-enum-value: Enum '%s' has suspicious value '%s'", enumName, errValue),
+						LineContent: getLineContent(schemaContent, line),
+					})
 				}
 			}
 		}
 	}
 
-	return errors, errorLines
+	return errors, errorLines, descErrors
 }
 
 func (s Store) validateDataTypes(
 	doc *ast.Document,
 	schemaContent string,
 	schemaPath string,
-) (bool, []int) {
+) (bool, []int, []DescriptionError) {
 	builtInScalars := map[string]bool{
 		"String":  true,
 		"Int":     true,
@@ -1038,6 +1046,7 @@ func (s Store) validateDataTypes(
 	hasErrors := false
 
 	var errorLines []int
+	var enumDescErrors []DescriptionError
 
 	fieldErrors, fieldErrorLines := validateFieldTypes(
 		doc,
@@ -1063,7 +1072,7 @@ func (s Store) validateDataTypes(
 		errorLines = append(errorLines, inputErrorLines...)
 	}
 
-	enumErrors, enumErrorLines := s.validateEnumTypes(doc, schemaContent, schemaPath)
+	enumErrors, enumErrorLines, enumDescErrors := s.validateEnumTypes(doc, schemaContent, schemaPath)
 	if len(enumErrors) > 0 {
 		hasErrors = true
 
@@ -1073,12 +1082,12 @@ func (s Store) validateDataTypes(
 	if hasErrors {
 		log.Error("Data type validation FAILED - schema contains invalid type references")
 
-		return false, errorLines
+		return false, errorLines, enumDescErrors
 	}
 
 	log.Debug("Data type validation PASSED")
 
-	return true, errorLines
+	return true, errorLines, enumDescErrors
 }
 
 func collectDefinedTypeNames(doc *ast.Document) map[string]bool {
@@ -2012,15 +2021,40 @@ func (s Store) collectUnsuppressedDataTypeErrors(
 
 	var allErrors []DescriptionError
 
-	dataTypesValid, dataTypeErrorLines := s.validateDataTypes(doc, schemaString, schemaFile)
+	dataTypesValid, dataTypeErrorLines, enumDescErrors := s.validateDataTypes(doc, schemaString, schemaFile)
+
+	// Add enum description errors (like suspicious-enum-value)
+	for _, enumErr := range enumDescErrors {
+		rule := enumErr.Message
+		if idx := strings.Index(rule, ":"); idx != -1 {
+			rule = rule[:idx]
+		}
+
+		if !s.isSuppressed(schemaFile, enumErr.LineNum, rule, "") {
+			allErrors = append(allErrors, enumErr)
+			unsuppressedDataTypeErrors++
+		}
+	}
+
 	if !dataTypesValid {
 		for _, lineNum := range dataTypeErrorLines {
-			if !s.isSuppressed(schemaFile, lineNum, "defined-types-are-used", "") {
+			// Create a more specific error message based on the context
+			lineContent := getLineContent(schemaString, lineNum)
+
+			// Try to determine what kind of error this is
+			var message string
+			if strings.Contains(lineContent, "enum") {
+				message = "suspicious-enum-value: Type validation failed"
+			} else {
+				message = "defined-types-are-used: Type is defined but not used"
+			}
+
+			if !s.isSuppressed(schemaFile, lineNum, strings.Split(message, ":")[0], "") {
 				allErrors = append(allErrors, DescriptionError{
 					FilePath:    schemaFile,
 					LineNum:     lineNum,
-					Message:     "defined-types-are-used: Type is defined but not used",
-					LineContent: getLineContent(schemaString, lineNum),
+					Message:     message,
+					LineContent: lineContent,
 				})
 				unsuppressedDataTypeErrors++
 			}

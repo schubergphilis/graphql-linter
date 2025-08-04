@@ -247,7 +247,7 @@ func runValidateDataTypesTest(
 	doc := parseGraphQLDocument(schemaContent)
 	s := Store{}
 
-	valid, errorLines := s.validateDataTypes(doc, schemaContent, "test.graphql")
+	valid, errorLines, _ := s.validateDataTypes(doc, schemaContent, "test.graphql")
 	if valid != wantValid {
 		t.Errorf("%s: got valid=%v, want %v", testName, valid, wantValid)
 	}

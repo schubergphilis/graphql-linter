@@ -1221,7 +1221,7 @@ func TestValidateEnumTypes(t *testing.T) {
 	doc, _ := astparser.ParseGraphqlDocumentString("enum Status { ACTIVE 1NVALID FOO1 }")
 	s := Store{}
 
-	_, errorLines := s.validateEnumTypes(
+	_, errorLines, _ := s.validateEnumTypes(
 		&doc,
 		"enum Status { ACTIVE 1NVALID FOO1 }",
 		"test.graphql",
