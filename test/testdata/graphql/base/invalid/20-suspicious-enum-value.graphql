@@ -1,0 +1,15 @@
+type Query {
+  status: Status
+  user(id: ID!): User
+}
+
+type User {
+  id: ID!
+  name: String
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE1
+  PENDING
+}

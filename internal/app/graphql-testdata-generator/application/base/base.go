@@ -50,6 +50,7 @@ func (e Execute) Run() error {
 		func() error { return WriteProductSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteQueryRootMustBeProvidedSchemaToFile(e.testdataInvalidDir) },
 		func() error { return WriteUpdateProfileInputSchemaToFile(e.testdataInvalidDir) },
+		func() error { return WriteSuspiciousEnumValueSchemaToFile(e.testdataInvalidDir) },
 	}
 	for i, writer := range writers {
 		writerErr := writer()
@@ -959,6 +960,41 @@ func WriteQueryRootMustBeProvidedSchemaToFile(outputDir string) error {
 	gql := data.GenerateGraphQLFromDocument(doc)
 
 	outputPath := filepath.Join(outputDir, "19-invalid-graphql-schema.graphql")
+
+	err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm)
+	if err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	err = os.WriteFile(outputPath, []byte(gql), constants.FilePerm)
+	if err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func WriteSuspiciousEnumValueSchemaToFile(outputDir string) error {
+	gql := `type Query {
+  status: Status
+  user(id: ID!): User
+}
+
+type User {
+  id: ID!
+  name: String
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE1
+  PENDING
+}`
+
+	outputPath := filepath.Join(
+		outputDir,
+		"20-suspicious-enum-value.graphql",
+	)
 
 	err := os.MkdirAll(filepath.Dir(outputPath), constants.DirPerm)
 	if err != nil {
