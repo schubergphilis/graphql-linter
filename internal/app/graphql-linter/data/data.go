@@ -46,9 +46,10 @@ type Storer interface {
 }
 
 type Store struct {
-	LinterConfig *LinterConfig
-	TargetPath   string
-	Verbose      bool
+	LinterConfig     *LinterConfig
+	LinterConfigPath string
+	TargetPath       string
+	Verbose          bool
 }
 
 type LinterConfig struct {
@@ -210,12 +211,18 @@ func (s Store) LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionErr
 }
 
 func (s Store) LoadConfig() (*LinterConfig, error) {
-	projectRoot, err := projectroot.FindProjectRoot()
-	if err != nil {
-		return nil, fmt.Errorf("failed to determine project root: %w", err)
-	}
+	configPath := s.LinterConfigPath
 
-	configPath := filepath.Join(projectRoot, ".graphql-linter.yml")
+	if configPath == "" {
+		log.Debug("No config path provided, using default project root search")
+
+		projectRoot, err := projectroot.FindProjectRoot()
+		if err != nil {
+			return nil, fmt.Errorf("failed to determine project root: %w", err)
+		}
+
+		configPath = filepath.Join(projectRoot, ".graphql-linter.yml")
+	}
 
 	config := &LinterConfig{
 		Settings: Settings{
@@ -225,7 +232,7 @@ func (s Store) LoadConfig() (*LinterConfig, error) {
 		},
 	}
 
-	_, err = os.Stat(configPath)
+	_, err := os.Stat(configPath)
 	if os.IsNotExist(err) {
 		log.Debugf("no config file found at %s. Using defaults", configPath)
 

@@ -141,12 +141,20 @@ func TestIntegrationLoadConfig(t *testing.T) {
 		configYAML   string
 		wantStrict   bool
 		wantSuppress int
+		wantVerbose  bool
 	}{
 		{
 			name:         "no config file",
 			configYAML:   "",
 			wantStrict:   true,
 			wantSuppress: 0,
+		},
+		{
+			name:         "with verbose logging",
+			configYAML:   "",
+			wantStrict:   true,
+			wantSuppress: 0,
+			wantVerbose:  true,
 		},
 	}
 
@@ -156,15 +164,20 @@ func TestIntegrationLoadConfig(t *testing.T) {
 
 			dir := t.TempDir()
 
+			store := Store{TargetPath: dir}
+			if test.wantVerbose {
+				store.Verbose = true
+			}
+
 			configPath := filepath.Join(dir, ".graphql-linter.yml")
 			if test.configYAML != "" {
 				err := os.WriteFile(configPath, []byte(test.configYAML), 0o600)
 				if err != nil {
 					t.Fatalf("failed to write config: %v", err)
 				}
-			}
 
-			store := Store{TargetPath: dir}
+				store.LinterConfigPath = configPath
+			}
 
 			config, err := store.LoadConfig()
 			if err != nil {
