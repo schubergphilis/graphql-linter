@@ -1460,6 +1460,64 @@ func TestFindMissingEnumValueDescriptions(t *testing.T) {
 	}
 }
 
+func TestFindMissingInputObjectValueDescriptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		schema       string
+		wantCount    int
+		wantContains []string
+	}{
+		{
+			name:      "all described",
+			schema:    `input Foo { "desc" bar: String "desc" baz: Int }`,
+			wantCount: 0,
+		},
+		{
+			name:         "one missing",
+			schema:       `input Foo { bar: String "desc" baz: Int }`,
+			wantCount:    1,
+			wantContains: []string{"input-object-values-have-descriptions"},
+		},
+		{
+			name:         "all missing",
+			schema:       `input Foo { bar: String baz: Int }`,
+			wantCount:    2,
+			wantContains: []string{"input-object-values-have-descriptions"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
+
+			errs := findMissingInputObjectValueDescriptions(&doc, test.schema)
+			if len(errs) != test.wantCount {
+				t.Errorf("got %d errors, want %d", len(errs), test.wantCount)
+			}
+
+			for _, substr := range test.wantContains {
+				found := false
+
+				for _, err := range errs {
+					if strings.Contains(err.Message, substr) {
+						found = true
+
+						break
+					}
+				}
+
+				if !found {
+					t.Errorf("expected error message containing '%s', got %v", substr, errs)
+				}
+			}
+		})
+	}
+}
+
 func TestStore_ReportSummary(t *testing.T) {
 	t.Parallel()
 
@@ -1731,25 +1789,33 @@ func TestCollectUnsuppressedDataTypeErrors(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			store := Store{LinterConfig: tt.config}
-			doc, _ := astparser.ParseGraphqlDocumentString(tt.schema)
-			count, errs := store.collectUnsuppressedDataTypeErrors(&doc, tt.schema, "test.graphql")
-			if count != tt.wantCount {
-				t.Errorf("got count %d, want %d", count, tt.wantCount)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			store := Store{LinterConfig: test.config}
+			doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
+
+			count, errs := store.collectUnsuppressedDataTypeErrors(&doc, test.schema, "test.graphql")
+			if count != test.wantCount {
+				t.Errorf("got count %d, want %d", count, test.wantCount)
 			}
-			if len(errs) != tt.wantCount {
-				t.Errorf("got %d errors, want %d", len(errs), tt.wantCount)
+
+			if len(errs) != test.wantCount {
+				t.Errorf("got %d errors, want %d", len(errs), test.wantCount)
 			}
-			for _, substr := range tt.wantContains {
+
+			for _, substr := range test.wantContains {
 				found := false
+
 				for _, err := range errs {
 					if strings.Contains(err.Message, substr) {
 						found = true
+
 						break
 					}
 				}
+
 				if !found {
 					t.Errorf("expected error message containing '%s', got %v", substr, errs)
 				}
