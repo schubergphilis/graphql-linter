@@ -2088,7 +2088,6 @@ func (s Store) collectUnsuppressedDataTypeErrors(
 		schemaFile,
 	)
 
-	// Add enum description errors (like suspicious-enum-value)
 	for _, enumErr := range enumDescErrors {
 		rule := enumErr.Message
 		if idx := strings.Index(rule, ":"); idx != -1 {
@@ -2103,10 +2102,8 @@ func (s Store) collectUnsuppressedDataTypeErrors(
 
 	if !dataTypesValid {
 		for _, lineNum := range dataTypeErrorLines {
-			// Create a more specific error message based on the context
 			lineContent := getLineContent(schemaString, lineNum)
 
-			// Try to determine what kind of error this is
 			var message string
 			if strings.Contains(lineContent, "enum") {
 				message = "suspicious-enum-value: Type validation failed"

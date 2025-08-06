@@ -1699,3 +1699,61 @@ func TestFindRelayConnectionTypesSpec(t *testing.T) {
 		}
 	}
 }
+
+func TestCollectUnsuppressedDataTypeErrors(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		schema       string
+		config       *LinterConfig
+		wantCount    int
+		wantContains []string
+	}{
+		{
+			name:      "valid types",
+			schema:    `type Query { id: ID name: String }`,
+			config:    &LinterConfig{},
+			wantCount: 0,
+		},
+		{
+			name:         "undefined type",
+			schema:       `type Query { foo: Bar }`,
+			config:       &LinterConfig{},
+			wantCount:    1,
+			wantContains: []string{"defined-types-are-used"},
+		},
+		{
+			name:      "suppressed error",
+			schema:    `type Query { foo: Bar }`,
+			config:    &LinterConfig{Suppressions: []Suppression{{Line: 1, Rule: "defined-types-are-used"}}},
+			wantCount: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := Store{LinterConfig: tt.config}
+			doc, _ := astparser.ParseGraphqlDocumentString(tt.schema)
+			count, errs := store.collectUnsuppressedDataTypeErrors(&doc, tt.schema, "test.graphql")
+			if count != tt.wantCount {
+				t.Errorf("got count %d, want %d", count, tt.wantCount)
+			}
+			if len(errs) != tt.wantCount {
+				t.Errorf("got %d errors, want %d", len(errs), tt.wantCount)
+			}
+			for _, substr := range tt.wantContains {
+				found := false
+				for _, err := range errs {
+					if strings.Contains(err.Message, substr) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("expected error message containing '%s', got %v", substr, errs)
+				}
+			}
+		})
+	}
+}
