@@ -132,3 +132,52 @@ func TestStore_ReadAndValidateSchemaFile(t *testing.T) {
 		})
 	}
 }
+
+func TestIntegrationLoadConfig(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		configYAML   string
+		wantStrict   bool
+		wantSuppress int
+	}{
+		{
+			name:         "no config file",
+			configYAML:   "",
+			wantStrict:   true,
+			wantSuppress: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+
+			configPath := filepath.Join(dir, ".graphql-linter.yml")
+			if test.configYAML != "" {
+				err := os.WriteFile(configPath, []byte(test.configYAML), 0o600)
+				if err != nil {
+					t.Fatalf("failed to write config: %v", err)
+				}
+			}
+
+			store := Store{TargetPath: dir}
+
+			config, err := store.LoadConfig()
+			if err != nil {
+				t.Fatalf("LoadConfig error: %v", err)
+			}
+
+			if config.Settings.StrictMode != test.wantStrict {
+				t.Errorf("StrictMode got %v, want %v", config.Settings.StrictMode, test.wantStrict)
+			}
+
+			if len(config.Suppressions) != test.wantSuppress {
+				t.Errorf("Suppressions got %d, want %d", len(config.Suppressions), test.wantSuppress)
+			}
+		})
+	}
+}
