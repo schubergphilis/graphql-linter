@@ -961,7 +961,7 @@ func TestFilterSchemaComments(t *testing.T) {
 	schema := "// comment\ntype Query { id: ID }\n// another"
 	want := "type Query { id: ID }"
 
-	got := filterSchemaComments(schema)
+	got := FilterSchemaComments(schema)
 	if !strings.Contains(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
@@ -1628,5 +1628,74 @@ func TestErrorTypeCounts(t *testing.T) {
 				t.Errorf("errorTypeCounts() = %v, want %v", got, test.want)
 			}
 		})
+	}
+}
+
+func TestFindRelayConnectionTypesSpec(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		schema     string
+		expectMsgs []string
+	}{
+		{
+			name:       "has both pageInfo and edges",
+			schema:     `type UserConnection { pageInfo: PageInfo edges: [UserEdge] }`,
+			expectMsgs: []string{},
+		},
+		{
+			name:       "missing pageInfo",
+			schema:     `type UserConnection { edges: [UserEdge] }`,
+			expectMsgs: []string{"missing the following field: pageInfo."},
+		},
+		{
+			name:       "missing edges",
+			schema:     `type UserConnection { pageInfo: PageInfo }`,
+			expectMsgs: []string{"missing the following field: edges."},
+		},
+		{
+			name:       "missing both",
+			schema:     `type UserConnection { foo: String }`,
+			expectMsgs: []string{"missing the following field: pageInfo.", "missing the following field: edges."},
+		},
+		{
+			name:       "not a Connection type",
+			schema:     `type User { id: ID }`,
+			expectMsgs: []string{},
+		},
+	}
+
+	for _, test := range tests {
+		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
+
+		errs := findRelayConnectionTypesSpec(&doc, test.schema)
+		if len(test.expectMsgs) == 0 {
+			if len(errs) != 0 {
+				t.Errorf("%s: expected no errors, got %v", test.name, errs)
+			}
+
+			return
+		}
+
+		if len(errs) != len(test.expectMsgs) {
+			t.Errorf("%s: expected %d errors, got %d", test.name, len(test.expectMsgs), len(errs))
+		}
+
+		for _, expectMsg := range test.expectMsgs {
+			found := false
+
+			for _, err := range errs {
+				if strings.Contains(err.Message, expectMsg) {
+					found = true
+
+					break
+				}
+			}
+
+			if !found {
+				t.Errorf("%s: expected error message containing '%s', got %v", test.name, expectMsg, errs)
+			}
+		}
 	}
 }

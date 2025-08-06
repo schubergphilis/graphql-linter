@@ -270,10 +270,6 @@ func reportInternalErrors(parseReport *operationreport.Report) {
 	}
 }
 
-func FilterSchemaComments(schemaString string) string {
-	return filterSchemaComments(schemaString)
-}
-
 func (s Store) ReadAndValidateSchemaFile(schemaFile string) (string, bool) {
 	return s.readAndValidateSchemaFile(schemaFile)
 }
@@ -832,7 +828,7 @@ func readSchemaFile(schemaPath string) (string, bool) {
 	return string(schemaBytes), true
 }
 
-func filterSchemaComments(schemaString string) string {
+func FilterSchemaComments(schemaString string) string {
 	lines := strings.Split(schemaString, "\n")
 
 	var filteredLines []string
@@ -1689,6 +1685,7 @@ func findRelayConnectionTypesSpec(doc *ast.Document, schemaString string) []Desc
 		}
 
 		hasPageInfo := false
+		hasEdges := false
 
 		for _, fieldRef := range obj.FieldsDefinition.Refs {
 			fieldDef := doc.FieldDefinitions[fieldRef]
@@ -1696,16 +1693,31 @@ func findRelayConnectionTypesSpec(doc *ast.Document, schemaString string) []Desc
 			fieldName := doc.Input.ByteSliceString(fieldDef.Name)
 			if fieldName == "pageInfo" {
 				hasPageInfo = true
+			}
 
-				break
+			if fieldName == "edges" {
+				hasEdges = true
 			}
 		}
 
+		lineNum := findLineNumberByText(schemaString, "type "+typeName)
+		lineContent := getLineContent(schemaString, lineNum)
+
 		if !hasPageInfo {
-			lineNum := findLineNumberByText(schemaString, "type "+typeName)
-			lineContent := getLineContent(schemaString, lineNum)
 			message := fmt.Sprintf(
 				"relay-connection-types-spec: Connection `%s` is missing the following field: pageInfo.",
+				typeName,
+			)
+			errors = append(errors, DescriptionError{
+				LineNum:     lineNum,
+				Message:     message,
+				LineContent: lineContent,
+			})
+		}
+
+		if !hasEdges {
+			message := fmt.Sprintf(
+				"relay-connection-types-spec: Connection `%s` is missing the following field: edges.",
 				typeName,
 			)
 			errors = append(errors, DescriptionError{
@@ -2196,7 +2208,7 @@ func (s Store) readAndValidateSchemaFile(schemaFile string) (string, bool) {
 func (s Store) parseAndFilterSchema(
 	schemaString string,
 ) (string, ast.Document, operationreport.Report) {
-	filteredSchema := filterSchemaComments(schemaString)
+	filteredSchema := FilterSchemaComments(schemaString)
 	doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
 
 	return filteredSchema, doc, parseReport
