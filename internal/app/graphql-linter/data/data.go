@@ -345,8 +345,8 @@ func printDetailedErrors(errors []DescriptionError) {
 	}
 }
 
-func printErrorTypeSummary(errors []DescriptionError) {
-	errorTypeCounts := make(map[string]int)
+func errorTypeCounts(errors []DescriptionError) map[string]int {
+	counts := make(map[string]int)
 
 	for _, err := range errors {
 		msg := err.Message
@@ -358,24 +358,30 @@ func printErrorTypeSummary(errors []DescriptionError) {
 			typeKey = msg[:idx]
 		}
 
-		errorTypeCounts[typeKey]++
+		counts[typeKey]++
 	}
 
-	if len(errorTypeCounts) == 0 {
+	return counts
+}
+
+func printErrorTypeSummary(errors []DescriptionError) {
+	errorTypeCountsMap := errorTypeCounts(errors)
+
+	if len(errorTypeCountsMap) == 0 {
 		return
 	}
 
 	log.Error("Error type summary:")
 
-	keys := make([]string, 0, len(errorTypeCounts))
-	for k := range errorTypeCounts {
+	keys := make([]string, 0, len(errorTypeCountsMap))
+	for k := range errorTypeCountsMap {
 		keys = append(keys, k)
 	}
 
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		log.Errorf("  %s: %d", k, errorTypeCounts[k])
+		log.Errorf("  %s: %d", k, errorTypeCountsMap[k])
 	}
 }
 
