@@ -116,44 +116,80 @@ func (s Store) FindAndLogGraphQLSchemaFiles() ([]string, error) {
 	return schemaFiles, nil
 }
 
+type ReportSummary struct {
+	TotalFiles                int
+	PassedFiles               int
+	TotalErrors               int
+	PercentPassed             float64
+	PercentageFilesWithErrors float64
+	FilesWithAtLeastOneError  int
+	AllErrors                 []DescriptionError
+}
+
+func (s Store) ReportSummary(
+	schemaFiles []string,
+	totalErrors int,
+	passedFiles int,
+	allErrors []DescriptionError,
+) ReportSummary {
+	totalFiles := len(schemaFiles)
+
+	percentPassed := 0.0
+	if totalFiles > 0 {
+		percentPassed = float64(passedFiles) / float64(totalFiles) * percentMultiplier
+	}
+
+	percentageFilesWithErrors := 0.0
+
+	filesWithAtLeastOneError := totalFiles - passedFiles
+	if totalFiles > 0 {
+		percentageFilesWithErrors = float64(
+			filesWithAtLeastOneError,
+		) / float64(
+			totalFiles,
+		) * percentMultiplier
+	}
+
+	return ReportSummary{
+		TotalFiles:                totalFiles,
+		PassedFiles:               passedFiles,
+		TotalErrors:               totalErrors,
+		PercentPassed:             percentPassed,
+		PercentageFilesWithErrors: percentageFilesWithErrors,
+		FilesWithAtLeastOneError:  filesWithAtLeastOneError,
+		AllErrors:                 allErrors,
+	}
+}
+
 func (s Store) PrintReport(
 	schemaFiles []string,
 	totalErrors int,
 	passedFiles int,
 	allErrors []DescriptionError,
 ) {
-	percentPassed := 0.0
-	if len(schemaFiles) > 0 {
-		percentPassed = float64(passedFiles) / float64(len(schemaFiles)) * percentMultiplier
-	}
+	summary := s.ReportSummary(schemaFiles, totalErrors, passedFiles, allErrors)
 
-	percentageFilesWithAtLeastOneError := 0.0
-	if len(schemaFiles) > 0 {
-		percentageFilesWithAtLeastOneError = float64(len(schemaFiles)-passedFiles) /
-			float64(len(schemaFiles)) * percentMultiplier
-	}
-
-	printDetailedErrors(allErrors)
-	printErrorTypeSummary(allErrors)
+	printDetailedErrors(summary.AllErrors)
+	printErrorTypeSummary(summary.AllErrors)
 
 	log.WithFields(log.Fields{
-		"passedFiles":   passedFiles,
-		"totalFiles":    len(schemaFiles),
-		"percentPassed": fmt.Sprintf("%.2f%%", percentPassed),
+		"passedFiles":   summary.PassedFiles,
+		"totalFiles":    summary.TotalFiles,
+		"percentPassed": fmt.Sprintf("%.2f%%", summary.PercentPassed),
 	}).Info("linting summary")
 
-	if totalErrors > 0 {
+	if summary.TotalErrors > 0 {
 		log.WithFields(log.Fields{
-			"filesWithAtLeastOneError": len(schemaFiles) - passedFiles,
-			"percentage":               fmt.Sprintf("%.2f%%", percentageFilesWithAtLeastOneError),
+			"filesWithAtLeastOneError": summary.FilesWithAtLeastOneError,
+			"percentage":               fmt.Sprintf("%.2f%%", summary.PercentageFilesWithErrors),
 		}).Error("files with at least one error")
 
-		log.Fatalf("totalErrors: %d", totalErrors)
+		log.Fatalf("totalErrors: %d", summary.TotalErrors)
 
 		return
 	}
 
-	log.Infof("All %d schema file(s) passed linting successfully!", len(schemaFiles))
+	log.Infof("All %d schema file(s) passed linting successfully!", summary.TotalFiles)
 }
 
 func (s Store) LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionError) {
@@ -1017,9 +1053,13 @@ func (s Store) validateEnumTypes(
 					errorLines = append(errorLines, line)
 					// Create a DescriptionError for suspicious enum values
 					descErrors = append(descErrors, DescriptionError{
-						FilePath:    schemaPath,
-						LineNum:     line,
-						Message:     fmt.Sprintf("suspicious-enum-value: Enum '%s' has suspicious value '%s'", enumName, errValue),
+						FilePath: schemaPath,
+						LineNum:  line,
+						Message: fmt.Sprintf(
+							"suspicious-enum-value: Enum '%s' has suspicious value '%s'",
+							enumName,
+							errValue,
+						),
 						LineContent: getLineContent(schemaContent, line),
 					})
 				}
@@ -1050,35 +1090,36 @@ func (s Store) validateDataTypes(
 		enumDescErrors []DescriptionError
 	)
 
-	fieldErrors, fieldErrorLines := validateFieldTypes(
-		doc,
-		schemaContent,
-		builtInScalars,
-		definedTypes,
-	)
-	if len(fieldErrors) > 0 {
-		hasErrors = true
-
-		errorLines = append(errorLines, fieldErrorLines...)
+	type errorResult struct {
+		errors     []string
+		errorLines []int
 	}
 
-	inputErrors, inputErrorLines := validateInputFieldTypes(
-		doc,
-		schemaContent,
-		builtInScalars,
-		definedTypes,
-	)
-	if len(inputErrors) > 0 {
-		hasErrors = true
+	errorResults := []errorResult{
+		func() errorResult {
+			errs, lines := validateFieldTypes(doc, schemaContent, builtInScalars, definedTypes)
 
-		errorLines = append(errorLines, inputErrorLines...)
+			return errorResult{errs, lines}
+		}(),
+		func() errorResult {
+			errs, lines := validateInputFieldTypes(doc, schemaContent, builtInScalars, definedTypes)
+
+			return errorResult{errs, lines}
+		}(),
+		func() errorResult {
+			errs, lines, descErrs := s.validateEnumTypes(doc, schemaContent, schemaPath)
+			enumDescErrors = descErrs
+
+			return errorResult{errs, lines}
+		}(),
 	}
 
-	enumErrors, enumErrorLines, enumDescErrors := s.validateEnumTypes(doc, schemaContent, schemaPath)
-	if len(enumErrors) > 0 {
-		hasErrors = true
+	for _, res := range errorResults {
+		if len(res.errors) > 0 {
+			hasErrors = true
 
-		errorLines = append(errorLines, enumErrorLines...)
+			errorLines = append(errorLines, res.errorLines...)
+		}
 	}
 
 	if hasErrors {
@@ -1878,7 +1919,8 @@ func findMissingInputObjectValueDescriptions(
 				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
 				lineNum := findLineNumberByText(schemaString, fieldName+":")
 				lineContent := getLineContent(schemaString, lineNum)
-				message := fmt.Sprintf("input-object-values-have-descriptions: The input value `%s.%s` is missing a description.",
+				message := fmt.Sprintf(
+					"input-object-values-have-descriptions: The input value `%s.%s` is missing a description.",
 					inputName,
 					fieldName,
 				)
@@ -2022,7 +2064,11 @@ func (s Store) collectUnsuppressedDataTypeErrors(
 
 	var allErrors []DescriptionError
 
-	dataTypesValid, dataTypeErrorLines, enumDescErrors := s.validateDataTypes(doc, schemaString, schemaFile)
+	dataTypesValid, dataTypeErrorLines, enumDescErrors := s.validateDataTypes(
+		doc,
+		schemaString,
+		schemaFile,
+	)
 
 	// Add enum description errors (like suspicious-enum-value)
 	for _, enumErr := range enumDescErrors {

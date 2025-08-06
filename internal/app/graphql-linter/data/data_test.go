@@ -1458,3 +1458,123 @@ func TestFindMissingEnumValueDescriptions(t *testing.T) {
 		}
 	}
 }
+
+func TestStore_ReportSummary(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		schemaFiles []string
+		totalErrors int
+		passedFiles int
+		allErrors   []DescriptionError
+		want        ReportSummary
+	}{
+		{
+			name:        "all files pass",
+			schemaFiles: []string{"a.graphql", "b.graphql"},
+			totalErrors: 0,
+			passedFiles: 2,
+			allErrors:   nil,
+			want: ReportSummary{
+				TotalFiles:                2,
+				PassedFiles:               2,
+				TotalErrors:               0,
+				PercentPassed:             100.0,
+				PercentageFilesWithErrors: 0.0,
+				FilesWithAtLeastOneError:  0,
+				AllErrors:                 nil,
+			},
+		},
+		{
+			name:        "some files fail",
+			schemaFiles: []string{"a.graphql", "b.graphql"},
+			totalErrors: 1,
+			passedFiles: 1,
+			allErrors: []DescriptionError{
+				{FilePath: "a.graphql", LineNum: 1, Message: "error", LineContent: "foo"},
+			},
+			want: ReportSummary{
+				TotalFiles:                2,
+				PassedFiles:               1,
+				TotalErrors:               1,
+				PercentPassed:             50.0,
+				PercentageFilesWithErrors: 50.0,
+				FilesWithAtLeastOneError:  1,
+				AllErrors: []DescriptionError{
+					{FilePath: "a.graphql", LineNum: 1, Message: "error", LineContent: "foo"},
+				},
+			},
+		},
+		{
+			name:        "no files",
+			schemaFiles: []string{},
+			totalErrors: 0,
+			passedFiles: 0,
+			allErrors:   nil,
+			want: ReportSummary{
+				TotalFiles:                0,
+				PassedFiles:               0,
+				TotalErrors:               0,
+				PercentPassed:             0.0,
+				PercentageFilesWithErrors: 0.0,
+				FilesWithAtLeastOneError:  0,
+				AllErrors:                 nil,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			store := Store{}
+			summary := store.ReportSummary(
+				test.schemaFiles,
+				test.totalErrors,
+				test.passedFiles,
+				test.allErrors,
+			)
+
+			if summary.TotalFiles != test.want.TotalFiles {
+				t.Errorf("TotalFiles: got %d, want %d", summary.TotalFiles, test.want.TotalFiles)
+			}
+
+			if summary.PassedFiles != test.want.PassedFiles {
+				t.Errorf("PassedFiles: got %d, want %d", summary.PassedFiles, test.want.PassedFiles)
+			}
+
+			if summary.TotalErrors != test.want.TotalErrors {
+				t.Errorf("TotalErrors: got %d, want %d", summary.TotalErrors, test.want.TotalErrors)
+			}
+
+			if summary.PercentPassed != test.want.PercentPassed {
+				t.Errorf(
+					"PercentPassed: got %f, want %f",
+					summary.PercentPassed,
+					test.want.PercentPassed,
+				)
+			}
+
+			if summary.PercentageFilesWithErrors != test.want.PercentageFilesWithErrors {
+				t.Errorf(
+					"PercentageFilesWithErrors: got %f, want %f",
+					summary.PercentageFilesWithErrors,
+					test.want.PercentageFilesWithErrors,
+				)
+			}
+
+			if summary.FilesWithAtLeastOneError != test.want.FilesWithAtLeastOneError {
+				t.Errorf(
+					"FilesWithAtLeastOneError: got %d, want %d",
+					summary.FilesWithAtLeastOneError,
+					test.want.FilesWithAtLeastOneError,
+				)
+			}
+
+			if !assert.Equal(t, test.want.AllErrors, summary.AllErrors) {
+				t.Errorf("AllErrors: got %+v, want %+v", summary.AllErrors, test.want.AllErrors)
+			}
+		})
+	}
+}
