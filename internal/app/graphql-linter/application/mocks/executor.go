@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -33,6 +34,43 @@ type Executor_Expecter struct {
 
 func (_m *Executor) EXPECT() *Executor_Expecter {
 	return &Executor_Expecter{mock: &_m.Mock}
+}
+
+// PrintReport provides a mock function for the type Executor
+func (_mock *Executor) PrintReport(schemaFiles []string, totalErrors int, passedFiles int, allErrors []data.DescriptionError) {
+	_mock.Called(schemaFiles, totalErrors, passedFiles, allErrors)
+	return
+}
+
+// Executor_PrintReport_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PrintReport'
+type Executor_PrintReport_Call struct {
+	*mock.Call
+}
+
+// PrintReport is a helper method to define mock.On call
+//   - schemaFiles
+//   - totalErrors
+//   - passedFiles
+//   - allErrors
+func (_e *Executor_Expecter) PrintReport(schemaFiles interface{}, totalErrors interface{}, passedFiles interface{}, allErrors interface{}) *Executor_PrintReport_Call {
+	return &Executor_PrintReport_Call{Call: _e.mock.On("PrintReport", schemaFiles, totalErrors, passedFiles, allErrors)}
+}
+
+func (_c *Executor_PrintReport_Call) Run(run func(schemaFiles []string, totalErrors int, passedFiles int, allErrors []data.DescriptionError)) *Executor_PrintReport_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].([]string), args[1].(int), args[2].(int), args[3].([]data.DescriptionError))
+	})
+	return _c
+}
+
+func (_c *Executor_PrintReport_Call) Return() *Executor_PrintReport_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *Executor_PrintReport_Call) RunAndReturn(run func(schemaFiles []string, totalErrors int, passedFiles int, allErrors []data.DescriptionError)) *Executor_PrintReport_Call {
+	_c.Run(run)
+	return _c
 }
 
 // Run provides a mock function for the type Executor
