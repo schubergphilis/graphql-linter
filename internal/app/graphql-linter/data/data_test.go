@@ -2,7 +2,6 @@ package data
 
 import (
 	"os"
-	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -1633,57 +1632,6 @@ func TestStore_ReportSummary(t *testing.T) {
 
 			if !assert.Equal(t, test.want.AllErrors, summary.AllErrors) {
 				t.Errorf("AllErrors: got %+v, want %+v", summary.AllErrors, test.want.AllErrors)
-			}
-		})
-	}
-}
-
-func TestErrorTypeCounts(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name  string
-		input []DescriptionError
-		want  map[string]int
-	}{
-		{
-			name:  "empty slice",
-			input: []DescriptionError{},
-			want:  map[string]int{},
-		},
-		{
-			name:  "single error with colon",
-			input: []DescriptionError{{Message: "type-error: something went wrong"}},
-			want:  map[string]int{"type-error": 1},
-		},
-		{
-			name:  "single error with space",
-			input: []DescriptionError{{Message: "field error something went wrong"}},
-			want:  map[string]int{"field": 1},
-		},
-		{
-			name: "multiple errors, mixed",
-			input: []DescriptionError{
-				{Message: "type-error: foo"},
-				{Message: "type-error: bar"},
-				{Message: "field error baz"},
-				{Message: "other"},
-			},
-			want: map[string]int{
-				"type-error": 2,
-				"field":      1,
-				"other":      1,
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := errorTypeCounts(test.input)
-			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("errorTypeCounts() = %v, want %v", got, test.want)
 			}
 		})
 	}

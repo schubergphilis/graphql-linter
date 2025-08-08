@@ -37,12 +37,6 @@ type Storer interface {
 	FindAndLogGraphQLSchemaFiles() ([]string, error)
 	LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionError)
 	LoadConfig() (*LinterConfig, error)
-	PrintReport(
-		schemaFiles []string,
-		totalErrors int,
-		passedFiles int,
-		allErrors []DescriptionError,
-	)
 }
 
 type Store struct {
@@ -160,37 +154,6 @@ func (s Store) ReportSummary(
 		FilesWithAtLeastOneError:  filesWithAtLeastOneError,
 		AllErrors:                 allErrors,
 	}
-}
-
-func (s Store) PrintReport(
-	schemaFiles []string,
-	totalErrors int,
-	passedFiles int,
-	allErrors []DescriptionError,
-) {
-	summary := s.ReportSummary(schemaFiles, totalErrors, passedFiles, allErrors)
-
-	printDetailedErrors(summary.AllErrors)
-	printErrorTypeSummary(summary.AllErrors)
-
-	log.WithFields(log.Fields{
-		"passedFiles":   summary.PassedFiles,
-		"totalFiles":    summary.TotalFiles,
-		"percentPassed": fmt.Sprintf("%.2f%%", summary.PercentPassed),
-	}).Info("linting summary")
-
-	if summary.TotalErrors > 0 {
-		log.WithFields(log.Fields{
-			"filesWithAtLeastOneError": summary.FilesWithAtLeastOneError,
-			"percentage":               fmt.Sprintf("%.2f%%", summary.PercentageFilesWithErrors),
-		}).Error("files with at least one error")
-
-		log.Fatalf("totalErrors: %d", summary.TotalErrors)
-
-		return
-	}
-
-	log.Infof("All %d schema file(s) passed linting successfully!", summary.TotalFiles)
 }
 
 func (s Store) LintSchemaFiles(schemaFiles []string) (int, int, []DescriptionError) {
@@ -335,56 +298,6 @@ func reportContextLines(
 		}
 
 		log.Infof("  %s Line %d: %s\n", marker, contextIdx+1, lines[contextIdx])
-	}
-}
-
-func printDetailedErrors(errors []DescriptionError) {
-	if len(errors) == 0 {
-		return
-	}
-
-	for _, err := range errors {
-		log.Errorf("%s:%d: %s\n  %s", err.FilePath, err.LineNum, err.Message, err.LineContent)
-	}
-}
-
-func errorTypeCounts(errors []DescriptionError) map[string]int {
-	counts := make(map[string]int)
-
-	for _, err := range errors {
-		msg := err.Message
-
-		typeKey := msg
-		if idx := strings.Index(msg, ":"); idx != -1 {
-			typeKey = msg[:idx]
-		} else if idx := strings.Index(msg, " "); idx != -1 {
-			typeKey = msg[:idx]
-		}
-
-		counts[typeKey]++
-	}
-
-	return counts
-}
-
-func printErrorTypeSummary(errors []DescriptionError) {
-	errorTypeCountsMap := errorTypeCounts(errors)
-
-	if len(errorTypeCountsMap) == 0 {
-		return
-	}
-
-	log.Error("Error type summary:")
-
-	keys := make([]string, 0, len(errorTypeCountsMap))
-	for k := range errorTypeCountsMap {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	for _, k := range keys {
-		log.Errorf("  %s: %d", k, errorTypeCountsMap[k])
 	}
 }
 
