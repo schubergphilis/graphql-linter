@@ -255,11 +255,10 @@ func TestOutput(t *testing.T) {
 	t.Run("Error file lines format", func(t *testing.T) {
 		lines := sections["errors"]
 		for _, line := range lines {
-			// Look for lines with a file path and line number: .../somefile.graphql:<number>:
 			idx := strings.Index(line, ".graphql:")
 			if idx > 0 {
 				suffix := line[idx+len(".graphql:"):]
-				// Check if it starts with a number
+
 				if len(suffix) == 0 || suffix[0] < '0' || suffix[0] > '9' {
 					t.Errorf("error line does not have valid file:line format: %q", line)
 				}

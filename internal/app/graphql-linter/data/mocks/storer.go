@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data"
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -92,7 +92,7 @@ func (_c *Storer_FindAndLogGraphQLSchemaFiles_Call) RunAndReturn(run func() ([]s
 }
 
 // LintSchemaFiles provides a mock function for the type Storer
-func (_mock *Storer) LintSchemaFiles(schemaFiles []string) (int, int, []data.DescriptionError) {
+func (_mock *Storer) LintSchemaFiles(schemaFiles []string) (int, int, []models.DescriptionError) {
 	ret := _mock.Called(schemaFiles)
 
 	if len(ret) == 0 {
@@ -101,8 +101,8 @@ func (_mock *Storer) LintSchemaFiles(schemaFiles []string) (int, int, []data.Des
 
 	var r0 int
 	var r1 int
-	var r2 []data.DescriptionError
-	if returnFunc, ok := ret.Get(0).(func([]string) (int, int, []data.DescriptionError)); ok {
+	var r2 []models.DescriptionError
+	if returnFunc, ok := ret.Get(0).(func([]string) (int, int, []models.DescriptionError)); ok {
 		return returnFunc(schemaFiles)
 	}
 	if returnFunc, ok := ret.Get(0).(func([]string) int); ok {
@@ -115,11 +115,11 @@ func (_mock *Storer) LintSchemaFiles(schemaFiles []string) (int, int, []data.Des
 	} else {
 		r1 = ret.Get(1).(int)
 	}
-	if returnFunc, ok := ret.Get(2).(func([]string) []data.DescriptionError); ok {
+	if returnFunc, ok := ret.Get(2).(func([]string) []models.DescriptionError); ok {
 		r2 = returnFunc(schemaFiles)
 	} else {
 		if ret.Get(2) != nil {
-			r2 = ret.Get(2).([]data.DescriptionError)
+			r2 = ret.Get(2).([]models.DescriptionError)
 		}
 	}
 	return r0, r1, r2
@@ -143,34 +143,34 @@ func (_c *Storer_LintSchemaFiles_Call) Run(run func(schemaFiles []string)) *Stor
 	return _c
 }
 
-func (_c *Storer_LintSchemaFiles_Call) Return(n int, n1 int, descriptionErrors []data.DescriptionError) *Storer_LintSchemaFiles_Call {
+func (_c *Storer_LintSchemaFiles_Call) Return(n int, n1 int, descriptionErrors []models.DescriptionError) *Storer_LintSchemaFiles_Call {
 	_c.Call.Return(n, n1, descriptionErrors)
 	return _c
 }
 
-func (_c *Storer_LintSchemaFiles_Call) RunAndReturn(run func(schemaFiles []string) (int, int, []data.DescriptionError)) *Storer_LintSchemaFiles_Call {
+func (_c *Storer_LintSchemaFiles_Call) RunAndReturn(run func(schemaFiles []string) (int, int, []models.DescriptionError)) *Storer_LintSchemaFiles_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // LoadConfig provides a mock function for the type Storer
-func (_mock *Storer) LoadConfig() (*data.LinterConfig, error) {
+func (_mock *Storer) LoadConfig() (*models.LinterConfig, error) {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for LoadConfig")
 	}
 
-	var r0 *data.LinterConfig
+	var r0 *models.LinterConfig
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() (*data.LinterConfig, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func() (*models.LinterConfig, error)); ok {
 		return returnFunc()
 	}
-	if returnFunc, ok := ret.Get(0).(func() *data.LinterConfig); ok {
+	if returnFunc, ok := ret.Get(0).(func() *models.LinterConfig); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*data.LinterConfig)
+			r0 = ret.Get(0).(*models.LinterConfig)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func() error); ok {
@@ -198,12 +198,12 @@ func (_c *Storer_LoadConfig_Call) Run(run func()) *Storer_LoadConfig_Call {
 	return _c
 }
 
-func (_c *Storer_LoadConfig_Call) Return(linterConfig *data.LinterConfig, err error) *Storer_LoadConfig_Call {
+func (_c *Storer_LoadConfig_Call) Return(linterConfig *models.LinterConfig, err error) *Storer_LoadConfig_Call {
 	_c.Call.Return(linterConfig, err)
 	return _c
 }
 
-func (_c *Storer_LoadConfig_Call) RunAndReturn(run func() (*data.LinterConfig, error)) *Storer_LoadConfig_Call {
+func (_c *Storer_LoadConfig_Call) RunAndReturn(run func() (*models.LinterConfig, error)) *Storer_LoadConfig_Call {
 	_c.Call.Return(run)
 	return _c
 }

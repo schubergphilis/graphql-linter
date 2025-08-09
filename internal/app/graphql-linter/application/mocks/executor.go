@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data"
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -37,7 +37,7 @@ func (_m *Executor) EXPECT() *Executor_Expecter {
 }
 
 // PrintReport provides a mock function for the type Executor
-func (_mock *Executor) PrintReport(schemaFiles []string, totalErrors int, passedFiles int, allErrors []data.DescriptionError) {
+func (_mock *Executor) PrintReport(schemaFiles []string, totalErrors int, passedFiles int, allErrors []models.DescriptionError) {
 	_mock.Called(schemaFiles, totalErrors, passedFiles, allErrors)
 	return
 }
@@ -56,9 +56,9 @@ func (_e *Executor_Expecter) PrintReport(schemaFiles interface{}, totalErrors in
 	return &Executor_PrintReport_Call{Call: _e.mock.On("PrintReport", schemaFiles, totalErrors, passedFiles, allErrors)}
 }
 
-func (_c *Executor_PrintReport_Call) Run(run func(schemaFiles []string, totalErrors int, passedFiles int, allErrors []data.DescriptionError)) *Executor_PrintReport_Call {
+func (_c *Executor_PrintReport_Call) Run(run func(schemaFiles []string, totalErrors int, passedFiles int, allErrors []models.DescriptionError)) *Executor_PrintReport_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]string), args[1].(int), args[2].(int), args[3].([]data.DescriptionError))
+		run(args[0].([]string), args[1].(int), args[2].(int), args[3].([]models.DescriptionError))
 	})
 	return _c
 }
@@ -68,7 +68,7 @@ func (_c *Executor_PrintReport_Call) Return() *Executor_PrintReport_Call {
 	return _c
 }
 
-func (_c *Executor_PrintReport_Call) RunAndReturn(run func(schemaFiles []string, totalErrors int, passedFiles int, allErrors []data.DescriptionError)) *Executor_PrintReport_Call {
+func (_c *Executor_PrintReport_Call) RunAndReturn(run func(schemaFiles []string, totalErrors int, passedFiles int, allErrors []models.DescriptionError)) *Executor_PrintReport_Call {
 	_c.Run(run)
 	return _c
 }
