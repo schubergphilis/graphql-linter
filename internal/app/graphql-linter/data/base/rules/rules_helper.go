@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"unicode"
@@ -45,13 +44,9 @@ func checkSortedOrder(
 	itemName,
 	rulePrefix string,
 ) *models.DescriptionError {
-	fmt.Println("CP 44.0==========================> checkSortedOrder:", itemName, len(names))
-
 	if len(names) < minLength {
 		return nil
 	}
-
-	fmt.Println("CP 44.1==========================> checkSortedOrder:", itemName, len(names), "minLength:", minLength)
 
 	sorted := make([]string, len(names))
 	copy(sorted, names)

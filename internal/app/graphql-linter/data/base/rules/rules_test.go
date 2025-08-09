@@ -732,9 +732,12 @@ func TestFindRelayConnectionTypesSpec(t *testing.T) {
 			expectMsgs: []string{"missing the following field: edges."},
 		},
 		{
-			name:       "missing both",
-			schema:     `type UserConnection { foo: String }`,
-			expectMsgs: []string{"missing the following field: pageInfo.", "missing the following field: edges."},
+			name:   "missing both",
+			schema: `type UserConnection { foo: String }`,
+			expectMsgs: []string{
+				"missing the following field: pageInfo.",
+				"missing the following field: edges.",
+			},
 		},
 		{
 			name:       "not a Connection type",
@@ -771,7 +774,12 @@ func TestFindRelayConnectionTypesSpec(t *testing.T) {
 			}
 
 			if !found {
-				t.Errorf("%s: expected error message containing '%s', got %v", test.name, expectMsg, errs)
+				t.Errorf(
+					"%s: expected error message containing '%s', got %v",
+					test.name,
+					expectMsg,
+					errs,
+				)
 			}
 		}
 	}

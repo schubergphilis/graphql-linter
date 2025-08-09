@@ -151,40 +151,21 @@ func (s Store) ValidateDataTypes(
 		"Boolean": true,
 		"ID":      true,
 	}
-	definedTypes := rules.CollectDefinedTypes(doc)
-	hasErrors := false
+	definedTypesSet := rules.CollectDefinedTypes(doc)
 
-	var (
-		errorLines     []int
-		enumDescErrors []models.DescriptionError
+	definedTypes := make(map[string]bool)
+	for k := range definedTypesSet {
+		definedTypes[k] = true
+	}
+
+	hasErrors, errorLines, enumDescErrors := s.collectDataTypeErrors(
+		doc,
+		modelsLinterConfig,
+		schemaContent,
+		schemaPath,
+		builtInScalars,
+		definedTypes,
 	)
-
-	errorResults := []errorResult{
-		func() errorResult {
-			errs, lines := rules.ValidateFieldTypes(doc, schemaContent, builtInScalars, definedTypes)
-
-			return errorResult{errs, lines}
-		}(),
-		func() errorResult {
-			errs, lines := rules.ValidateInputFieldTypes(doc, schemaContent, builtInScalars, definedTypes)
-
-			return errorResult{errs, lines}
-		}(),
-		func() errorResult {
-			errs, lines, descErrs := rules.ValidateEnumTypes(doc, modelsLinterConfig, schemaContent, schemaPath)
-			enumDescErrors = descErrs
-
-			return errorResult{errs, lines}
-		}(),
-	}
-
-	for _, res := range errorResults {
-		if len(res.errors) > 0 {
-			hasErrors = true
-
-			errorLines = append(errorLines, res.errorLines...)
-		}
-	}
 
 	if hasErrors {
 		log.Error("Data type validation FAILED - schema contains invalid type references")
@@ -195,112 +176,6 @@ func (s Store) ValidateDataTypes(
 	log.Debug("Data type validation PASSED")
 
 	return true, errorLines, enumDescErrors
-}
-
-func uncapitalizedTypeDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
-	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		if obj.Description.IsDefined {
-			desc := doc.Input.ByteSliceString(obj.Description.Content)
-
-			err := rules.ReportUncapitalizedDescription(
-				"type",
-				"",
-				doc.Input.ByteSliceString(obj.Name), desc, schemaString)
-			if err != nil {
-				errors = append(errors, *err)
-			}
-		}
-	}
-
-	return errors
-}
-
-func uncapitalizedFieldDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
-	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		for _, fieldRef := range obj.FieldsDefinition.Refs {
-			fieldDef := doc.FieldDefinitions[fieldRef]
-			if fieldDef.Description.IsDefined {
-				desc := doc.Input.ByteSliceString(fieldDef.Description.Content)
-
-				err := rules.ReportUncapitalizedDescription(
-					"field",
-					doc.Input.ByteSliceString(obj.Name),
-					doc.Input.ByteSliceString(fieldDef.Name),
-					desc, schemaString)
-				if err != nil {
-					errors = append(errors, *err)
-				}
-			}
-		}
-	}
-
-	return errors
-}
-
-func uncapitalizedEnumValueDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
-	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
-
-	for _, enum := range doc.EnumTypeDefinitions {
-		enumName := doc.Input.ByteSliceString(enum.Name)
-
-		for _, valueRef := range enum.EnumValuesDefinition.Refs {
-			valueDef := doc.EnumValueDefinitions[valueRef]
-			if valueDef.Description.IsDefined {
-				desc := doc.Input.ByteSliceString(valueDef.Description.Content)
-
-				valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
-
-				err := rules.ReportUncapitalizedDescription(
-					"enum",
-					enumName,
-					valueName,
-					desc,
-					schemaString,
-				)
-				if err != nil {
-					errors = append(errors, *err)
-				}
-			}
-		}
-	}
-
-	return errors
-}
-
-func uncapitalizedArgumentDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
-	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		for _, fieldRef := range obj.FieldsDefinition.Refs {
-			fieldDef := doc.FieldDefinitions[fieldRef]
-			for _, argRef := range fieldDef.ArgumentsDefinition.Refs {
-				argDef := doc.InputValueDefinitions[argRef]
-				if argDef.Description.IsDefined {
-					desc := doc.Input.ByteSliceString(argDef.Description.Content)
-					argName := doc.Input.ByteSliceString(argDef.Name)
-
-					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-
-					err := rules.ReportUncapitalizedDescription(
-						"argument",
-						fieldName,
-						argName,
-						desc,
-						schemaString,
-					)
-					if err != nil {
-						errors = append(errors, *err)
-					}
-				}
-			}
-		}
-	}
-
-	return errors
 }
 
 func UncapitalizedDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
@@ -394,7 +269,13 @@ func (s Store) CollectUnsuppressedDataTypeErrors(
 				message = "defined-types-are-used: Type is defined but not used"
 			}
 
-			if !pkgrules.IsSuppressed(schemaFile, lineNum, modelsLinterConfig, strings.Split(message, ":")[0], "") {
+			if !pkgrules.IsSuppressed(
+				schemaFile,
+				lineNum,
+				modelsLinterConfig,
+				strings.Split(message, ":")[0],
+				"",
+			) {
 				allErrors = append(allErrors, models.DescriptionError{
 					FilePath:    schemaFile,
 					LineNum:     lineNum,
@@ -409,12 +290,6 @@ func (s Store) CollectUnsuppressedDataTypeErrors(
 	return unsuppressedDataTypeErrors, allErrors
 }
 
-func (s Store) readAndValidateSchemaFile(schemaFile string) (string, bool) {
-	schemaString, ok := readSchemaFile(schemaFile)
-
-	return schemaString, ok
-}
-
 func (s Store) ParseAndFilterSchema(
 	schemaString string,
 ) (string, ast.Document, operationreport.Report) {
@@ -422,4 +297,188 @@ func (s Store) ParseAndFilterSchema(
 	doc, parseReport := astparser.ParseGraphqlDocumentString(schemaString)
 
 	return filteredSchema, doc, parseReport
+}
+
+func (s Store) readAndValidateSchemaFile(schemaFile string) (string, bool) {
+	schemaString, ok := readSchemaFile(schemaFile)
+
+	return schemaString, ok
+}
+
+func (s Store) collectDataTypeErrors(
+	doc *ast.Document,
+	modelsLinterConfig *models.LinterConfig,
+	schemaContent string,
+	schemaPath string,
+	builtInScalars map[string]bool,
+	definedTypes map[string]bool,
+) (bool, []int, []models.DescriptionError) {
+	hasErrors := false
+
+	var (
+		errorLines     []int
+		enumDescErrors []models.DescriptionError
+	)
+
+	errorResults := []errorResult{
+		func() errorResult {
+			errs, lines := rules.ValidateFieldTypes(
+				doc,
+				schemaContent,
+				builtInScalars,
+				definedTypes,
+			)
+
+			return errorResult{errs, lines}
+		}(),
+		func() errorResult {
+			errs, lines := rules.ValidateInputFieldTypes(
+				doc,
+				schemaContent,
+				builtInScalars,
+				definedTypes,
+			)
+
+			return errorResult{errs, lines}
+		}(),
+		func() errorResult {
+			errs, lines, descErrs := rules.ValidateEnumTypes(
+				doc,
+				modelsLinterConfig,
+				schemaContent,
+				schemaPath,
+			)
+			enumDescErrors = descErrs
+
+			return errorResult{errs, lines}
+		}(),
+	}
+
+	for _, res := range errorResults {
+		if len(res.errors) > 0 {
+			hasErrors = true
+
+			errorLines = append(errorLines, res.errorLines...)
+		}
+	}
+
+	return hasErrors, errorLines, enumDescErrors
+}
+
+func uncapitalizedTypeDescriptions(
+	doc *ast.Document,
+	schemaString string,
+) []models.DescriptionError {
+	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		if obj.Description.IsDefined {
+			desc := doc.Input.ByteSliceString(obj.Description.Content)
+
+			err := rules.ReportUncapitalizedDescription(
+				"type",
+				"",
+				doc.Input.ByteSliceString(obj.Name), desc, schemaString)
+			if err != nil {
+				errors = append(errors, *err)
+			}
+		}
+	}
+
+	return errors
+}
+
+func uncapitalizedFieldDescriptions(
+	doc *ast.Document,
+	schemaString string,
+) []models.DescriptionError {
+	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		for _, fieldRef := range obj.FieldsDefinition.Refs {
+			fieldDef := doc.FieldDefinitions[fieldRef]
+			if fieldDef.Description.IsDefined {
+				desc := doc.Input.ByteSliceString(fieldDef.Description.Content)
+
+				err := rules.ReportUncapitalizedDescription(
+					"field",
+					doc.Input.ByteSliceString(obj.Name),
+					doc.Input.ByteSliceString(fieldDef.Name),
+					desc, schemaString)
+				if err != nil {
+					errors = append(errors, *err)
+				}
+			}
+		}
+	}
+
+	return errors
+}
+
+func uncapitalizedEnumValueDescriptions(
+	doc *ast.Document,
+	schemaString string,
+) []models.DescriptionError {
+	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+			if valueDef.Description.IsDefined {
+				desc := doc.Input.ByteSliceString(valueDef.Description.Content)
+
+				valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+
+				err := rules.ReportUncapitalizedDescription(
+					"enum",
+					enumName,
+					valueName,
+					desc,
+					schemaString,
+				)
+				if err != nil {
+					errors = append(errors, *err)
+				}
+			}
+		}
+	}
+
+	return errors
+}
+
+func uncapitalizedArgumentDescriptions(
+	doc *ast.Document,
+	schemaString string,
+) []models.DescriptionError {
+	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
+
+	for _, obj := range doc.ObjectTypeDefinitions {
+		for _, fieldRef := range obj.FieldsDefinition.Refs {
+			fieldDef := doc.FieldDefinitions[fieldRef]
+			for _, argRef := range fieldDef.ArgumentsDefinition.Refs {
+				argDef := doc.InputValueDefinitions[argRef]
+				if argDef.Description.IsDefined {
+					desc := doc.Input.ByteSliceString(argDef.Description.Content)
+					argName := doc.Input.ByteSliceString(argDef.Name)
+
+					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
+
+					err := rules.ReportUncapitalizedDescription(
+						"argument",
+						fieldName,
+						argName,
+						desc,
+						schemaString,
+					)
+					if err != nil {
+						errors = append(errors, *err)
+					}
+				}
+			}
+		}
+	}
+
+	return errors
 }

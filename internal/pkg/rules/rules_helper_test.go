@@ -124,7 +124,15 @@ func TestMatches(t *testing.T) {
 		},
 		{"line match", models.Suppression{Line: 2}, "foo.graphql", 2, "rule", "value", true},
 		{"line no match", models.Suppression{Line: 3}, "foo.graphql", 2, "rule", "value", false},
-		{"rule match", models.Suppression{Rule: "myrule"}, "foo.graphql", 1, "myrule", "value", true},
+		{
+			"rule match",
+			models.Suppression{Rule: "myrule"},
+			"foo.graphql",
+			1,
+			"myrule",
+			"value",
+			true,
+		},
 		{
 			"rule no match",
 			models.Suppression{Rule: "otherrule"},
@@ -135,7 +143,15 @@ func TestMatches(t *testing.T) {
 			false,
 		},
 		{"value match", models.Suppression{Value: "val"}, "foo.graphql", 1, "rule", "val", true},
-		{"value no match", models.Suppression{Value: "other"}, "foo.graphql", 1, "rule", "val", false},
+		{
+			"value no match",
+			models.Suppression{Value: "other"},
+			"foo.graphql",
+			1,
+			"rule",
+			"val",
+			false,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

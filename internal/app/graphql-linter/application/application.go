@@ -29,7 +29,12 @@ const (
 type Executor interface {
 	Run() error
 	Version()
-	PrintReport(schemaFiles []string, totalErrors int, passedFiles int, allErrors []models.DescriptionError)
+	PrintReport(
+		schemaFiles []string,
+		totalErrors int,
+		passedFiles int,
+		allErrors []models.DescriptionError,
+	)
 }
 
 type Debugger interface {
@@ -91,7 +96,10 @@ func (e Execute) Run() error {
 		}
 	}
 
-	totalErrors, errorFilesCount, dataDescriptionError := e.lintSchemaFiles(linterConfig, schemaFiles)
+	totalErrors, errorFilesCount, dataDescriptionError := e.lintSchemaFiles(
+		linterConfig,
+		schemaFiles,
+	)
 
 	report.Print(
 		schemaFiles,
@@ -253,8 +261,12 @@ func lintDescriptions(
 		}
 	}
 
-	enumSortErrors := rules.EnumValuesSortedAlphabetically(doc, modelsLinterConfig, schemaString, schemaPath)
-	fmt.Println("CP 42.1==========================> enumSortErrors:", len(enumSortErrors))
+	enumSortErrors := rules.EnumValuesSortedAlphabetically(
+		doc,
+		modelsLinterConfig,
+		schemaString,
+		schemaPath,
+	)
 
 	descriptionErrors = append(descriptionErrors, enumSortErrors...)
 
@@ -285,7 +297,10 @@ func getUnsuppressedDescriptionErrors(
 	return unsuppressed
 }
 
-func (e Execute) lintSchemaFiles(modelsLinterConfig *models.LinterConfig, schemaFiles []string) (int, int, []models.DescriptionError) {
+func (e Execute) lintSchemaFiles(
+	modelsLinterConfig *models.LinterConfig,
+	schemaFiles []string,
+) (int, int, []models.DescriptionError) {
 	totalErrors := 0
 	errorFilesCount := 0
 
@@ -331,8 +346,48 @@ func (e Execute) lintSingleSchemaFile(
 
 	_, doc, parseReport := dataStore.ParseAndFilterSchema(schemaString)
 	LogSchemaParseErrors(schemaString, &parseReport)
-	descriptionErrors, hasUnsuppressedDeprecationReasonError := lintDescriptions(
+
+	totalErrors, errorFilesCount, allErrors := e.collectLintErrors(
 		&doc,
+		modelsLinterConfig,
+		schemaString,
+		schemaFile,
+		&dataStore,
+	)
+
+	return totalErrors, errorFilesCount, allErrors
+}
+
+func LogSchemaParseErrors(
+	schemaString string,
+	parseReport *operationreport.Report,
+) {
+	if !parseReport.HasErrors() {
+		return
+	}
+
+	log.Errorf("Failed to parse schema - found %d errors:\n",
+		len(parseReport.InternalErrors)+len(parseReport.ExternalErrors))
+
+	report.InternalErrors(parseReport)
+	report.ExternalErrors(schemaString, parseReport, linesBeforeContext, linesAfterContext)
+}
+
+func parseGraphQLDocument(schemaContent string) *ast.Document {
+	doc, _ := astparser.ParseGraphqlDocumentString(schemaContent)
+
+	return &doc
+}
+
+func (e Execute) collectLintErrors(
+	doc *ast.Document,
+	modelsLinterConfig *models.LinterConfig,
+	schemaString string,
+	schemaFile string,
+	dataStore *data.Store,
+) (int, int, []models.DescriptionError) {
+	descriptionErrors, hasUnsuppressedDeprecationReasonError := lintDescriptions(
+		doc,
 		modelsLinterConfig,
 		schemaString,
 		schemaFile,
@@ -343,13 +398,13 @@ func (e Execute) lintSingleSchemaFile(
 		schemaFile,
 	)
 	unsuppressedDataTypeErrors, dataTypeErrors := dataStore.CollectUnsuppressedDataTypeErrors(
-		&doc,
+		doc,
 		modelsLinterConfig,
 		schemaString,
 		schemaFile,
 	)
 	allErrors := append([]models.DescriptionError{}, dataTypeErrors...)
-	unsuppressedDirectiveOrFederationError := !federation_rules.ValidateDirectiveNames(&doc)
+	unsuppressedDirectiveOrFederationError := !federation_rules.ValidateDirectiveNames(doc)
 
 	totalErrors, errorFilesCount := report.SummarizeLintResults(
 		len(unsuppressedDescriptionErrors),
@@ -366,25 +421,4 @@ func (e Execute) lintSingleSchemaFile(
 	}
 
 	return totalErrors, errorFilesCount, allErrors
-}
-
-func LogSchemaParseErrors(
-	schemaString string,
-	parseReport *operationreport.Report,
-) {
-	if !parseReport.HasErrors() {
-		return
-	}
-
-	log.Errorf("Failed to parse schema - found %d errors:\n",
-		len(parseReport.InternalErrors)+len(parseReport.ExternalErrors))
-
-	report.ReportInternalErrors(parseReport)
-	report.ReportExternalErrors(schemaString, parseReport, linesBeforeContext, linesAfterContext)
-}
-
-func parseGraphQLDocument(schemaContent string) *ast.Document {
-	doc, _ := astparser.ParseGraphqlDocumentString(schemaContent)
-
-	return &doc
 }

@@ -247,7 +247,7 @@ type Query { """ID field""" id: ID }`
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
-	e := createTestExecute(false, nil)
+	e := createTestExecute(false)
 
 	total, errorFiles, _ := e.lintSchemaFiles(&models.LinterConfig{}, []string{file})
 	if total != 1 || errorFiles != 1 {

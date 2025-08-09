@@ -27,7 +27,6 @@ func TypesAreCapitalized(doc *ast.Document, schemaString string) []models.Descri
 		if typeName == constants.RootQueryType ||
 			typeName == constants.RootMutationType ||
 			typeName == constants.RootSubscriptionType {
-
 			continue
 		}
 
@@ -54,8 +53,6 @@ func EnumValuesSortedAlphabetically(
 ) []models.DescriptionError {
 	var errors []models.DescriptionError
 
-	fmt.Println("CP 43.0==========================> EnumValuesSortedAlphabetically")
-
 	for _, enum := range doc.EnumTypeDefinitions {
 		enumName := doc.Input.ByteSliceString(enum.Name)
 
@@ -65,8 +62,6 @@ func EnumValuesSortedAlphabetically(
 			valueDef := doc.EnumValueDefinitions[valueRef]
 			valueNames = append(valueNames, doc.Input.ByteSliceString(valueDef.EnumValue))
 		}
-
-		fmt.Println("CP 43.2==========================> ", len(valueNames))
 
 		if err := checkSortedOrder(
 			valueNames,
@@ -83,8 +78,6 @@ func EnumValuesSortedAlphabetically(
 				suppressionValue = messageParts[1]
 			}
 
-			fmt.Println("CP43.3 ============================>")
-
 			if !pkg_rules.IsSuppressed(
 				schemaPath,
 				err.LineNum,
@@ -92,8 +85,6 @@ func EnumValuesSortedAlphabetically(
 				"enum-values-sorted-alphabetically",
 				suppressionValue,
 			) {
-				fmt.Println("CP44.0 ============================>")
-
 				errors = append(errors, *err)
 			}
 		}
@@ -333,7 +324,10 @@ func RelayPageInfoSpec(doc *ast.Document, schemaString string) []models.Descript
 	}}
 }
 
-func RelayConnectionArgumentsSpec(doc *ast.Document, schemaString string) []models.DescriptionError {
+func RelayConnectionArgumentsSpec(
+	doc *ast.Document,
+	schemaString string,
+) []models.DescriptionError {
 	var errors []models.DescriptionError
 
 	for _, fieldDef := range doc.FieldDefinitions {
@@ -451,7 +445,10 @@ func MissingQueryRootType(doc *ast.Document, schemaString string) []models.Descr
 	}}
 }
 
-func MissingEnumValueDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
+func MissingEnumValueDescriptions(
+	doc *ast.Document,
+	schemaString string,
+) []models.DescriptionError {
 	var errors []models.DescriptionError
 
 	for _, enum := range doc.EnumTypeDefinitions {

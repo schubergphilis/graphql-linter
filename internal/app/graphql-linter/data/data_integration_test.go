@@ -120,7 +120,11 @@ func TestIntegrationLoadConfig(t *testing.T) {
 			}
 
 			if len(config.Suppressions) != test.wantSuppress {
-				t.Errorf("Suppressions got %d, want %d", len(config.Suppressions), test.wantSuppress)
+				t.Errorf(
+					"Suppressions got %d, want %d",
+					len(config.Suppressions),
+					test.wantSuppress,
+				)
 			}
 		})
 	}

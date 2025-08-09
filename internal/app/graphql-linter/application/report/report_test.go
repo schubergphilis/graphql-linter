@@ -8,7 +8,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
-func TestStore_ReportSummary(t *testing.T) {
+func TestStore_Summary(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -77,7 +77,7 @@ func TestStore_ReportSummary(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			summary := ReportSummary(
+			summary := NewSummary(
 				test.schemaFiles,
 				test.totalErrors,
 				test.passedFiles,
@@ -131,14 +131,14 @@ func TestReportInternalErrors_Empty(t *testing.T) {
 	t.Parallel()
 
 	report := &operationreport.Report{}
-	ReportInternalErrors(report)
+	InternalErrors(report)
 }
 
 func TestReportExternalErrors_Empty(t *testing.T) {
 	t.Parallel()
 
 	report := &operationreport.Report{}
-	ReportExternalErrors("foo", report, 1, 1)
+	ExternalErrors("foo", report, 1, 1)
 }
 
 func TestReportExternalErrorLocations_Nil(t *testing.T) {

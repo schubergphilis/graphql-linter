@@ -134,9 +134,11 @@ func TestCollectUnsuppressedDataTypeErrors(t *testing.T) {
 			wantContains: []string{"defined-types-are-used"},
 		},
 		{
-			name:      "suppressed error",
-			schema:    `type Query { foo: Bar }`,
-			config:    &models.LinterConfig{Suppressions: []models.Suppression{{Line: 1, Rule: "defined-types-are-used"}}},
+			name:   "suppressed error",
+			schema: `type Query { foo: Bar }`,
+			config: &models.LinterConfig{
+				Suppressions: []models.Suppression{{Line: 1, Rule: "defined-types-are-used"}},
+			},
 			wantCount: 0,
 		},
 	}
@@ -148,7 +150,12 @@ func TestCollectUnsuppressedDataTypeErrors(t *testing.T) {
 			store := Store{LinterConfig: test.config}
 			doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
 
-			count, errs := store.CollectUnsuppressedDataTypeErrors(&doc, test.config, test.schema, "test.graphql")
+			count, errs := store.CollectUnsuppressedDataTypeErrors(
+				&doc,
+				test.config,
+				test.schema,
+				"test.graphql",
+			)
 			if count != test.wantCount {
 				t.Errorf("got count %d, want %d", count, test.wantCount)
 			}

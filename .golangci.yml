@@ -34,6 +34,7 @@ linters:
             - github.com/schubergphilis/graphql-linter/internal/app/graphql-testdata-generator/data
             - github.com/schubergphilis/graphql-linter/internal/app/graphql-testdata-generator/presentation
             - github.com/schubergphilis/graphql-linter/internal/pkg/constants
+            - github.com/schubergphilis/graphql-linter/internal/pkg/rules
             - github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot
             - github.com/sirupsen/logrus
             - github.com/stretchr/testify/assert

@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
@@ -69,10 +68,7 @@ func IsSuppressed(
 	rule string,
 	value string,
 ) bool {
-	fmt.Println("==========================>", len(modelsLinterConfig.Suppressions))
-
 	if modelsLinterConfig == nil || len(modelsLinterConfig.Suppressions) == 0 {
-		fmt.Println("CP42.0==========================> No suppressions configured")
 		return false
 	}
 

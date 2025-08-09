@@ -24,7 +24,12 @@ func runValidateDataTypesTest(
 	dataStore, err := data.NewStore("", true)
 	require.NoError(t, err, "Failed to create data store")
 
-	valid, errorLines, _ := dataStore.ValidateDataTypes(doc, modelsLinterConfig, schemaContent, "test.graphql")
+	valid, errorLines, _ := dataStore.ValidateDataTypes(
+		doc,
+		modelsLinterConfig,
+		schemaContent,
+		"test.graphql",
+	)
 	if valid != wantValid {
 		t.Errorf("%s: got valid=%v, want %v", testName, valid, wantValid)
 	}
@@ -97,11 +102,8 @@ func createTestDirectory(t *testing.T, files map[string]string) string {
 	return dir
 }
 
-func createTestExecute(verbose bool, config *models.LinterConfig) Execute {
+func createTestExecute(verbose bool) Execute {
 	execute := Execute{Verbose: verbose}
-	if config != nil {
-		// execute.LinterConfig = config
-	}
 
 	return execute
 }

@@ -47,7 +47,7 @@ func SummarizeLintResults(
 	return totalErrors, errorFilesCount
 }
 
-func ReportSummary(
+func NewSummary(
 	schemaFiles []string,
 	totalErrors int,
 	passedFiles int,
@@ -88,7 +88,7 @@ func Print(
 	passedFiles int,
 	allErrors []models.DescriptionError,
 ) {
-	summary := ReportSummary(schemaFiles, totalErrors, passedFiles, allErrors)
+	summary := NewSummary(schemaFiles, totalErrors, passedFiles, allErrors)
 
 	printDetailedErrors(summary.AllErrors)
 	printErrorTypeSummary(summary.AllErrors)
@@ -163,13 +163,13 @@ func ErrorTypeCounts(errors []models.DescriptionError) map[string]int {
 	return counts
 }
 
-func ReportInternalErrors(parseReport *operationreport.Report) {
+func InternalErrors(parseReport *operationreport.Report) {
 	for i, internalErr := range parseReport.InternalErrors {
 		log.Errorf("Internal Error %d: %v\n", i+1, internalErr)
 	}
 }
 
-func ReportExternalErrors(
+func ExternalErrors(
 	schemaString string,
 	parseReport *operationreport.Report,
 	linesBeforeContext, linesAfterContext int,
