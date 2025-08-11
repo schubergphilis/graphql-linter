@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const requiredLinterVersion = "3.0.1"
+const graphqlSchemaLinterVersion = "3.0.1"
 
 func validateErrorName(t *testing.T, fileName string) string {
 	t.Helper()
@@ -69,12 +69,12 @@ func checkLinterVersion(t *testing.T) {
 	output, err := cmd.CombinedOutput()
 	version := strings.TrimSpace(string(output))
 
-	if err != nil || version != requiredLinterVersion {
+	if err != nil || version != graphqlSchemaLinterVersion {
 		installCmd := exec.Command(
 			"npm",
 			"install",
 			"-g",
-			"graphql-schema-linter@"+requiredLinterVersion,
+			"graphql-schema-linter@"+graphqlSchemaLinterVersion,
 			"graphql",
 		)
 
@@ -82,7 +82,7 @@ func checkLinterVersion(t *testing.T) {
 		if installErr != nil {
 			t.Fatalf(
 				"Failed to install graphql-schema-linter@%s: %v\n%s",
-				requiredLinterVersion,
+				graphqlSchemaLinterVersion,
 				installErr,
 				string(installOut),
 			)
@@ -92,11 +92,11 @@ func checkLinterVersion(t *testing.T) {
 		output, err = cmd.CombinedOutput()
 		version = strings.TrimSpace(string(output))
 
-		if err != nil || version != requiredLinterVersion {
+		if err != nil || version != graphqlSchemaLinterVersion {
 			t.Fatalf(
 				"graphql-schema-linter version is %s, but %s is required after install.\n%s",
 				version,
-				requiredLinterVersion,
+				graphqlSchemaLinterVersion,
 				string(output),
 			)
 		}
