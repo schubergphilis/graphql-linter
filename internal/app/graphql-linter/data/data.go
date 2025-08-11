@@ -497,7 +497,10 @@ func loadDefaultConfig(config *models.LinterConfig) (*models.LinterConfig, error
 	return config, nil
 }
 
-func loadCustomConfig(configPath string, config *models.LinterConfig) (*models.LinterConfig, error) {
+func loadCustomConfig(
+	configPath string,
+	config *models.LinterConfig,
+) (*models.LinterConfig, error) {
 	_, statErr := os.Stat(configPath)
 	if os.IsNotExist(statErr) {
 		return nil, fmt.Errorf("config file does not exist at path: %s", configPath)
