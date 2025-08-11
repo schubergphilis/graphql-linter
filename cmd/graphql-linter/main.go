@@ -8,12 +8,9 @@ import (
 var Version string
 
 func main() {
-	cliPresent, err := presentation.NewCLI(Version)
-	if err != nil {
-		log.WithError(err).Fatal("failed to construct CLIPresent")
-	}
+	cliPresent := presentation.NewCLI(presentation.NewFlag(), Version)
 
-	err = cliPresent.Run()
+	err := cliPresent.Run()
 	if err != nil {
 		log.WithError(err).Fatal("unable to run presentation layer")
 	}

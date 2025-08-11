@@ -2,9 +2,11 @@ package application
 
 import (
 	"os"
+	"runtime/debug"
 	"strings"
 	"testing"
 
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application/mocks"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/rules"
@@ -50,8 +52,14 @@ func runLintDescriptionsTest(
 ) {
 	t.Helper()
 
-	execute, err := NewExecute("", "", "", false)
-	require.NoError(t, err, "Failed to create execute instance")
+	mocksDebugger := &mocks.Debugger{}
+	mocksDebugger.EXPECT().ReadBuildInfo().Return(&debug.BuildInfo{Main: debug.Module{Version: "4.3.2"}}, true).Times(1)
+
+	execute, err := NewExecute(mocksDebugger, "", "", "", false)
+	require.NoError(t, err, "failed to create execute instance")
+
+	version := execute.Version()
+	assert.Equal(t, "4.3.2", version, "expected version to be 4.3.2, got %s", version)
 
 	doc := parseGraphQLDocument(schemaContent)
 	descriptionErrors, hasDeprecationReasonError := execute.lintDescriptions(

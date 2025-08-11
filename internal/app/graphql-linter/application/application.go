@@ -43,6 +43,10 @@ type Debugger interface {
 
 type Debug struct{}
 
+func NewDebug() Debug {
+	return Debug{}
+}
+
 type Execute struct {
 	ConfigPath    string
 	Debugger      Debugger
@@ -52,12 +56,13 @@ type Execute struct {
 }
 
 func NewExecute(
+	debugger Debugger,
 	configPath, targetPath, versionString string,
 	verbose bool,
 ) (Execute, error) {
 	execute := Execute{
 		ConfigPath:    configPath,
-		Debugger:      Debug{},
+		Debugger:      debugger,
 		TargetPath:    targetPath,
 		Verbose:       verbose,
 		VersionString: versionString,

@@ -17,4 +17,5 @@ packages:
       Ruler: {}
   github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/presentation:
     interfaces:
+      Flagger: {}
       Presenter: {}

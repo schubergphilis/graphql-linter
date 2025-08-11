@@ -12,6 +12,14 @@ type Presenter interface {
 	Run() error
 }
 
+type Flagger interface {
+	BoolVar(p *bool, name string, value bool, usage string)
+	StringVar(p *string, name string, value string, usage string)
+	Parse()
+}
+
+type Flag struct{}
+
 type CLI struct {
 	configPathFlag string
 	targetPathFlag string
@@ -20,31 +28,36 @@ type CLI struct {
 	verboseFlag    bool
 }
 
-func NewCLI(version string) (CLI, error) {
+func NewCLI(flagger Flagger, version string) CLI {
 	cli := CLI{
 		version: version,
 	}
-	flag.StringVar(
+	flagger.StringVar(
 		&cli.configPathFlag,
 		"configPath",
 		"",
 		"The path to the configuration file (optional, defaults to .graphql-linter.yaml in the current directory)",
 	)
-	flag.StringVar(
+	flagger.StringVar(
 		&cli.targetPathFlag,
 		"targetPath",
 		"",
 		"The directory with GraphQL files that should be checked",
 	)
-	flag.BoolVar(&cli.versionFlag, "version", false, "Show version")
-	flag.BoolVar(&cli.verboseFlag, "verbose", false, "Enable verbose output")
-	flag.Parse()
+	flagger.BoolVar(&cli.versionFlag, "version", false, "Show version")
+	flagger.BoolVar(&cli.verboseFlag, "verbose", false, "Enable verbose output")
+	flagger.Parse()
 
-	return cli, nil
+	return cli
+}
+
+func NewFlag() Flag {
+	return Flag{}
 }
 
 func (c CLI) Run() error {
 	applicationExecute, err := application.NewExecute(
+		application.NewDebug(),
 		c.configPathFlag,
 		c.targetPathFlag,
 		c.version,
@@ -72,4 +85,16 @@ func (c CLI) Run() error {
 	}
 
 	return nil
+}
+
+func (f Flag) BoolVar(p *bool, name string, value bool, usage string) {
+	flag.BoolVar(p, name, value, usage)
+}
+
+func (f Flag) StringVar(p *string, name string, value string, usage string) {
+	flag.StringVar(p, name, value, usage)
+}
+
+func (f Flag) Parse() {
+	flag.Parse()
 }
