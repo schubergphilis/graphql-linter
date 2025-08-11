@@ -49,25 +49,13 @@ func TestValidateFederationSchema(t *testing.T) {
 func TestNewStore(t *testing.T) {
 	t.Parallel()
 
-	store, err := NewStore("/tmp", true)
+	store, err := NewStore("", "/tmp", true)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
 	if store.TargetPath != "/tmp" || !store.Verbose {
 		t.Errorf("unexpected store values: %+v", store)
-	}
-}
-
-func TestLoadConfig_MissingFile(t *testing.T) {
-	t.Parallel()
-
-	store := Store{Verbose: false}
-	store.TargetPath = "/tmp"
-
-	config, err := store.LoadConfig()
-	if err != nil || config == nil {
-		t.Errorf("expected default config, got err %v", err)
 	}
 }
 
@@ -180,16 +168,5 @@ func TestCollectUnsuppressedDataTypeErrors(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestLoadConfig(t *testing.T) {
-	t.Parallel()
-
-	s := createTestStore(false, nil)
-
-	config, err := s.LoadConfig()
-	if err != nil || config == nil {
-		t.Errorf("expected config, got err %v", err)
 	}
 }

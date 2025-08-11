@@ -28,10 +28,10 @@ type Storer interface {
 }
 
 type Store struct {
-	LinterConfig     *models.LinterConfig
-	LinterConfigPath string
-	TargetPath       string
-	Verbose          bool
+	ConfigPath   string
+	LinterConfig *models.LinterConfig
+	TargetPath   string
+	Verbose      bool
 }
 
 type Suppression struct {
@@ -53,29 +53,18 @@ type errorResult struct {
 	errorLines []int
 }
 
-func NewStore(targetPath string, verbose bool) (Store, error) {
-	s := Store{
+func NewStore(configPath, targetPath string, verbose bool) (Store, error) {
+	store := Store{
+		ConfigPath: configPath,
 		TargetPath: targetPath,
 		Verbose:    verbose,
 	}
 
-	return s, nil
+	return store, nil
 }
 
 func (s Store) LoadConfig() (*models.LinterConfig, error) {
-	configPath := s.LinterConfigPath
-
-	if configPath == "" {
-		log.Debug("No config path provided, using default project root search")
-
-		projectRoot, err := projectroot.FindProjectRoot()
-		if err != nil {
-			return nil, fmt.Errorf("failed to determine project root: %w", err)
-		}
-
-		configPath = filepath.Join(projectRoot, ".graphql-linter.yml")
-	}
-
+	configPath := s.ConfigPath
 	config := &models.LinterConfig{
 		Settings: models.Settings{
 			StrictMode:         true,
@@ -84,21 +73,20 @@ func (s Store) LoadConfig() (*models.LinterConfig, error) {
 		},
 	}
 
-	_, err := os.Stat(configPath)
-	if os.IsNotExist(err) {
-		log.Debugf("no config file found at %s. Using defaults", configPath)
+	if configPath == "" {
+		cfg, err := loadDefaultConfig(config)
+		if err != nil {
+			return nil, err
+		}
 
-		return config, nil
-	}
+		config = cfg
+	} else {
+		cfg, err := loadCustomConfig(configPath, config)
+		if err != nil {
+			return nil, err
+		}
 
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
-	}
-
-	err = yaml.Unmarshal(data, config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
+		config = cfg
 	}
 
 	if s.Verbose {
@@ -481,4 +469,49 @@ func uncapitalizedArgumentDescriptions(
 	}
 
 	return errors
+}
+
+func loadDefaultConfig(config *models.LinterConfig) (*models.LinterConfig, error) {
+	log.Debug("No config path provided, using default project root search")
+
+	projectRoot, err := projectroot.FindProjectRoot()
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine project root: %w", err)
+	}
+
+	defaultConfigPath := filepath.Join(projectRoot, ".graphql-linter.yml")
+
+	_, statErr := os.Stat(defaultConfigPath)
+	if statErr == nil {
+		data, readErr := os.ReadFile(defaultConfigPath)
+		if readErr != nil {
+			return nil, fmt.Errorf("failed to read config file: %w", readErr)
+		}
+
+		yamlErr := yaml.Unmarshal(data, config)
+		if yamlErr != nil {
+			return nil, fmt.Errorf("failed to parse config file: %w", yamlErr)
+		}
+	}
+
+	return config, nil
+}
+
+func loadCustomConfig(configPath string, config *models.LinterConfig) (*models.LinterConfig, error) {
+	_, statErr := os.Stat(configPath)
+	if os.IsNotExist(statErr) {
+		return nil, fmt.Errorf("config file does not exist at path: %s", configPath)
+	}
+
+	data, readErr := os.ReadFile(configPath)
+	if readErr != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", readErr)
+	}
+
+	yamlErr := yaml.Unmarshal(data, config)
+	if yamlErr != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", yamlErr)
+	}
+
+	return config, nil
 }

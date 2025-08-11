@@ -44,14 +44,19 @@ type Debugger interface {
 type Debug struct{}
 
 type Execute struct {
+	ConfigPath    string
 	Debugger      Debugger
 	TargetPath    string
 	Verbose       bool
 	VersionString string
 }
 
-func NewExecute(targetPath string, verbose bool, versionString string) (Execute, error) {
+func NewExecute(
+	configPath, targetPath, versionString string,
+	verbose bool,
+) (Execute, error) {
 	execute := Execute{
+		ConfigPath:    configPath,
 		Debugger:      Debug{},
 		TargetPath:    targetPath,
 		Verbose:       verbose,
@@ -66,7 +71,7 @@ func (Debug) ReadBuildInfo() (*debug.BuildInfo, bool) {
 }
 
 func (e Execute) Run() error {
-	dataStore, err := data.NewStore(e.TargetPath, e.Verbose)
+	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, e.Verbose)
 	if err != nil {
 		return fmt.Errorf("unable to load new store: %w", err)
 	}
@@ -329,7 +334,7 @@ func (e Execute) lintSingleSchemaFile(
 		log.Infof("=== Linting %s ===", schemaFile)
 	}
 
-	dataStore, err := data.NewStore(e.TargetPath, e.Verbose)
+	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, e.Verbose)
 	if err != nil {
 		log.Errorf("unable to load new store: %v", err)
 	}

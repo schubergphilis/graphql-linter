@@ -275,7 +275,7 @@ type SuppressionEntry struct {
 	Reason string
 }
 
-//nolint:maintidx // generateSuppressions is a data function and not logic-heavy.
+//nolint:maintidx //generateSuppressions is a data function and not logic-heavy.
 func generateSuppressions() []SuppressionEntry {
 	return []SuppressionEntry{
 		{

@@ -3,8 +3,6 @@ package data
 import (
 	"os"
 	"testing"
-
-	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 )
 
 type ErrorWithMessage interface {
@@ -47,13 +45,4 @@ func createTempSchemaFile(t *testing.T, content string) string {
 	tempFile.Close()
 
 	return tempFile.Name()
-}
-
-func createTestStore(verbose bool, config *models.LinterConfig) Store {
-	execute := Store{Verbose: verbose}
-	if config != nil {
-		execute.LinterConfig = config
-	}
-
-	return execute
 }

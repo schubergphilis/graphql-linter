@@ -21,7 +21,7 @@ func runValidateDataTypesTest(
 
 	doc := parseGraphQLDocument(schemaContent)
 
-	dataStore, err := data.NewStore("", true)
+	dataStore, err := data.NewStore("", "", true)
 	require.NoError(t, err, "Failed to create data store")
 
 	valid, errorLines, _ := dataStore.ValidateDataTypes(

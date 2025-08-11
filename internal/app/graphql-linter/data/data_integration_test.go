@@ -6,6 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStore_ReadAndValidateSchemaFile(t *testing.T) {
@@ -107,7 +110,7 @@ func TestIntegrationLoadConfig(t *testing.T) {
 					t.Fatalf("failed to write config: %v", err)
 				}
 
-				store.LinterConfigPath = configPath
+				store.ConfigPath = configPath
 			}
 
 			config, err := store.LoadConfig()
@@ -127,5 +130,100 @@ func TestIntegrationLoadConfig(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+//nolint:paralleltest,tparallel //t.Chdir cannot run in parallel
+func TestLoadConfig(t *testing.T) {
+	projectRoot, err := projectroot.FindProjectRoot()
+	require.NoError(t, err, "failed to determine project root")
+
+	t.Run("no configPath, no .graphql-linter.yml", testNoConfigPathNoConfigFile)
+	t.Run("no configPath, .graphql-linter.yml exists", func(t *testing.T) {
+		oldWd, _ := os.Getwd()
+
+		defer func() {
+			t.Chdir(oldWd)
+		}()
+
+		t.Chdir(projectRoot)
+
+		configContent := "suppressions:\n  - rule: test-rule\n    file: test.graphql\n    line: 1\n" +
+			"    value: test value\n    reason: test reason\n"
+
+		err = os.WriteFile(".graphql-linter.yml", []byte(configContent), 0o600)
+		require.NoError(t, err, "failed to write config file")
+
+		defer func() {
+			err := os.Remove(".graphql-linter.yml")
+			require.NoError(t, err, "failed to remove config file")
+		}()
+
+		store := Store{ConfigPath: "", Verbose: false}
+
+		config, err := store.LoadConfig()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if config == nil || len(config.Suppressions) != 1 {
+			t.Fatalf("expected config with suppressions, got %+v", config)
+		}
+	})
+
+	t.Run("configPath provided, file exists", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		configPath := dir + "/custom.yml"
+		configContent := "suppressions:\n  - rule: test-rule\n    file: test.graphql\n    line: 1\n" +
+			"    value: test value\n    reason: test reason\n"
+		err := os.WriteFile(configPath, []byte(configContent), 0o600)
+		require.NoError(t, err, "failed to write config file")
+
+		defer func() {
+			err := os.Remove(configPath)
+			require.NoError(t, err, "failed to remove config file")
+		}()
+
+		store := Store{ConfigPath: configPath, Verbose: false}
+
+		config, err := store.LoadConfig()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if config == nil || len(config.Suppressions) != 1 {
+			t.Fatalf("expected config with suppressions, got %+v", config)
+		}
+	})
+
+	t.Run("configPath provided, file does not exist", func(t *testing.T) {
+		t.Parallel()
+
+		store := Store{ConfigPath: "some-config-file-that-does-not-exist", Verbose: false}
+		config, err := store.LoadConfig()
+		require.Error(t, err, "expected error when loading config")
+		require.Nil(t, config, "expected nil config when error occurs")
+	})
+}
+
+func testNoConfigPathNoConfigFile(t *testing.T) {
+	oldWd, _ := os.Getwd()
+
+	defer func() {
+		t.Chdir(oldWd)
+	}()
+
+	t.Chdir(".")
+
+	store := Store{ConfigPath: "", Verbose: false}
+
+	config, err := store.LoadConfig()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if config == nil {
+		t.Fatalf("expected config, got nil")
 	}
 }

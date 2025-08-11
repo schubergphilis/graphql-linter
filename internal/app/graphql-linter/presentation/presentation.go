@@ -13,6 +13,7 @@ type Presenter interface {
 }
 
 type CLI struct {
+	configPathFlag string
 	targetPathFlag string
 	version        string
 	versionFlag    bool
@@ -23,6 +24,12 @@ func NewCLI(version string) (CLI, error) {
 	cli := CLI{
 		version: version,
 	}
+	flag.StringVar(
+		&cli.configPathFlag,
+		"configPath",
+		"",
+		"The path to the configuration file (optional, defaults to .graphql-linter.yaml in the current directory)",
+	)
 	flag.StringVar(
 		&cli.targetPathFlag,
 		"targetPath",
@@ -37,7 +44,12 @@ func NewCLI(version string) (CLI, error) {
 }
 
 func (c CLI) Run() error {
-	applicationExecute, err := application.NewExecute(c.targetPathFlag, c.verboseFlag, c.version)
+	applicationExecute, err := application.NewExecute(
+		c.configPathFlag,
+		c.targetPathFlag,
+		c.version,
+		c.verboseFlag,
+	)
 	if err != nil {
 		return fmt.Errorf("unable to load new execute: %w", err)
 	}
