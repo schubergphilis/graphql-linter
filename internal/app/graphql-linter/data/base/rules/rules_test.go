@@ -560,6 +560,8 @@ func TestRemoveAllDigits_ExtraCases(t *testing.T) {
 func TestReportUncapitalizedDescription(t *testing.T) {
 	t.Parallel()
 
+	rule := NewRule()
+
 	tests := []struct {
 		name      string
 		kind      string
@@ -615,7 +617,7 @@ func TestReportUncapitalizedDescription(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := ReportUncapitalizedDescription(
+			err := rule.ReportUncapitalizedDescription(
 				test.kind,
 				test.parent,
 				test.field,
@@ -639,6 +641,8 @@ func TestReportUncapitalizedDescription(t *testing.T) {
 
 func TestFindMissingArgumentDescriptions(t *testing.T) {
 	t.Parallel()
+
+	rule := NewRule()
 
 	tests := []struct {
 		name        string
@@ -675,7 +679,7 @@ func TestFindMissingArgumentDescriptions(t *testing.T) {
 	for _, test := range tests {
 		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
 
-		errs := MissingArgumentDescriptions(&doc, test.schema)
+		errs := rule.MissingArgumentDescriptions(&doc, test.schema)
 		if test.expectError {
 			if len(errs) == 0 {
 				t.Errorf("%s: expected error, got none", test.name)
@@ -710,6 +714,8 @@ func TestFindMissingArgumentDescriptions(t *testing.T) {
 
 func TestFindRelayConnectionTypesSpec(t *testing.T) {
 	t.Parallel()
+
+	rule := NewRule()
 
 	tests := []struct {
 		name       string
@@ -749,7 +755,7 @@ func TestFindRelayConnectionTypesSpec(t *testing.T) {
 	for _, test := range tests {
 		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
 
-		errs := RelayConnectionTypesSpec(&doc, test.schema)
+		errs := rule.RelayConnectionTypesSpec(&doc, test.schema)
 		if len(test.expectMsgs) == 0 {
 			if len(errs) != 0 {
 				t.Errorf("%s: expected no errors, got %v", test.name, errs)
@@ -788,6 +794,8 @@ func TestFindRelayConnectionTypesSpec(t *testing.T) {
 func TestFindMissingInputObjectValueDescriptions(t *testing.T) {
 	t.Parallel()
 
+	rule := NewRule()
+
 	tests := []struct {
 		name         string
 		schema       string
@@ -819,7 +827,7 @@ func TestFindMissingInputObjectValueDescriptions(t *testing.T) {
 
 			doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
 
-			errs := MissingInputObjectValueDescriptions(&doc, test.schema)
+			errs := rule.MissingInputObjectValueDescriptions(&doc, test.schema)
 			if len(errs) != test.wantCount {
 				t.Errorf("got %d errors, want %d", len(errs), test.wantCount)
 			}
@@ -845,6 +853,8 @@ func TestFindMissingInputObjectValueDescriptions(t *testing.T) {
 
 func TestFindMissingEnumValueDescriptions(t *testing.T) {
 	t.Parallel()
+
+	rule := NewRule()
 
 	tests := []struct {
 		name        string
@@ -873,7 +883,7 @@ func TestFindMissingEnumValueDescriptions(t *testing.T) {
 	for _, test := range tests {
 		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
 
-		errs := MissingEnumValueDescriptions(&doc, test.schema)
+		errs := rule.MissingEnumValueDescriptions(&doc, test.schema)
 		if test.expectError {
 			if len(errs) == 0 {
 				t.Errorf("%s: expected error, got none", test.name)
@@ -909,6 +919,8 @@ func TestFindMissingEnumValueDescriptions(t *testing.T) {
 func TestFindInputObjectValuesCamelCased(t *testing.T) {
 	t.Parallel()
 
+	rule := NewRule()
+
 	tests := []struct {
 		name        string
 		schema      string
@@ -942,7 +954,7 @@ func TestFindInputObjectValuesCamelCased(t *testing.T) {
 	for _, test := range tests {
 		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
 
-		errs := InputObjectValuesCamelCased(&doc, test.schema)
+		errs := rule.InputObjectValuesCamelCased(&doc, test.schema)
 		if test.expectError {
 			if len(errs) == 0 {
 				t.Errorf("%s: expected error, got none", test.name)
@@ -978,6 +990,8 @@ func TestFindInputObjectValuesCamelCased(t *testing.T) {
 func TestFindRelayPageInfoSpec(t *testing.T) {
 	t.Parallel()
 
+	rule := NewRule()
+
 	tests := []struct {
 		name        string
 		schema      string
@@ -997,7 +1011,7 @@ func TestFindRelayPageInfoSpec(t *testing.T) {
 	for _, test := range tests {
 		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
 
-		errs := RelayPageInfoSpec(&doc, test.schema)
+		errs := rule.RelayPageInfoSpec(&doc, test.schema)
 		if test.expectError {
 			assert.NotEmpty(t, errs, test.name)
 			assert.Contains(t, errs[0].Message, "relay-page-info-spec")
@@ -1025,9 +1039,11 @@ func TestFindFieldDefinitionLine(t *testing.T) {
 func TestValidateEnumTypes(t *testing.T) {
 	t.Parallel()
 
+	r := NewRule()
+
 	doc, _ := astparser.ParseGraphqlDocumentString("enum Status { ACTIVE 1NVALID FOO1 }")
 
-	_, errorLines, _ := ValidateEnumTypes(
+	_, errorLines, _ := r.ValidateEnumTypes(
 		&doc,
 		nil,
 		"enum Status { ACTIVE 1NVALID FOO1 }",

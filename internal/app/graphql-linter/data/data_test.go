@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/rules"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -49,7 +50,7 @@ func TestValidateFederationSchema(t *testing.T) {
 func TestNewStore(t *testing.T) {
 	t.Parallel()
 
-	store, err := NewStore("", "/tmp", true)
+	store, err := NewStore("", "/tmp", rules.Rule{}, true)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -61,6 +62,11 @@ func TestNewStore(t *testing.T) {
 
 func TestFindUnsortedInterfaceFields(t *testing.T) {
 	t.Parallel()
+
+	store, err := NewStore("", "/tmp", rules.Rule{}, true)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
 	tests := []struct {
 		name          string
@@ -88,7 +94,7 @@ func TestFindUnsortedInterfaceFields(t *testing.T) {
 	for _, test := range tests {
 		doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
 
-		errs := UnsortedInterfaceFields(&doc, test.schema)
+		errs := store.UnsortedInterfaceFields(&doc, test.schema)
 		if test.expectError {
 			assert.NotEmpty(t, errs, test.name)
 			assert.Contains(t, errs[0].Message, test.expectMessage)
@@ -135,7 +141,7 @@ func TestCollectUnsuppressedDataTypeErrors(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			store := Store{LinterConfig: test.config}
+			store := Store{LinterConfig: test.config, Ruler: rules.Rule{}}
 			doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
 
 			count, errs := store.CollectUnsuppressedDataTypeErrors(

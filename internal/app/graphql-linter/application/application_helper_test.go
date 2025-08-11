@@ -7,6 +7,8 @@ import (
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/rules"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,7 +23,7 @@ func runValidateDataTypesTest(
 
 	doc := parseGraphQLDocument(schemaContent)
 
-	dataStore, err := data.NewStore("", "", true)
+	dataStore, err := data.NewStore("", "", rules.Rule{}, true)
 	require.NoError(t, err, "Failed to create data store")
 
 	valid, errorLines, _ := dataStore.ValidateDataTypes(
@@ -44,16 +46,22 @@ func runLintDescriptionsTest(
 	modelsLinterConfig *models.LinterConfig,
 	testName, schemaContent, errorSubstring string,
 	wantHasDeprecationReasonError bool,
+	numberOfDescriptionErrors int,
 ) {
 	t.Helper()
 
+	execute, err := NewExecute("", "", "", false)
+	require.NoError(t, err, "Failed to create execute instance")
+
 	doc := parseGraphQLDocument(schemaContent)
-	descriptionErrors, hasDeprecationReasonError := lintDescriptions(
+	descriptionErrors, hasDeprecationReasonError := execute.lintDescriptions(
 		doc,
 		modelsLinterConfig,
 		schemaContent,
 		"test.graphql",
 	)
+
+	assert.Len(t, descriptionErrors, numberOfDescriptionErrors)
 
 	found := false
 

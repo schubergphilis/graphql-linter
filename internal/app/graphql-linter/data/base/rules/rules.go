@@ -19,7 +19,68 @@ const (
 	splitNParts               = 2
 )
 
-func TypesAreCapitalized(doc *ast.Document, schemaString string) []models.DescriptionError {
+//nolint:interfacebloat //TODO: generate one method per rule
+type Ruler interface {
+	EnumValuesSortedAlphabetically(
+		doc *ast.Document,
+		modelsLinterConfig *models.LinterConfig,
+		schemaString string,
+		schemaPath string,
+	) []models.DescriptionError
+	FieldsAreCamelCased(doc *ast.Document, schemaString string) []models.DescriptionError
+	InputObjectFieldsSortedAlphabetically(doc *ast.Document, schemaString string) []models.DescriptionError
+	InputObjectValuesCamelCased(doc *ast.Document, schemaString string) []models.DescriptionError
+	MissingArgumentDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError
+	MissingDeprecationReasons(doc *ast.Document, schemaString string) []models.DescriptionError
+	MissingEnumValueDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError
+	MissingFieldDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError
+	MissingInputObjectValueDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError
+	MissingQueryRootType(doc *ast.Document, schemaString string) []models.DescriptionError
+	MissingTypeDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError
+	RelayConnectionArgumentsSpec(doc *ast.Document, schemaString string) []models.DescriptionError
+	RelayConnectionTypesSpec(doc *ast.Document, schemaString string) []models.DescriptionError
+	RelayPageInfoSpec(doc *ast.Document, schemaString string) []models.DescriptionError
+	ReportUncapitalizedDescription(
+		kind,
+		parent,
+		name,
+		desc,
+		schemaString string,
+	) *models.DescriptionError
+	TypesAreCapitalized(doc *ast.Document, schemaString string) []models.DescriptionError
+	UnusedTypes(doc *ast.Document, schemaString string) []models.DescriptionError
+	UnsortedFields(
+		fieldDefs []int,
+		getFieldName func(int) string,
+		typeLabel,
+		typeName,
+		schemaString string,
+	) []models.DescriptionError
+	ValidateEnumTypes(
+		doc *ast.Document,
+		modelsLinterConfig *models.LinterConfig,
+		schemaContent string,
+		schemaPath string,
+	) ([]string, []int, []models.DescriptionError)
+	ValidateFieldTypes(
+		doc *ast.Document,
+		schemaContent string,
+		builtInScalars, definedTypes map[string]bool,
+	) ([]string, []int)
+	ValidateInputFieldTypes(
+		doc *ast.Document,
+		schemaContent string,
+		builtInScalars, definedTypes map[string]bool,
+	) ([]string, []int)
+}
+
+type Rule struct{}
+
+func NewRule() *Rule {
+	return &Rule{}
+}
+
+func (r Rule) TypesAreCapitalized(doc *ast.Document, schemaString string) []models.DescriptionError {
 	errors := make([]models.DescriptionError, 0)
 
 	for _, obj := range doc.ObjectTypeDefinitions {
@@ -45,7 +106,7 @@ func TypesAreCapitalized(doc *ast.Document, schemaString string) []models.Descri
 	return errors
 }
 
-func EnumValuesSortedAlphabetically(
+func (r Rule) EnumValuesSortedAlphabetically(
 	doc *ast.Document,
 	modelsLinterConfig *models.LinterConfig,
 	schemaString string,
@@ -93,7 +154,7 @@ func EnumValuesSortedAlphabetically(
 	return errors
 }
 
-func MissingDeprecationReasons(doc *ast.Document, schemaString string) []models.DescriptionError {
+func (r Rule) MissingDeprecationReasons(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
 	for _, enum := range doc.EnumTypeDefinitions {
@@ -124,7 +185,7 @@ func MissingDeprecationReasons(doc *ast.Document, schemaString string) []models.
 	return errors
 }
 
-func MissingArgumentDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
+func (r Rule) MissingArgumentDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
 	for _, obj := range doc.ObjectTypeDefinitions {
@@ -152,7 +213,7 @@ func MissingArgumentDescriptions(doc *ast.Document, schemaString string) []model
 	return errors
 }
 
-func UnsortedFields(
+func (r Rule) UnsortedFields(
 	fieldDefs []int,
 	getFieldName func(int) string,
 	typeLabel,
@@ -191,7 +252,7 @@ func UnsortedFields(
 	return nil
 }
 
-func MissingInputObjectValueDescriptions(
+func (r Rule) MissingInputObjectValueDescriptions(
 	doc *ast.Document,
 	schemaString string,
 ) []models.DescriptionError {
@@ -222,7 +283,7 @@ func MissingInputObjectValueDescriptions(
 	return errors
 }
 
-func InputObjectFieldsSortedAlphabetically(
+func (r Rule) InputObjectFieldsSortedAlphabetically(
 	doc *ast.Document,
 	schemaString string,
 ) []models.DescriptionError {
@@ -253,7 +314,7 @@ func InputObjectFieldsSortedAlphabetically(
 	return errors
 }
 
-func FieldsAreCamelCased(doc *ast.Document, schemaString string) []models.DescriptionError {
+func (r Rule) FieldsAreCamelCased(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
 	for _, obj := range doc.ObjectTypeDefinitions {
@@ -279,7 +340,7 @@ func FieldsAreCamelCased(doc *ast.Document, schemaString string) []models.Descri
 	return errors
 }
 
-func InputObjectValuesCamelCased(doc *ast.Document, schemaString string) []models.DescriptionError {
+func (r Rule) InputObjectValuesCamelCased(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
 	for _, input := range doc.InputObjectTypeDefinitions {
@@ -306,7 +367,7 @@ func InputObjectValuesCamelCased(doc *ast.Document, schemaString string) []model
 	return errors
 }
 
-func RelayPageInfoSpec(doc *ast.Document, schemaString string) []models.DescriptionError {
+func (r Rule) RelayPageInfoSpec(doc *ast.Document, schemaString string) []models.DescriptionError {
 	for _, obj := range doc.ObjectTypeDefinitions {
 		if doc.Input.ByteSliceString(obj.Name) == "PageInfo" {
 			return nil
@@ -324,7 +385,7 @@ func RelayPageInfoSpec(doc *ast.Document, schemaString string) []models.Descript
 	}}
 }
 
-func RelayConnectionArgumentsSpec(
+func (r Rule) RelayConnectionArgumentsSpec(
 	doc *ast.Document,
 	schemaString string,
 ) []models.DescriptionError {
@@ -371,7 +432,7 @@ func RelayConnectionArgumentsSpec(
 	return errors
 }
 
-func RelayConnectionTypesSpec(doc *ast.Document, schemaString string) []models.DescriptionError {
+func (r Rule) RelayConnectionTypesSpec(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
 	for _, obj := range doc.ObjectTypeDefinitions {
@@ -427,7 +488,7 @@ func RelayConnectionTypesSpec(doc *ast.Document, schemaString string) []models.D
 	return errors
 }
 
-func MissingQueryRootType(doc *ast.Document, schemaString string) []models.DescriptionError {
+func (r Rule) MissingQueryRootType(doc *ast.Document, schemaString string) []models.DescriptionError {
 	for _, obj := range doc.ObjectTypeDefinitions {
 		if doc.Input.ByteSliceString(obj.Name) == "Query" {
 			return nil
@@ -445,7 +506,7 @@ func MissingQueryRootType(doc *ast.Document, schemaString string) []models.Descr
 	}}
 }
 
-func MissingEnumValueDescriptions(
+func (r Rule) MissingEnumValueDescriptions(
 	doc *ast.Document,
 	schemaString string,
 ) []models.DescriptionError {
@@ -473,7 +534,7 @@ func MissingEnumValueDescriptions(
 	return errors
 }
 
-func MissingTypeDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
+func (r Rule) MissingTypeDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
 	for _, obj := range doc.ObjectTypeDefinitions {
@@ -493,7 +554,7 @@ func MissingTypeDescriptions(doc *ast.Document, schemaString string) []models.De
 	return errors
 }
 
-func MissingFieldDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
+func (r Rule) MissingFieldDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
 	for _, obj := range doc.ObjectTypeDefinitions {
@@ -517,7 +578,7 @@ func MissingFieldDescriptions(doc *ast.Document, schemaString string) []models.D
 	return errors
 }
 
-func ReportUncapitalizedDescription(
+func (r Rule) ReportUncapitalizedDescription(
 	kind,
 	parent,
 	name,
@@ -563,7 +624,7 @@ func ReportUncapitalizedDescription(
 	}
 }
 
-func UnusedTypes(doc *ast.Document, schemaString string) []models.DescriptionError {
+func (r Rule) UnusedTypes(doc *ast.Document, schemaString string) []models.DescriptionError {
 	definedTypes := collectDefinedTypeNames(doc)
 
 	unusedTypeErrors := make([]models.DescriptionError, 0, len(definedTypes))
@@ -589,6 +650,94 @@ func UnusedTypes(doc *ast.Document, schemaString string) []models.DescriptionErr
 	}
 
 	return unusedTypeErrors
+}
+
+func (r Rule) ValidateEnumTypes(
+	doc *ast.Document,
+	modelsLinterConfig *models.LinterConfig,
+	schemaContent string,
+	schemaPath string,
+) ([]string, []int, []models.DescriptionError) {
+	var (
+		errors     []string
+		errorLines []int
+		descErrors []models.DescriptionError
+	)
+
+	for _, enumDef := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enumDef.Name)
+
+		for _, valueRef := range enumDef.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+
+			if errValue, line := checkInvalidEnumValue(enumName, valueName, schemaContent); errValue != "" {
+				errors = append(errors, errValue)
+				if line > 0 {
+					errorLines = append(errorLines, line)
+				}
+			}
+
+			if errValue, line := checkSuspiciousEnumValue(
+				enumName,
+				valueName,
+				schemaContent,
+				schemaPath,
+				modelsLinterConfig,
+			); errValue != "" {
+				errors = append(errors, errValue)
+				if line > 0 {
+					errorLines = append(errorLines, line)
+					descErrors = append(descErrors, models.DescriptionError{
+						FilePath: schemaPath,
+						LineNum:  line,
+						Message: fmt.Sprintf(
+							"suspicious-enum-value: Enum '%s' has suspicious value '%s'",
+							enumName,
+							errValue,
+						),
+						LineContent: GetLineContent(schemaContent, line),
+					})
+				}
+			}
+		}
+	}
+
+	return errors, errorLines, descErrors
+}
+
+func (r Rule) ValidateFieldTypes(
+	doc *ast.Document,
+	schemaContent string,
+	builtInScalars, definedTypes map[string]bool,
+) ([]string, []int) {
+	return validateTypeReferences(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+		indexSlice(len(doc.FieldDefinitions)),
+		func(i int) string { return doc.Input.ByteSliceString(doc.FieldDefinitions[i].Name) },
+		func(i int) ast.Type { return doc.Types[doc.FieldDefinitions[i].Type] },
+		"invalid-field-types: Field",
+	)
+}
+
+func (r Rule) ValidateInputFieldTypes(
+	doc *ast.Document,
+	schemaContent string,
+	builtInScalars, definedTypes map[string]bool,
+) ([]string, []int) {
+	return validateTypeReferences(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+		indexSlice(len(doc.InputValueDefinitions)),
+		func(i int) string { return doc.Input.ByteSliceString(doc.InputValueDefinitions[i].Name) },
+		func(i int) ast.Type { return doc.Types[doc.InputValueDefinitions[i].Type] },
+		"invalid-input-field-types: Input field",
+	)
 }
 
 func checkInvalidEnumValue(enumName, valueName, schemaContent string) (string, int) {
@@ -650,77 +799,6 @@ func checkSuspiciousEnumValue(
 	return valueName, lineNum
 }
 
-func ValidateEnumTypes(
-	doc *ast.Document,
-	modelsLinterConfig *models.LinterConfig,
-	schemaContent string,
-	schemaPath string,
-) ([]string, []int, []models.DescriptionError) {
-	var (
-		errors     []string
-		errorLines []int
-		descErrors []models.DescriptionError
-	)
-
-	for _, enumDef := range doc.EnumTypeDefinitions {
-		enumName := doc.Input.ByteSliceString(enumDef.Name)
-
-		for _, valueRef := range enumDef.EnumValuesDefinition.Refs {
-			valueDef := doc.EnumValueDefinitions[valueRef]
-			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
-
-			if errValue, line := checkInvalidEnumValue(enumName, valueName, schemaContent); errValue != "" {
-				errors = append(errors, errValue)
-				if line > 0 {
-					errorLines = append(errorLines, line)
-				}
-			}
-
-			if errValue, line := checkSuspiciousEnumValue(
-				enumName,
-				valueName,
-				schemaContent,
-				schemaPath,
-				modelsLinterConfig,
-			); errValue != "" {
-				errors = append(errors, errValue)
-				if line > 0 {
-					errorLines = append(errorLines, line)
-					descErrors = append(descErrors, models.DescriptionError{
-						FilePath: schemaPath,
-						LineNum:  line,
-						Message: fmt.Sprintf(
-							"suspicious-enum-value: Enum '%s' has suspicious value '%s'",
-							enumName,
-							errValue,
-						),
-						LineContent: GetLineContent(schemaContent, line),
-					})
-				}
-			}
-		}
-	}
-
-	return errors, errorLines, descErrors
-}
-
-func ValidateFieldTypes(
-	doc *ast.Document,
-	schemaContent string,
-	builtInScalars, definedTypes map[string]bool,
-) ([]string, []int) {
-	return validateTypeReferences(
-		doc,
-		schemaContent,
-		builtInScalars,
-		definedTypes,
-		indexSlice(len(doc.FieldDefinitions)),
-		func(i int) string { return doc.Input.ByteSliceString(doc.FieldDefinitions[i].Name) },
-		func(i int) ast.Type { return doc.Types[doc.FieldDefinitions[i].Type] },
-		"invalid-field-types: Field",
-	)
-}
-
 func validateTypeReferences(
 	doc *ast.Document,
 	schemaContent string,
@@ -768,21 +846,4 @@ func validateTypeReferences(
 	}
 
 	return errors, errorLines
-}
-
-func ValidateInputFieldTypes(
-	doc *ast.Document,
-	schemaContent string,
-	builtInScalars, definedTypes map[string]bool,
-) ([]string, []int) {
-	return validateTypeReferences(
-		doc,
-		schemaContent,
-		builtInScalars,
-		definedTypes,
-		indexSlice(len(doc.InputValueDefinitions)),
-		func(i int) string { return doc.Input.ByteSliceString(doc.InputValueDefinitions[i].Name) },
-		func(i int) ast.Type { return doc.Types[doc.InputValueDefinitions[i].Type] },
-		"invalid-input-field-types: Input field",
-	)
 }

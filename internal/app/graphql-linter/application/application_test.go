@@ -9,6 +9,7 @@ import (
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application/mocks"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application/report"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
+	ruler_mocks "github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/rules/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
@@ -122,32 +123,38 @@ func TestLintDescriptions(t *testing.T) {
 
 	tests := []struct {
 		name                          string
-		schemaContent                 string
 		errorSubstring                string
+		schemaContent                 string
+		setupMockRuler                func(*ruler_mocks.Ruler)
+		wantNumberOfDescriptionErrors int
 		wantHasDeprecationReasonError bool
 	}{
 		{
 			name:                          "missing Query root type",
-			schemaContent:                 "type User { id: ID }",
 			errorSubstring:                "invalid-graphql-schema",
+			schemaContent:                 "type User { id: ID }",
+			wantNumberOfDescriptionErrors: 5,
 			wantHasDeprecationReasonError: false,
 		},
 		{
-			name:                          "all valid, no errors",
-			schemaContent:                 "type Query { id: ID }",
+			name:                          "all valid, no description reason errors",
 			errorSubstring:                "Object type 'Query' is missing a description",
+			schemaContent:                 "type Query { id: ID }",
+			wantNumberOfDescriptionErrors: 3,
 			wantHasDeprecationReasonError: false,
 		},
 		{
 			name:                          "missing deprecation reason",
-			schemaContent:                 `enum Status {\n  ACTIVE\n  INACTIVE @deprecated\n}`,
 			errorSubstring:                "deprecations-have-a-reason",
+			schemaContent:                 `enum Status {\n  ACTIVE\n  INACTIVE @deprecated\n}`,
+			wantNumberOfDescriptionErrors: 10,
 			wantHasDeprecationReasonError: true,
 		},
 		{
 			name:                          "missing type description",
-			schemaContent:                 "type Query { id: ID }\ntype Foo { bar: String }",
 			errorSubstring:                "Object type 'Foo' is missing a description",
+			schemaContent:                 "type Query { id: ID }\ntype Foo { bar: String }",
+			wantNumberOfDescriptionErrors: 6,
 			wantHasDeprecationReasonError: false,
 		},
 	}
@@ -155,6 +162,7 @@ func TestLintDescriptions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
+
 			runLintDescriptionsTest(
 				t,
 				&models.LinterConfig{},
@@ -162,6 +170,7 @@ func TestLintDescriptions(t *testing.T) {
 				test.schemaContent,
 				test.errorSubstring,
 				test.wantHasDeprecationReasonError,
+				test.wantNumberOfDescriptionErrors,
 			)
 		})
 	}

@@ -7,6 +7,7 @@ package mocks
 import (
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	mock "github.com/stretchr/testify/mock"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 )
 
 // NewStorer creates a new instance of Storer. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -204,6 +205,54 @@ func (_c *Storer_LoadConfig_Call) Return(linterConfig *models.LinterConfig, err 
 }
 
 func (_c *Storer_LoadConfig_Call) RunAndReturn(run func() (*models.LinterConfig, error)) *Storer_LoadConfig_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UnsortedTypeFields provides a mock function for the type Storer
+func (_mock *Storer) UnsortedTypeFields(doc *ast.Document, schemaString string) []models.DescriptionError {
+	ret := _mock.Called(doc, schemaString)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UnsortedTypeFields")
+	}
+
+	var r0 []models.DescriptionError
+	if returnFunc, ok := ret.Get(0).(func(*ast.Document, string) []models.DescriptionError); ok {
+		r0 = returnFunc(doc, schemaString)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DescriptionError)
+		}
+	}
+	return r0
+}
+
+// Storer_UnsortedTypeFields_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UnsortedTypeFields'
+type Storer_UnsortedTypeFields_Call struct {
+	*mock.Call
+}
+
+// UnsortedTypeFields is a helper method to define mock.On call
+//   - doc
+//   - schemaString
+func (_e *Storer_Expecter) UnsortedTypeFields(doc interface{}, schemaString interface{}) *Storer_UnsortedTypeFields_Call {
+	return &Storer_UnsortedTypeFields_Call{Call: _e.mock.On("UnsortedTypeFields", doc, schemaString)}
+}
+
+func (_c *Storer_UnsortedTypeFields_Call) Run(run func(doc *ast.Document, schemaString string)) *Storer_UnsortedTypeFields_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*ast.Document), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Storer_UnsortedTypeFields_Call) Return(descriptionErrors []models.DescriptionError) *Storer_UnsortedTypeFields_Call {
+	_c.Call.Return(descriptionErrors)
+	return _c
+}
+
+func (_c *Storer_UnsortedTypeFields_Call) RunAndReturn(run func(doc *ast.Document, schemaString string) []models.DescriptionError) *Storer_UnsortedTypeFields_Call {
 	_c.Call.Return(run)
 	return _c
 }

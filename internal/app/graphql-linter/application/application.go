@@ -71,7 +71,7 @@ func (Debug) ReadBuildInfo() (*debug.BuildInfo, bool) {
 }
 
 func (e Execute) Run() error {
-	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, e.Verbose)
+	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, rules.Rule{}, e.Verbose)
 	if err != nil {
 		return fmt.Errorf("unable to load new store: %w", err)
 	}
@@ -218,41 +218,76 @@ func isGraphQLFile(info os.FileInfo) bool {
 	return ext == ".graphql" || ext == ".graphqls"
 }
 
-func lintDescriptions(
+func (e Execute) lintDescriptions(
 	doc *ast.Document,
 	modelsLinterConfig *models.LinterConfig,
 	schemaString string,
 	schemaPath string,
 ) ([]models.DescriptionError, bool) {
+	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, rules.Rule{}, e.Verbose)
+	if err != nil {
+		log.Errorf("unable to load new store: %v", err)
+
+		return nil, false
+	}
+
 	descriptionErrors := make([]models.DescriptionError, 0, pkg_rules.DefaultErrorCapacity)
 	hasUnsuppressedDeprecationReasonError := false
 
-	helpers := []func(*ast.Document, string) []models.DescriptionError{
-		rules.FieldsAreCamelCased,
-		rules.InputObjectFieldsSortedAlphabetically,
-		rules.InputObjectValuesCamelCased,
-		rules.MissingArgumentDescriptions,
-		rules.MissingDeprecationReasons,
-		rules.MissingEnumValueDescriptions,
-		rules.MissingFieldDescriptions,
-		rules.MissingInputObjectValueDescriptions,
-		rules.MissingQueryRootType,
-		rules.MissingTypeDescriptions,
-		rules.RelayConnectionArgumentsSpec,
-		rules.RelayConnectionTypesSpec,
-		rules.RelayPageInfoSpec,
-		rules.TypesAreCapitalized,
-		data.UncapitalizedDescriptions,
-		data.UnsortedInterfaceFields,
-		data.UnsortedTypeFields,
-		rules.UnusedTypes,
-	}
+	descriptionErrors, hasUnsuppressedDeprecationReasonError = e.collectDescriptionErrors(
+		doc,
+		&dataStore,
+		modelsLinterConfig,
+		schemaString,
+		schemaPath,
+		descriptionErrors,
+		hasUnsuppressedDeprecationReasonError,
+	)
 
+	enumSortErrors := dataStore.Ruler.EnumValuesSortedAlphabetically(
+		doc,
+		modelsLinterConfig,
+		schemaString,
+		schemaPath,
+	)
+	descriptionErrors = append(descriptionErrors, enumSortErrors...)
+
+	return sortDescriptionErrors(descriptionErrors), hasUnsuppressedDeprecationReasonError
+}
+
+func (e Execute) collectDescriptionErrors(
+	doc *ast.Document,
+	dataStore *data.Store,
+	modelsLinterConfig *models.LinterConfig,
+	schemaString string,
+	schemaPath string,
+	descriptionErrors []models.DescriptionError,
+	hasUnsuppressedDeprecationReasonError bool,
+) ([]models.DescriptionError, bool) {
+	helpers := []func(*ast.Document, string) []models.DescriptionError{
+		dataStore.Ruler.FieldsAreCamelCased,
+		dataStore.Ruler.InputObjectFieldsSortedAlphabetically,
+		dataStore.Ruler.InputObjectValuesCamelCased,
+		dataStore.Ruler.MissingArgumentDescriptions,
+		dataStore.Ruler.MissingDeprecationReasons,
+		dataStore.Ruler.MissingEnumValueDescriptions,
+		dataStore.Ruler.MissingFieldDescriptions,
+		dataStore.Ruler.MissingInputObjectValueDescriptions,
+		dataStore.Ruler.MissingQueryRootType,
+		dataStore.Ruler.MissingTypeDescriptions,
+		dataStore.Ruler.RelayConnectionArgumentsSpec,
+		dataStore.Ruler.RelayConnectionTypesSpec,
+		dataStore.Ruler.RelayPageInfoSpec,
+		dataStore.Ruler.TypesAreCapitalized,
+		dataStore.UncapitalizedDescriptions,
+		dataStore.UnsortedInterfaceFields,
+		dataStore.UnsortedTypeFields,
+		dataStore.Ruler.UnusedTypes,
+	}
 	for _, helper := range helpers {
 		errList := helper(doc, schemaString)
 		for _, err := range errList {
 			descriptionErrors = append(descriptionErrors, err)
-
 			if strings.Contains(err.Message, "deprecations-have-a-reason") {
 				rule := err.Message
 				if idx := strings.Index(rule, ":"); idx != -1 {
@@ -266,16 +301,7 @@ func lintDescriptions(
 		}
 	}
 
-	enumSortErrors := rules.EnumValuesSortedAlphabetically(
-		doc,
-		modelsLinterConfig,
-		schemaString,
-		schemaPath,
-	)
-
-	descriptionErrors = append(descriptionErrors, enumSortErrors...)
-
-	return sortDescriptionErrors(descriptionErrors), hasUnsuppressedDeprecationReasonError
+	return descriptionErrors, hasUnsuppressedDeprecationReasonError
 }
 
 func sortDescriptionErrors(errors []models.DescriptionError) []models.DescriptionError {
@@ -334,7 +360,7 @@ func (e Execute) lintSingleSchemaFile(
 		log.Infof("=== Linting %s ===", schemaFile)
 	}
 
-	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, e.Verbose)
+	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, rules.Rule{}, e.Verbose)
 	if err != nil {
 		log.Errorf("unable to load new store: %v", err)
 	}
@@ -391,7 +417,7 @@ func (e Execute) collectLintErrors(
 	schemaFile string,
 	dataStore *data.Store,
 ) (int, int, []models.DescriptionError) {
-	descriptionErrors, hasUnsuppressedDeprecationReasonError := lintDescriptions(
+	descriptionErrors, hasUnsuppressedDeprecationReasonError := e.lintDescriptions(
 		doc,
 		modelsLinterConfig,
 		schemaString,
