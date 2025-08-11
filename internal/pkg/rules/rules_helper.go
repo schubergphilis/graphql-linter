@@ -28,23 +28,41 @@ func LevenshteinDistance(source, target string) int {
 		return len(source)
 	}
 
-	matrix := make([][]int, len(source)+1)
-	for row := range matrix {
-		matrix[row] = make([]int, len(target)+1)
+	matrix := newLevenshteinMatrix(len(source)+1, len(target)+1)
+	fillLevenshteinBorders(matrix)
+	computeLevenshtein(matrix, source, target)
+
+	return matrix[len(source)][len(target)]
+}
+
+func newLevenshteinMatrix(rows, cols int) [][]int {
+	matrix := make([][]int, rows)
+	for i := range matrix {
+		matrix[i] = make([]int, cols)
 	}
 
-	for row := 0; row <= len(source); row++ {
-		matrix[row][0] = row
+	return matrix
+}
+
+func fillLevenshteinBorders(matrix [][]int) {
+	for i := range matrix {
+		matrix[i][0] = i
 	}
 
-	for col := 0; col <= len(target); col++ {
-		matrix[0][col] = col
+	for j := range matrix[0] {
+		matrix[0][j] = j
 	}
+}
 
-	for row := 1; row <= len(source); row++ {
-		for col := 1; col <= len(target); col++ {
+func computeLevenshtein(matrix [][]int, source, target string) {
+	for row := 1; row < len(matrix); row++ {
+		sourceChar := source[row-1]
+
+		for col := 1; col < len(matrix[0]); col++ {
+			targetChar := target[col-1]
+
 			cost := 0
-			if source[row-1] != target[col-1] {
+			if sourceChar != targetChar {
 				cost = 1
 			}
 
@@ -57,8 +75,6 @@ func LevenshteinDistance(source, target string) int {
 			)
 		}
 	}
-
-	return matrix[len(source)][len(target)]
 }
 
 func IsSuppressed(
