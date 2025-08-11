@@ -39,6 +39,17 @@ graphql-linter --version
 
 ## Usage
 
+### Command-line Parameters
+
+- `-configPath string`
+  The path to the configuration file (optional, defaults to `.graphql-linter.yaml` in the current directory).
+- `-targetPath string`
+  The directory with GraphQL files that should be checked.
+- `-verbose`
+  Enable verbose output.
+- `-version`
+  Show version information and exit.
+
 ### Testdata generation
 
 ```zsh
@@ -51,16 +62,35 @@ go run cmd/graphql-testdata-generator/main.go
 go run cmd/graphql-linter/main.go --help
 ```
 
-### Lint specific directory
+### Lint a specific directory
 
 ```zsh
-go run cmd/graphql-linter/main.go -targetPath test/testdata/graphql/invalid
+go run cmd/graphql-linter/main.go \
+  -targetPath test/testdata/graphql/base/invalid
 ```
 
-```zsh
-graphql-schema-linter test/testdata/graphql/invalid/*
-```
+### Lint a specific file
 
 ```zsh
-graphql-schema-linter test/testdata/graphql/valid/*
+go run cmd/graphql-linter/main.go \
+  -targetPath test/testdata/graphql/base/invalid/20-suspicious-enum-value.graphql
+```
+
+### Example configuration file
+
+By default, the linter looks for a `.graphql-linter.yaml` file in the current directory.
+
+For a full example with all options and comments, see the provided `.graphql-linter.yml.example` file in the repository root.
+
+Example minimal configuration:
+
+```yaml
+rules:
+  require-descriptions:
+    types: true
+    fields: true
+    enums: true
+suppressions:
+  - path: "test/testdata/graphql/invalid/ignore_this.graphql"
+    rules: ["require-descriptions"]
 ```
