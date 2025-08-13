@@ -29,31 +29,31 @@ func (e Execute) Run() error {
 		return fmt.Errorf("unable to remove directory: '%s'. Error: %w", e.testdataInvalidDir, err)
 	}
 
-	writers := []func() error{
-		func() error { return WriteArgumentsHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteDefinedTypesAreUsedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteDeprecationsHaveAReasonSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteDescriptionsAreCapitalizedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteTestSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteEnumValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WritePrioritySchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteUserSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WritePostSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteInputObjectFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteInputObjectValuesAreCamelCasedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteInputObjectValuesHaveDescriptionsSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteInterfaceFieldsSortedAlphabeticallySchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteRelayConnectionSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteRelayConnectionArgumentsSpecSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteFieldsSortedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteProductSchemaToFile17(e.testdataInvalidDir) },
-		func() error { return WriteProductSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteQueryRootMustBeProvidedSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteUpdateProfileInputSchemaToFile(e.testdataInvalidDir) },
-		func() error { return WriteSuspiciousEnumValueSchemaToFile(e.testdataInvalidDir) },
+	writerFuncs := []func(string) error{
+		WriteArgumentsHaveDescriptionsSchemaToFile,
+		WriteDefinedTypesAreUsedSchemaToFile,
+		WriteDeprecationsHaveAReasonSchemaToFile,
+		WriteDescriptionsAreCapitalizedSchemaToFile,
+		WriteTestSchemaToFile,
+		WriteEnumValuesHaveDescriptionsSchemaToFile,
+		WritePrioritySchemaToFile,
+		WriteUserSchemaToFile,
+		WritePostSchemaToFile,
+		WriteInputObjectFieldsSortedAlphabeticallySchemaToFile,
+		WriteInputObjectValuesAreCamelCasedSchemaToFile,
+		WriteInputObjectValuesHaveDescriptionsSchemaToFile,
+		WriteInterfaceFieldsSortedAlphabeticallySchemaToFile,
+		WriteRelayConnectionSchemaToFile,
+		WriteRelayConnectionArgumentsSpecSchemaToFile,
+		WriteFieldsSortedSchemaToFile,
+		WriteProductSchemaToFile17,
+		WriteProductSchemaToFile,
+		WriteQueryRootMustBeProvidedSchemaToFile,
+		WriteUpdateProfileInputSchemaToFile,
+		WriteSuspiciousEnumValueSchemaToFile,
 	}
-	for i, writer := range writers {
-		writerErr := writer()
+	for i, writer := range writerFuncs {
+		writerErr := writer(e.testdataInvalidDir)
 		if writerErr != nil {
 			return fmt.Errorf("error in writer %d: %w", i+1, writerErr)
 		}
