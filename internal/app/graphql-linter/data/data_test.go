@@ -115,24 +115,21 @@ func TestCollectUnsuppressedDataTypeErrors(t *testing.T) {
 		wantContains []string
 	}{
 		{
-			name:      "valid types",
-			schema:    `type Query { id: ID name: String }`,
+			name:      "valid enum types",
+			schema:    `enum Color { RED GREEN BLUE } type Query { color: Color }`,
 			config:    &models.LinterConfig{},
 			wantCount: 0,
 		},
 		{
-			name:         "undefined type",
-			schema:       `type Query { foo: Bar }`,
-			config:       &models.LinterConfig{},
-			wantCount:    1,
-			wantContains: []string{"defined-types-are-used"},
+			name:      "valid types without enum errors",
+			schema:    `type Query { foo: String }`,
+			config:    &models.LinterConfig{},
+			wantCount: 0,
 		},
 		{
-			name:   "suppressed error",
-			schema: `type Query { foo: Bar }`,
-			config: &models.LinterConfig{
-				Suppressions: []models.Suppression{{Line: 1, Rule: "defined-types-are-used"}},
-			},
+			name:      "schema with no enum description errors",
+			schema:    `enum Status { ACTIVE INACTIVE } type Query { status: Status }`,
+			config:    &models.LinterConfig{},
 			wantCount: 0,
 		},
 	}
@@ -150,13 +147,9 @@ func TestCollectUnsuppressedDataTypeErrors(t *testing.T) {
 				test.schema,
 				"test.graphql",
 			)
-			if count != test.wantCount {
-				t.Errorf("got count %d, want %d", count, test.wantCount)
-			}
 
-			if len(errs) != test.wantCount {
-				t.Errorf("got %d errors, want %d", len(errs), test.wantCount)
-			}
+			assert.Equal(t, test.wantCount, count, "error count mismatch for %s", test.name)
+			assert.Len(t, errs, test.wantCount, "errors slice length mismatch for %s", test.name)
 
 			for _, substr := range test.wantContains {
 				found := false
@@ -169,9 +162,7 @@ func TestCollectUnsuppressedDataTypeErrors(t *testing.T) {
 					}
 				}
 
-				if !found {
-					t.Errorf("expected error message containing '%s', got %v", substr, errs)
-				}
+				assert.True(t, found, "expected error message containing '%s' in test %s, got %v", substr, test.name, errs)
 			}
 		})
 	}

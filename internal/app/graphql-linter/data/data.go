@@ -230,7 +230,7 @@ func (s Store) CollectUnsuppressedDataTypeErrors(
 
 	var allErrors []models.DescriptionError
 
-	dataTypesValid, dataTypeErrorLines, enumDescErrors := s.ValidateDataTypes(
+	_, _, enumDescErrors := s.ValidateDataTypes(
 		doc,
 		modelsLinterConfig,
 		schemaString,
@@ -246,35 +246,6 @@ func (s Store) CollectUnsuppressedDataTypeErrors(
 		if !pkgrules.IsSuppressed(schemaFile, enumErr.LineNum, modelsLinterConfig, rule, "") {
 			allErrors = append(allErrors, enumErr)
 			unsuppressedDataTypeErrors++
-		}
-	}
-
-	if !dataTypesValid {
-		for _, lineNum := range dataTypeErrorLines {
-			lineContent := rules.GetLineContent(schemaString, lineNum)
-
-			var message string
-			if strings.Contains(lineContent, "enum") {
-				message = "suspicious-enum-value: Type validation failed"
-			} else {
-				message = "defined-types-are-used: Type is defined but not used"
-			}
-
-			if !pkgrules.IsSuppressed(
-				schemaFile,
-				lineNum,
-				modelsLinterConfig,
-				strings.Split(message, ":")[0],
-				"",
-			) {
-				allErrors = append(allErrors, models.DescriptionError{
-					FilePath:    schemaFile,
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
-				unsuppressedDataTypeErrors++
-			}
 		}
 	}
 

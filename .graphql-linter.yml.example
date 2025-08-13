@@ -6,18 +6,18 @@ suppressions:
   # Suppress suspicious enum value warnings for specific cases
   - file: test/testdata/graphql/suspicious-enum-value.graphql
     line: 4
+    reason: PO4_VOLUME is valid domain-specific enum value phosphate volume
     rule: suspicious_enum_value
     value: PO4_VOLUME
-    reason: PO4_VOLUME is valid domain-specific enum value phosphate volume
   - file: test/testdata/graphql/base/invalid/07-enum-values-sorted-alphabetically.graphql
     line: 12
+    reason: PageInfo is intentionally unused in this test schema
     rule: defined-types-are-used
     value: PageInfo
-    reason: PageInfo is intentionally unused in this test schema
   - file: test/testdata/graphql/base/invalid/07-enum-values-sorted-alphabetically.graphql
     line: 2
-    rule: enum-values-sorted-alphabetically
     reason: Test schema intentionally has unsorted enum values to test the linter
+    rule: enum-values-sorted-alphabetically
 
 # Example suppressions for other rule types:
 # - file: "path/to/schema.graphqls"
@@ -36,9 +36,7 @@ suppressions:
 settings:
   # Whether to treat warnings as errors (default: false)
   strictMode: true
-
   # Whether to validate federation directives (default: true)
   validateFederation: true
-
   # Whether to check for missing descriptions (default: true)
   checkDescriptions: true
