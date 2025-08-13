@@ -8,7 +8,7 @@ import (
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/rules"
-	pkgrules "github.com/schubergphilis/graphql-linter/internal/pkg/rules"
+	pkg_rules "github.com/schubergphilis/graphql-linter/internal/pkg/rules"
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 	log "github.com/sirupsen/logrus"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -170,7 +170,7 @@ func (s Store) ValidateDataTypes(
 }
 
 func (s Store) UncapitalizedDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
-	errors := make([]models.DescriptionError, 0, pkgrules.DefaultErrorCapacity)
+	errors := make([]models.DescriptionError, 0, pkg_rules.DefaultErrorCapacity)
 	errors = append(errors, s.uncapitalizedTypeDescriptions(doc, schemaString)...)
 	errors = append(errors, s.uncapitalizedFieldDescriptions(doc, schemaString)...)
 	errors = append(errors, s.uncapitalizedEnumValueDescriptions(doc, schemaString)...)
@@ -243,7 +243,7 @@ func (s Store) CollectUnsuppressedDataTypeErrors(
 			rule = rule[:idx]
 		}
 
-		if !pkgrules.IsSuppressed(schemaFile, enumErr.LineNum, modelsLinterConfig, rule, "") {
+		if !pkg_rules.IsSuppressedNoValue(schemaFile, enumErr.LineNum, modelsLinterConfig, rule) {
 			allErrors = append(allErrors, enumErr)
 			unsuppressedDataTypeErrors++
 		}

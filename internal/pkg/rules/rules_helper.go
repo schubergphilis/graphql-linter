@@ -101,6 +101,15 @@ func IsSuppressed(
 	return false
 }
 
+func IsSuppressedNoValue(
+	filePath string,
+	line int,
+	modelsLinterConfig *models.LinterConfig,
+	rule string,
+) bool {
+	return IsSuppressed(filePath, line, modelsLinterConfig, rule, "")
+}
+
 func Matches(
 	filePath string,
 	line int,
