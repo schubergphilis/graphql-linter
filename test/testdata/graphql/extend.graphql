@@ -1,0 +1,31 @@
+type Animal {
+  species: String
+}
+
+type Owner {
+  species: String
+}
+
+"what"
+extend type Animal {
+  owner: Owner
+  name: String
+}
+
+"Query root."
+type Query {
+  "Query root added in order for the introspection endpoint to work."
+  empty: PageInfo
+}
+
+"Pagination information for a connection, following the Relay specification: https://relay.dev/graphql/connections.htm"
+type PageInfo {
+  "The cursor corresponding to the last node in the connection."
+  endCursor: String!
+  "True if there are more pages after this connection."
+  hasNextPage: Boolean!
+  "True if there are pages prior to this connection."
+  hasPreviousPage: Boolean!
+  "The cursor corresponding to the first node in the connection."
+  startCursor: String!
+}

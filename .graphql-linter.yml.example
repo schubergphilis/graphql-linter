@@ -1,0 +1,42 @@
+---
+# GraphQL Linter Configuration
+# This file allows you to suppress specific linter warnings and errors
+
+suppressions:
+  # Suppress suspicious enum value warnings for specific cases
+  - file: test/testdata/graphql/suspicious-enum-value.graphql
+    line: 4
+    reason: PO4_VOLUME is valid domain-specific enum value phosphate volume
+    rule: suspicious_enum_value
+    value: PO4_VOLUME
+  - file: test/testdata/graphql/base/invalid/07-enum-values-sorted-alphabetically.graphql
+    line: 12
+    reason: PageInfo is intentionally unused in this test schema
+    rule: defined-types-are-used
+    value: PageInfo
+  - file: test/testdata/graphql/base/invalid/07-enum-values-sorted-alphabetically.graphql
+    line: 2
+    reason: Test schema intentionally has unsorted enum values to test the linter
+    rule: enum-values-sorted-alphabetically
+
+# Example suppressions for other rule types:
+# - file: "path/to/schema.graphqls"
+#   line: 42
+#   rule: "undefined_type"
+#   value: "CustomType"
+#   reason: "CustomType is defined externally in federation"
+#
+# - file: "path/to/schema.graphqls"
+#   line: 15
+#   rule: "invalid_directive"
+#   value: "customDirective"
+#   reason: "Custom directive allowed for this specific use case"
+
+# Global settings
+settings:
+  # Whether to treat warnings as errors (default: false)
+  strictMode: true
+  # Whether to validate federation directives (default: true)
+  validateFederation: true
+  # Whether to check for missing descriptions (default: true)
+  checkDescriptions: true

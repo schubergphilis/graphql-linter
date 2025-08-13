@@ -1,0 +1,11 @@
+type PostConnection {
+  """Edges field."""
+  edges: String
+}
+
+"""Query root."""
+type Query {
+  """Returns post connection."""
+  posts: PostConnection
+}
+

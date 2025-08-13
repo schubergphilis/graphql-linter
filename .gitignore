@@ -1,0 +1,5 @@
+.task
+.vscode
+/graphql-linter
+profile.cov
+unique_profile.cov

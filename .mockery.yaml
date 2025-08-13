@@ -1,0 +1,21 @@
+---
+dir: "{{.InterfaceDir}}/mocks"
+filename: "{{.InterfaceName | snakecase}}.go"
+structname: "{{.InterfaceName}}"
+pkgname: mocks
+template: testify
+packages:
+  github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application:
+    interfaces:
+      Debugger: {}
+      Executor: {}
+  github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data:
+    interfaces:
+      Storer: {}
+  github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/rules:
+    interfaces:
+      Ruler: {}
+  github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/presentation:
+    interfaces:
+      Flagger: {}
+      Presenter: {}

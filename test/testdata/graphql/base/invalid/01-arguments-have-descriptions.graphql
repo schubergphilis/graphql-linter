@@ -1,0 +1,12 @@
+"""Mutation root."""
+type Mutation {
+  """Does something."""
+  doSomething(input: String): Boolean
+}
+
+"""Query root."""
+type Query {
+  """Dummy field."""
+  dummy: Boolean
+}
+

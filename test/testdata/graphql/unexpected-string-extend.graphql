@@ -1,0 +1,21 @@
+# "Something"
+# type Something {
+#   "Some description"
+#   allo: String
+# }
+
+# "Hola mundo"
+# type Hola {
+#   "Some description"
+#   mundo: Something
+# }
+
+# "Something is something."
+# extend type Something @key(fields: "what") {
+#   "What."
+#   what: String!
+# }
+
+type Hola {
+  mundo: String!
+}

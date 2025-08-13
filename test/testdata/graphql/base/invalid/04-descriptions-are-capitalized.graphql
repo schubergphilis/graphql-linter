@@ -1,0 +1,6 @@
+"""query root."""
+type Query {
+  """dummy field."""
+  dummy: Boolean
+}
+

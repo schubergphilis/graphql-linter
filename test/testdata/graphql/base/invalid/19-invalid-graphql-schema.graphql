@@ -1,0 +1,6 @@
+"""Mutation root."""
+type Mutation {
+  """Dummy field."""
+  dummy: String
+}
+

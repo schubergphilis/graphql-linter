@@ -1,0 +1,14 @@
+"""Test interface."""
+interface TestInterface {
+  """Zeta field."""
+  zeta: String
+  """Alpha field."""
+  alpha: String
+}
+
+"""Query root."""
+type Query {
+  """Returns interface."""
+  iface: TestInterface
+}
+

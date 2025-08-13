@@ -1,0 +1,14 @@
+"""Status enum."""
+enum Status {
+  """Old status."""
+  OLD @deprecated
+  """Active status."""
+  ACTIVE
+}
+
+"""Query root."""
+type Query {
+  """Returns status."""
+  status: Status
+}
+

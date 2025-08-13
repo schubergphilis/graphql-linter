@@ -1,0 +1,28 @@
+"""Priority of the task."""
+enum Priority {
+  """High priority."""
+  HIGH
+  """Medium priority."""
+  MEDIUM
+  """Low priority."""
+  LOW
+}
+
+"""Relay-compliant PageInfo object."""
+type PageInfo {
+  """Has next page."""
+  hasNextPage: Boolean!
+  """Has previous page."""
+  hasPreviousPage: Boolean!
+  """Start cursor."""
+  startCursor: String
+  """End cursor."""
+  endCursor: String
+}
+
+"""Query root."""
+type Query {
+  """Returns a priority."""
+  priority: Priority
+}
+
