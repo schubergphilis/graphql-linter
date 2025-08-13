@@ -282,38 +282,30 @@ func (s Store) collectDataTypeErrors(
 		enumDescErrors []models.DescriptionError
 	)
 
+	fieldTypeResultErrs, fieldTypeResultLines := s.Ruler.ValidateFieldTypes(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+	)
+	inputFieldTypeResultErrs, inputFieldTypeResultLines := s.Ruler.ValidateInputFieldTypes(
+		doc,
+		schemaContent,
+		builtInScalars,
+		definedTypes,
+	)
+	enumTypeResultErrs, enumTypeResultLines, descErrs := s.Ruler.ValidateEnumTypes(
+		doc,
+		modelsLinterConfig,
+		schemaContent,
+		schemaPath,
+	)
+	enumDescErrors = descErrs
+
 	errorResults := []errorResult{
-		func() errorResult {
-			errs, lines := s.Ruler.ValidateFieldTypes(
-				doc,
-				schemaContent,
-				builtInScalars,
-				definedTypes,
-			)
-
-			return errorResult{errs, lines}
-		}(),
-		func() errorResult {
-			errs, lines := s.Ruler.ValidateInputFieldTypes(
-				doc,
-				schemaContent,
-				builtInScalars,
-				definedTypes,
-			)
-
-			return errorResult{errs, lines}
-		}(),
-		func() errorResult {
-			errs, lines, descErrs := s.Ruler.ValidateEnumTypes(
-				doc,
-				modelsLinterConfig,
-				schemaContent,
-				schemaPath,
-			)
-			enumDescErrors = descErrs
-
-			return errorResult{errs, lines}
-		}(),
+		{fieldTypeResultErrs, fieldTypeResultLines},
+		{inputFieldTypeResultErrs, inputFieldTypeResultLines},
+		{enumTypeResultErrs, enumTypeResultLines},
 	}
 
 	for _, res := range errorResults {
