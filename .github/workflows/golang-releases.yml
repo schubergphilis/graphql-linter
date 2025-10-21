@@ -29,7 +29,7 @@ jobs:
       TASK_X_REMOTE_TASKFILES: 1
     steps:
       - uses: actions/checkout@v5.0.0
-      - uses: schubergphilis/mcvs-golang-action@v3.7.1
+      - uses: schubergphilis/mcvs-golang-action@v3.7.13
         with:
           release-application-name: ${{ matrix.args.release-application-name }}
           release-architecture: ${{ matrix.args.release-architecture }}
