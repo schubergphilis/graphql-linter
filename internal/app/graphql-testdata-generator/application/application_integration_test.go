@@ -3,6 +3,7 @@
 package application
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -10,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/schubergphilis/graphql-linter/internal/pkg/constants"
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
@@ -65,12 +67,16 @@ func parseLinterOutput(t *testing.T, output []byte, fileName string) []string {
 func checkLinterVersion(t *testing.T) {
 	t.Helper()
 
-	cmd := exec.Command("graphql-schema-linter", "--version")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "graphql-schema-linter", "--version")
 	output, err := cmd.CombinedOutput()
 	version := strings.TrimSpace(string(output))
 
 	if err != nil || version != graphqlSchemaLinterVersion {
-		installCmd := exec.Command(
+		installCmd := exec.CommandContext(
+			ctx,
 			"npm",
 			"install",
 			"-g",
@@ -88,7 +94,7 @@ func checkLinterVersion(t *testing.T) {
 			)
 		}
 
-		cmd = exec.Command("graphql-schema-linter", "--version")
+		cmd = exec.CommandContext(ctx, "graphql-schema-linter", "--version")
 		output, err = cmd.CombinedOutput()
 		version = strings.TrimSpace(string(output))
 
@@ -105,6 +111,10 @@ func checkLinterVersion(t *testing.T) {
 
 func TestInvalidSchemas(t *testing.T) {
 	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	checkLinterVersion(t)
 
 	projectRoot, err := projectroot.FindProjectRoot()
@@ -120,7 +130,7 @@ func TestInvalidSchemas(t *testing.T) {
 		}
 
 		filePath := filepath.Join(baseDir, file.Name())
-		cmd := exec.Command("graphql-schema-linter", "-f", "json", filePath)
+		cmd := exec.CommandContext(ctx, "graphql-schema-linter", "-f", "json", filePath)
 
 		output, err := cmd.CombinedOutput()
 		if err == nil {

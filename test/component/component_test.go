@@ -3,11 +3,13 @@
 package component
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 	"github.com/stretchr/testify/require"
@@ -26,14 +28,16 @@ func TestMain(m *testing.M) {
 func TestVersion(t *testing.T) {
 	t.Parallel()
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		t.Fatalf("failed to find project root: %v", err)
 	}
 
 	binaryPath := filepath.Join(projectRoot, "graphql-linter")
-
-	cmd := exec.Command(binaryPath, "--version")
+	cmd := exec.CommandContext(ctx, binaryPath, "--version")
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -47,6 +51,9 @@ func TestVersion(t *testing.T) {
 
 //nolint:paralleltest //must not run in parallel as it conflicts with TestSuppressAllScenarios.
 func TestOutput(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		t.Fatalf("failed to find project root: %v", err)
@@ -54,7 +61,7 @@ func TestOutput(t *testing.T) {
 
 	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
 	targetPath := filepath.Join(projectRoot, "test", "testdata", "graphql", "base", "invalid")
-	cmd := exec.Command("go", "run", mainPath, "-targetPath", targetPath)
+	cmd := exec.CommandContext(ctx, "go", "run", mainPath, "-targetPath", targetPath)
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 
@@ -130,6 +137,9 @@ func TestOutput(t *testing.T) {
 
 //nolint:paralleltest //must not run in parallel as it conflicts with TestOutput.
 func TestSuppressAllScenarios(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		t.Fatalf("failed to find project root: %v", err)
@@ -151,7 +161,7 @@ func TestSuppressAllScenarios(t *testing.T) {
 	}()
 
 	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
-	cmd := exec.Command("go", "run", mainPath, "-targetPath", targetPath)
+	cmd := exec.CommandContext(ctx, "go", "run", mainPath, "-targetPath", targetPath)
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 
@@ -179,6 +189,9 @@ func TestSuppressAllScenarios(t *testing.T) {
 
 //nolint:paralleltest //must not run in parallel as it conflicts with TestOutput.
 func TestSuppressTwoScenarios(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		t.Fatalf("failed to find project root: %v", err)
@@ -215,7 +228,7 @@ func TestSuppressTwoScenarios(t *testing.T) {
 	}()
 
 	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
-	cmd := exec.Command("go", "run", mainPath, "-targetPath", targetPath)
+	cmd := exec.CommandContext(ctx, "go", "run", mainPath, "-targetPath", targetPath)
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 

@@ -3,12 +3,14 @@
 package component
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 	log "github.com/sirupsen/logrus"
@@ -23,16 +25,18 @@ type SuppressionEntry struct {
 }
 
 func setup() {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
 		log.WithError(err).Fatal("failed to find project root")
 	}
 
 	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
-
 	outputPath := filepath.Join(projectRoot, "graphql-linter")
-
-	cmd := exec.Command(
+	cmd := exec.CommandContext(
+		ctx,
 		"go",
 		"build",
 		"-ldflags=-X 'main.Version=v4.5.6'",
@@ -40,6 +44,7 @@ func setup() {
 		outputPath,
 		mainPath,
 	)
+
 	cmd.Stdout = os.Stdout
 
 	var stderrBuf strings.Builder
