@@ -1,16 +1,6 @@
 ---
 version: 2
 updates:
-  - package-ecosystem: docker
-    commit-message:
-      prefix: build(deps)
-    directory: /
-    schedule:
-      interval: weekly
-    groups:
-      docker-all:
-        patterns:
-          - "*"
   - package-ecosystem: github-actions
     commit-message:
       prefix: build(deps)
