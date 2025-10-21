@@ -62,17 +62,38 @@ type Ruler_EnumValuesSortedAlphabetically_Call struct {
 }
 
 // EnumValuesSortedAlphabetically is a helper method to define mock.On call
-//   - doc
-//   - modelsLinterConfig
-//   - schemaString
-//   - schemaPath
+//   - doc *ast.Document
+//   - modelsLinterConfig *models.LinterConfig
+//   - schemaString string
+//   - schemaPath string
 func (_e *Ruler_Expecter) EnumValuesSortedAlphabetically(doc interface{}, modelsLinterConfig interface{}, schemaString interface{}, schemaPath interface{}) *Ruler_EnumValuesSortedAlphabetically_Call {
 	return &Ruler_EnumValuesSortedAlphabetically_Call{Call: _e.mock.On("EnumValuesSortedAlphabetically", doc, modelsLinterConfig, schemaString, schemaPath)}
 }
 
 func (_c *Ruler_EnumValuesSortedAlphabetically_Call) Run(run func(doc *ast.Document, modelsLinterConfig *models.LinterConfig, schemaString string, schemaPath string)) *Ruler_EnumValuesSortedAlphabetically_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(*models.LinterConfig), args[2].(string), args[3].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 *models.LinterConfig
+		if args[1] != nil {
+			arg1 = args[1].(*models.LinterConfig)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -112,15 +133,26 @@ type Ruler_FieldsAreCamelCased_Call struct {
 }
 
 // FieldsAreCamelCased is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) FieldsAreCamelCased(doc interface{}, schemaString interface{}) *Ruler_FieldsAreCamelCased_Call {
 	return &Ruler_FieldsAreCamelCased_Call{Call: _e.mock.On("FieldsAreCamelCased", doc, schemaString)}
 }
 
 func (_c *Ruler_FieldsAreCamelCased_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_FieldsAreCamelCased_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -160,15 +192,26 @@ type Ruler_InputObjectFieldsSortedAlphabetically_Call struct {
 }
 
 // InputObjectFieldsSortedAlphabetically is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) InputObjectFieldsSortedAlphabetically(doc interface{}, schemaString interface{}) *Ruler_InputObjectFieldsSortedAlphabetically_Call {
 	return &Ruler_InputObjectFieldsSortedAlphabetically_Call{Call: _e.mock.On("InputObjectFieldsSortedAlphabetically", doc, schemaString)}
 }
 
 func (_c *Ruler_InputObjectFieldsSortedAlphabetically_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_InputObjectFieldsSortedAlphabetically_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -208,15 +251,26 @@ type Ruler_InputObjectValuesCamelCased_Call struct {
 }
 
 // InputObjectValuesCamelCased is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) InputObjectValuesCamelCased(doc interface{}, schemaString interface{}) *Ruler_InputObjectValuesCamelCased_Call {
 	return &Ruler_InputObjectValuesCamelCased_Call{Call: _e.mock.On("InputObjectValuesCamelCased", doc, schemaString)}
 }
 
 func (_c *Ruler_InputObjectValuesCamelCased_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_InputObjectValuesCamelCased_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -256,15 +310,26 @@ type Ruler_MissingArgumentDescriptions_Call struct {
 }
 
 // MissingArgumentDescriptions is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) MissingArgumentDescriptions(doc interface{}, schemaString interface{}) *Ruler_MissingArgumentDescriptions_Call {
 	return &Ruler_MissingArgumentDescriptions_Call{Call: _e.mock.On("MissingArgumentDescriptions", doc, schemaString)}
 }
 
 func (_c *Ruler_MissingArgumentDescriptions_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_MissingArgumentDescriptions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -304,15 +369,26 @@ type Ruler_MissingDeprecationReasons_Call struct {
 }
 
 // MissingDeprecationReasons is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) MissingDeprecationReasons(doc interface{}, schemaString interface{}) *Ruler_MissingDeprecationReasons_Call {
 	return &Ruler_MissingDeprecationReasons_Call{Call: _e.mock.On("MissingDeprecationReasons", doc, schemaString)}
 }
 
 func (_c *Ruler_MissingDeprecationReasons_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_MissingDeprecationReasons_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -352,15 +428,26 @@ type Ruler_MissingEnumValueDescriptions_Call struct {
 }
 
 // MissingEnumValueDescriptions is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) MissingEnumValueDescriptions(doc interface{}, schemaString interface{}) *Ruler_MissingEnumValueDescriptions_Call {
 	return &Ruler_MissingEnumValueDescriptions_Call{Call: _e.mock.On("MissingEnumValueDescriptions", doc, schemaString)}
 }
 
 func (_c *Ruler_MissingEnumValueDescriptions_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_MissingEnumValueDescriptions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -400,15 +487,26 @@ type Ruler_MissingFieldDescriptions_Call struct {
 }
 
 // MissingFieldDescriptions is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) MissingFieldDescriptions(doc interface{}, schemaString interface{}) *Ruler_MissingFieldDescriptions_Call {
 	return &Ruler_MissingFieldDescriptions_Call{Call: _e.mock.On("MissingFieldDescriptions", doc, schemaString)}
 }
 
 func (_c *Ruler_MissingFieldDescriptions_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_MissingFieldDescriptions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -448,15 +546,26 @@ type Ruler_MissingInputObjectValueDescriptions_Call struct {
 }
 
 // MissingInputObjectValueDescriptions is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) MissingInputObjectValueDescriptions(doc interface{}, schemaString interface{}) *Ruler_MissingInputObjectValueDescriptions_Call {
 	return &Ruler_MissingInputObjectValueDescriptions_Call{Call: _e.mock.On("MissingInputObjectValueDescriptions", doc, schemaString)}
 }
 
 func (_c *Ruler_MissingInputObjectValueDescriptions_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_MissingInputObjectValueDescriptions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -496,15 +605,26 @@ type Ruler_MissingQueryRootType_Call struct {
 }
 
 // MissingQueryRootType is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) MissingQueryRootType(doc interface{}, schemaString interface{}) *Ruler_MissingQueryRootType_Call {
 	return &Ruler_MissingQueryRootType_Call{Call: _e.mock.On("MissingQueryRootType", doc, schemaString)}
 }
 
 func (_c *Ruler_MissingQueryRootType_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_MissingQueryRootType_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -544,15 +664,26 @@ type Ruler_MissingTypeDescriptions_Call struct {
 }
 
 // MissingTypeDescriptions is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) MissingTypeDescriptions(doc interface{}, schemaString interface{}) *Ruler_MissingTypeDescriptions_Call {
 	return &Ruler_MissingTypeDescriptions_Call{Call: _e.mock.On("MissingTypeDescriptions", doc, schemaString)}
 }
 
 func (_c *Ruler_MissingTypeDescriptions_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_MissingTypeDescriptions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -592,15 +723,26 @@ type Ruler_RelayConnectionArgumentsSpec_Call struct {
 }
 
 // RelayConnectionArgumentsSpec is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) RelayConnectionArgumentsSpec(doc interface{}, schemaString interface{}) *Ruler_RelayConnectionArgumentsSpec_Call {
 	return &Ruler_RelayConnectionArgumentsSpec_Call{Call: _e.mock.On("RelayConnectionArgumentsSpec", doc, schemaString)}
 }
 
 func (_c *Ruler_RelayConnectionArgumentsSpec_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_RelayConnectionArgumentsSpec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -640,15 +782,26 @@ type Ruler_RelayConnectionTypesSpec_Call struct {
 }
 
 // RelayConnectionTypesSpec is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) RelayConnectionTypesSpec(doc interface{}, schemaString interface{}) *Ruler_RelayConnectionTypesSpec_Call {
 	return &Ruler_RelayConnectionTypesSpec_Call{Call: _e.mock.On("RelayConnectionTypesSpec", doc, schemaString)}
 }
 
 func (_c *Ruler_RelayConnectionTypesSpec_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_RelayConnectionTypesSpec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -688,15 +841,26 @@ type Ruler_RelayPageInfoSpec_Call struct {
 }
 
 // RelayPageInfoSpec is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) RelayPageInfoSpec(doc interface{}, schemaString interface{}) *Ruler_RelayPageInfoSpec_Call {
 	return &Ruler_RelayPageInfoSpec_Call{Call: _e.mock.On("RelayPageInfoSpec", doc, schemaString)}
 }
 
 func (_c *Ruler_RelayPageInfoSpec_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_RelayPageInfoSpec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -736,18 +900,44 @@ type Ruler_ReportUncapitalizedDescription_Call struct {
 }
 
 // ReportUncapitalizedDescription is a helper method to define mock.On call
-//   - kind
-//   - parent
-//   - name
-//   - desc
-//   - schemaString
+//   - kind string
+//   - parent string
+//   - name string
+//   - desc string
+//   - schemaString string
 func (_e *Ruler_Expecter) ReportUncapitalizedDescription(kind interface{}, parent interface{}, name interface{}, desc interface{}, schemaString interface{}) *Ruler_ReportUncapitalizedDescription_Call {
 	return &Ruler_ReportUncapitalizedDescription_Call{Call: _e.mock.On("ReportUncapitalizedDescription", kind, parent, name, desc, schemaString)}
 }
 
 func (_c *Ruler_ReportUncapitalizedDescription_Call) Run(run func(kind string, parent string, name string, desc string, schemaString string)) *Ruler_ReportUncapitalizedDescription_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string), args[2].(string), args[3].(string), args[4].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
 	})
 	return _c
 }
@@ -787,15 +977,26 @@ type Ruler_TypesAreCapitalized_Call struct {
 }
 
 // TypesAreCapitalized is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) TypesAreCapitalized(doc interface{}, schemaString interface{}) *Ruler_TypesAreCapitalized_Call {
 	return &Ruler_TypesAreCapitalized_Call{Call: _e.mock.On("TypesAreCapitalized", doc, schemaString)}
 }
 
 func (_c *Ruler_TypesAreCapitalized_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_TypesAreCapitalized_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -835,18 +1036,44 @@ type Ruler_UnsortedFields_Call struct {
 }
 
 // UnsortedFields is a helper method to define mock.On call
-//   - fieldDefs
-//   - getFieldName
-//   - typeLabel
-//   - typeName
-//   - schemaString
+//   - fieldDefs []int
+//   - getFieldName func(int) string
+//   - typeLabel string
+//   - typeName string
+//   - schemaString string
 func (_e *Ruler_Expecter) UnsortedFields(fieldDefs interface{}, getFieldName interface{}, typeLabel interface{}, typeName interface{}, schemaString interface{}) *Ruler_UnsortedFields_Call {
 	return &Ruler_UnsortedFields_Call{Call: _e.mock.On("UnsortedFields", fieldDefs, getFieldName, typeLabel, typeName, schemaString)}
 }
 
 func (_c *Ruler_UnsortedFields_Call) Run(run func(fieldDefs []int, getFieldName func(int) string, typeLabel string, typeName string, schemaString string)) *Ruler_UnsortedFields_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]int), args[1].(func(int) string), args[2].(string), args[3].(string), args[4].(string))
+		var arg0 []int
+		if args[0] != nil {
+			arg0 = args[0].([]int)
+		}
+		var arg1 func(int) string
+		if args[1] != nil {
+			arg1 = args[1].(func(int) string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
 	})
 	return _c
 }
@@ -886,15 +1113,26 @@ type Ruler_UnusedTypes_Call struct {
 }
 
 // UnusedTypes is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Ruler_Expecter) UnusedTypes(doc interface{}, schemaString interface{}) *Ruler_UnusedTypes_Call {
 	return &Ruler_UnusedTypes_Call{Call: _e.mock.On("UnusedTypes", doc, schemaString)}
 }
 
 func (_c *Ruler_UnusedTypes_Call) Run(run func(doc *ast.Document, schemaString string)) *Ruler_UnusedTypes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -953,17 +1191,38 @@ type Ruler_ValidateEnumTypes_Call struct {
 }
 
 // ValidateEnumTypes is a helper method to define mock.On call
-//   - doc
-//   - modelsLinterConfig
-//   - schemaContent
-//   - schemaPath
+//   - doc *ast.Document
+//   - modelsLinterConfig *models.LinterConfig
+//   - schemaContent string
+//   - schemaPath string
 func (_e *Ruler_Expecter) ValidateEnumTypes(doc interface{}, modelsLinterConfig interface{}, schemaContent interface{}, schemaPath interface{}) *Ruler_ValidateEnumTypes_Call {
 	return &Ruler_ValidateEnumTypes_Call{Call: _e.mock.On("ValidateEnumTypes", doc, modelsLinterConfig, schemaContent, schemaPath)}
 }
 
 func (_c *Ruler_ValidateEnumTypes_Call) Run(run func(doc *ast.Document, modelsLinterConfig *models.LinterConfig, schemaContent string, schemaPath string)) *Ruler_ValidateEnumTypes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(*models.LinterConfig), args[2].(string), args[3].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 *models.LinterConfig
+		if args[1] != nil {
+			arg1 = args[1].(*models.LinterConfig)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -1014,17 +1273,38 @@ type Ruler_ValidateFieldTypes_Call struct {
 }
 
 // ValidateFieldTypes is a helper method to define mock.On call
-//   - doc
-//   - schemaContent
-//   - builtInScalars
-//   - definedTypes
+//   - doc *ast.Document
+//   - schemaContent string
+//   - builtInScalars map[string]bool
+//   - definedTypes map[string]bool
 func (_e *Ruler_Expecter) ValidateFieldTypes(doc interface{}, schemaContent interface{}, builtInScalars interface{}, definedTypes interface{}) *Ruler_ValidateFieldTypes_Call {
 	return &Ruler_ValidateFieldTypes_Call{Call: _e.mock.On("ValidateFieldTypes", doc, schemaContent, builtInScalars, definedTypes)}
 }
 
 func (_c *Ruler_ValidateFieldTypes_Call) Run(run func(doc *ast.Document, schemaContent string, builtInScalars map[string]bool, definedTypes map[string]bool)) *Ruler_ValidateFieldTypes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string), args[2].(map[string]bool), args[3].(map[string]bool))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 map[string]bool
+		if args[2] != nil {
+			arg2 = args[2].(map[string]bool)
+		}
+		var arg3 map[string]bool
+		if args[3] != nil {
+			arg3 = args[3].(map[string]bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -1075,17 +1355,38 @@ type Ruler_ValidateInputFieldTypes_Call struct {
 }
 
 // ValidateInputFieldTypes is a helper method to define mock.On call
-//   - doc
-//   - schemaContent
-//   - builtInScalars
-//   - definedTypes
+//   - doc *ast.Document
+//   - schemaContent string
+//   - builtInScalars map[string]bool
+//   - definedTypes map[string]bool
 func (_e *Ruler_Expecter) ValidateInputFieldTypes(doc interface{}, schemaContent interface{}, builtInScalars interface{}, definedTypes interface{}) *Ruler_ValidateInputFieldTypes_Call {
 	return &Ruler_ValidateInputFieldTypes_Call{Call: _e.mock.On("ValidateInputFieldTypes", doc, schemaContent, builtInScalars, definedTypes)}
 }
 
 func (_c *Ruler_ValidateInputFieldTypes_Call) Run(run func(doc *ast.Document, schemaContent string, builtInScalars map[string]bool, definedTypes map[string]bool)) *Ruler_ValidateInputFieldTypes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string), args[2].(map[string]bool), args[3].(map[string]bool))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 map[string]bool
+		if args[2] != nil {
+			arg2 = args[2].(map[string]bool)
+		}
+		var arg3 map[string]bool
+		if args[3] != nil {
+			arg3 = args[3].(map[string]bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }

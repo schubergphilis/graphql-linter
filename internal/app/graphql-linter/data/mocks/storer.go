@@ -132,14 +132,20 @@ type Storer_LintSchemaFiles_Call struct {
 }
 
 // LintSchemaFiles is a helper method to define mock.On call
-//   - schemaFiles
+//   - schemaFiles []string
 func (_e *Storer_Expecter) LintSchemaFiles(schemaFiles interface{}) *Storer_LintSchemaFiles_Call {
 	return &Storer_LintSchemaFiles_Call{Call: _e.mock.On("LintSchemaFiles", schemaFiles)}
 }
 
 func (_c *Storer_LintSchemaFiles_Call) Run(run func(schemaFiles []string)) *Storer_LintSchemaFiles_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]string))
+		var arg0 []string
+		if args[0] != nil {
+			arg0 = args[0].([]string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -234,15 +240,26 @@ type Storer_UnsortedTypeFields_Call struct {
 }
 
 // UnsortedTypeFields is a helper method to define mock.On call
-//   - doc
-//   - schemaString
+//   - doc *ast.Document
+//   - schemaString string
 func (_e *Storer_Expecter) UnsortedTypeFields(doc interface{}, schemaString interface{}) *Storer_UnsortedTypeFields_Call {
 	return &Storer_UnsortedTypeFields_Call{Call: _e.mock.On("UnsortedTypeFields", doc, schemaString)}
 }
 
 func (_c *Storer_UnsortedTypeFields_Call) Run(run func(doc *ast.Document, schemaString string)) *Storer_UnsortedTypeFields_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*ast.Document), args[1].(string))
+		var arg0 *ast.Document
+		if args[0] != nil {
+			arg0 = args[0].(*ast.Document)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

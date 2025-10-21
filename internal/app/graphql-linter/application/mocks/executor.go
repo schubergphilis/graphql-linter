@@ -48,17 +48,38 @@ type Executor_PrintReport_Call struct {
 }
 
 // PrintReport is a helper method to define mock.On call
-//   - schemaFiles
-//   - totalErrors
-//   - passedFiles
-//   - allErrors
+//   - schemaFiles []string
+//   - totalErrors int
+//   - passedFiles int
+//   - allErrors []models.DescriptionError
 func (_e *Executor_Expecter) PrintReport(schemaFiles interface{}, totalErrors interface{}, passedFiles interface{}, allErrors interface{}) *Executor_PrintReport_Call {
 	return &Executor_PrintReport_Call{Call: _e.mock.On("PrintReport", schemaFiles, totalErrors, passedFiles, allErrors)}
 }
 
 func (_c *Executor_PrintReport_Call) Run(run func(schemaFiles []string, totalErrors int, passedFiles int, allErrors []models.DescriptionError)) *Executor_PrintReport_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]string), args[1].(int), args[2].(int), args[3].([]models.DescriptionError))
+		var arg0 []string
+		if args[0] != nil {
+			arg0 = args[0].([]string)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		var arg3 []models.DescriptionError
+		if args[3] != nil {
+			arg3 = args[3].([]models.DescriptionError)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }

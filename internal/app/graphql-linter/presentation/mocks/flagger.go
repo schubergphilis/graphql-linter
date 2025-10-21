@@ -47,17 +47,38 @@ type Flagger_BoolVar_Call struct {
 }
 
 // BoolVar is a helper method to define mock.On call
-//   - p
-//   - name
-//   - value
-//   - usage
+//   - p *bool
+//   - name string
+//   - value bool
+//   - usage string
 func (_e *Flagger_Expecter) BoolVar(p interface{}, name interface{}, value interface{}, usage interface{}) *Flagger_BoolVar_Call {
 	return &Flagger_BoolVar_Call{Call: _e.mock.On("BoolVar", p, name, value, usage)}
 }
 
 func (_c *Flagger_BoolVar_Call) Run(run func(p *bool, name string, value bool, usage string)) *Flagger_BoolVar_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*bool), args[1].(string), args[2].(bool), args[3].(string))
+		var arg0 *bool
+		if args[0] != nil {
+			arg0 = args[0].(*bool)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -117,17 +138,38 @@ type Flagger_StringVar_Call struct {
 }
 
 // StringVar is a helper method to define mock.On call
-//   - p
-//   - name
-//   - value
-//   - usage
+//   - p *string
+//   - name string
+//   - value string
+//   - usage string
 func (_e *Flagger_Expecter) StringVar(p interface{}, name interface{}, value interface{}, usage interface{}) *Flagger_StringVar_Call {
 	return &Flagger_StringVar_Call{Call: _e.mock.On("StringVar", p, name, value, usage)}
 }
 
 func (_c *Flagger_StringVar_Call) Run(run func(p *string, name string, value string, usage string)) *Flagger_StringVar_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*string), args[1].(string), args[2].(string), args[3].(string))
+		var arg0 *string
+		if args[0] != nil {
+			arg0 = args[0].(*string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
