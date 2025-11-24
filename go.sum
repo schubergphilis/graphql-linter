@@ -16,8 +16,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=
 github.com/rogpeppe/go-internal v1.13.1/go.mod h1:uMEvuHeurkdAXX61udpOXGD/AzZDWNMNyH2VO9fmH0o=
-github.com/schubergphilis/mcvs-golang-project-root v0.1.5 h1:/HvXr3Encq7ubr8e9nS8ZDLrOJz9AN1mdbJ4QlI/JsI=
-github.com/schubergphilis/mcvs-golang-project-root v0.1.5/go.mod h1:9L2mQceq4PMXmKFvjuDUahtrJFUb4NZORvOdDTadNow=
+github.com/schubergphilis/mcvs-golang-project-root v0.1.6 h1:EhGIJhjCZ3eABEriAkbwH5D40b65WO0zdGr5nQ8q5Wo=
+github.com/schubergphilis/mcvs-golang-project-root v0.1.6/go.mod h1:IU5ZuFlQ+NdnYWJ6RiSvlMIayaT8BFmVknlbF+djQYA=
 github.com/sebdah/goldie/v2 v2.7.1 h1:PkBHymaYdtvEkZV7TmyqKxdmn5/Vcj+8TpATWZjnG5E=
 github.com/sebdah/goldie/v2 v2.7.1/go.mod h1:oZ9fp0+se1eapSRjfYbsV/0Hqhbuu3bJVvKI/NNtssI=
 github.com/sergi/go-diff v1.3.1 h1:xkr+Oxo4BOQKmkn/B9eMK0g5Kg/983T9DqqPHwYqD+8=
@@ -30,8 +30,8 @@ github.com/stretchr/objx v0.5.2/go.mod h1:FRsXN1f5AsAjCGJKqEizvkpNtU+EGNCLh3NxZ/
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.237 h1:5cNEANPVbWUFDEX9dqETH1fa7MIoJDFipuJLFCReSOM=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.237/go.mod h1:ErOQH1ki2+SZB8JjpTyGVnoBpg5picIyjvuWQJP4abg=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.239 h1:wh8qTtVS4Wr/dJ/s162hAvCPsaZ1VOdmmg82QhNcGBE=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.239/go.mod h1:mX25ASEQiKamxaFSK6NZihh0oDCigIuzro30up4mFH4=
 golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.37.0 h1:fdNQudmxPjkdUTPnLn5mdQv7Zwvbvpaxqs831goi9kQ=
 golang.org/x/sys v0.37.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
