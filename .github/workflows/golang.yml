@@ -28,7 +28,7 @@ jobs:
           - testing-type: security-grype
           - testing-type: security-trivy
           - testing-type: unit
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     env:
       TASK_X_REMOTE_TASKFILES: 1
     steps:
