@@ -2,6 +2,7 @@ package data
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 )
@@ -352,17 +353,17 @@ func GenerateGraphQLFromDocument(doc *ast.Document) string {
 }
 
 func generateEnums(doc *ast.Document) string {
-	var result string
+	var result strings.Builder
 
 	for _, enum := range doc.EnumTypeDefinitions {
 		enumName := doc.Input.ByteSliceString(enum.Name)
 
 		desc := getDescription(doc, enum.Description)
 		if desc != "" {
-			result += desc + "\n"
+			result.WriteString(desc + "\n")
 		}
 
-		result += fmt.Sprintf("enum %s {\n", enumName)
+		fmt.Fprintf(&result, "enum %s {\n", enumName)
 
 		for _, valueRef := range enum.EnumValuesDefinition.Refs {
 			value := doc.EnumValueDefinitions[valueRef]
@@ -370,30 +371,30 @@ func generateEnums(doc *ast.Document) string {
 
 			valueDesc := getDescription(doc, value.Description)
 			if valueDesc != "" {
-				result += fmt.Sprintf("  %s\n", valueDesc)
+				fmt.Fprintf(&result, "  %s\n", valueDesc)
 			}
 
-			result += fmt.Sprintf("  %s\n", valueName)
+			fmt.Fprintf(&result, "  %s\n", valueName)
 		}
 
-		result += blockClose
+		result.WriteString(blockClose)
 	}
 
-	return result
+	return result.String()
 }
 
 func generateInterfaces(doc *ast.Document) string {
-	var result string
+	var result strings.Builder
 
 	for _, iface := range doc.InterfaceTypeDefinitions {
 		ifaceName := doc.Input.ByteSliceString(iface.Name)
 
 		desc := getDescription(doc, iface.Description)
 		if desc != "" {
-			result += desc + "\n"
+			result.WriteString(desc + "\n")
 		}
 
-		result += fmt.Sprintf("interface %s {\n", ifaceName)
+		fmt.Fprintf(&result, "interface %s {\n", ifaceName)
 
 		for _, fieldRef := range iface.FieldsDefinition.Refs {
 			field := doc.FieldDefinitions[fieldRef]
@@ -402,30 +403,30 @@ func generateInterfaces(doc *ast.Document) string {
 			fieldType := getFieldType(doc, field.Type)
 
 			if fieldDesc != "" {
-				result += fmt.Sprintf("  %s\n", fieldDesc)
+				fmt.Fprintf(&result, "  %s\n", fieldDesc)
 			}
 
-			result += fmt.Sprintf("  %s: %s\n", fieldName, fieldType)
+			fmt.Fprintf(&result, "  %s: %s\n", fieldName, fieldType)
 		}
 
-		result += blockClose
+		result.WriteString(blockClose)
 	}
 
-	return result
+	return result.String()
 }
 
 func generateInputObjects(doc *ast.Document) string {
-	var result string
+	var result strings.Builder
 
 	for _, input := range doc.InputObjectTypeDefinitions {
 		inputName := doc.Input.ByteSliceString(input.Name)
 
 		desc := getDescription(doc, input.Description)
 		if desc != "" {
-			result += desc + "\n"
+			result.WriteString(desc + "\n")
 		}
 
-		result += fmt.Sprintf("input %s {\n", inputName)
+		fmt.Fprintf(&result, "input %s {\n", inputName)
 
 		for _, fieldRef := range input.InputFieldsDefinition.Refs {
 			field := doc.InputValueDefinitions[fieldRef]
@@ -434,16 +435,16 @@ func generateInputObjects(doc *ast.Document) string {
 			fieldType := getFieldType(doc, field.Type)
 
 			if fieldDesc != "" {
-				result += fmt.Sprintf("  %s\n", fieldDesc)
+				fmt.Fprintf(&result, "  %s\n", fieldDesc)
 			}
 
-			result += fmt.Sprintf("  %s: %s\n", fieldName, fieldType)
+			fmt.Fprintf(&result, "  %s: %s\n", fieldName, fieldType)
 		}
 
-		result += blockClose
+		result.WriteString(blockClose)
 	}
 
-	return result
+	return result.String()
 }
 
 func renderObjectField(doc *ast.Document, field ast.FieldDefinition) string {
@@ -451,69 +452,69 @@ func renderObjectField(doc *ast.Document, field ast.FieldDefinition) string {
 	fieldDesc := getDescription(doc, field.Description)
 	fieldType := getFieldType(doc, field.Type)
 
-	argsClause := ""
+	var argsClause strings.Builder
 	if len(field.ArgumentsDefinition.Refs) > 0 {
-		argsClause = "("
+		argsClause.WriteString("(")
 
 		for i, argRef := range field.ArgumentsDefinition.Refs {
 			if i > 0 {
-				argsClause += ", "
+				argsClause.WriteString(", ")
 			}
 
 			arg := doc.InputValueDefinitions[argRef]
 			argName := doc.Input.ByteSliceString(arg.Name)
 			argType := getFieldType(doc, arg.Type)
-			argsClause += fmt.Sprintf("%s: %s", argName, argType)
+			fmt.Fprintf(&argsClause, "%s: %s", argName, argType)
 		}
 
-		argsClause += ")"
+		argsClause.WriteString(")")
 	}
 
-	var result string
+	var result strings.Builder
 	if fieldDesc != "" {
-		result += fmt.Sprintf("  %s\n", fieldDesc)
+		fmt.Fprintf(&result, "  %s\n", fieldDesc)
 	}
 
-	result += fmt.Sprintf("  %s%s: %s\n", fieldName, argsClause, fieldType)
+	fmt.Fprintf(&result, "  %s%s: %s\n", fieldName, argsClause.String(), fieldType)
 
-	return result
+	return result.String()
 }
 
 func generateObjects(doc *ast.Document) string {
-	var result string
+	var result strings.Builder
 
 	for _, obj := range doc.ObjectTypeDefinitions {
 		objName := doc.Input.ByteSliceString(obj.Name)
 
 		desc := getDescription(doc, obj.Description)
 		if desc != "" {
-			result += desc + "\n"
+			result.WriteString(desc + "\n")
 		}
 
-		implementsClause := ""
+		var implementsClause strings.Builder
 		if len(obj.ImplementsInterfaces.Refs) > 0 {
-			implementsClause = " implements "
+			implementsClause.WriteString(" implements ")
 
 			for i, interfaceRef := range obj.ImplementsInterfaces.Refs {
 				if i > 0 {
-					implementsClause += " & "
+					implementsClause.WriteString(" & ")
 				}
 
-				implementsClause += getFieldType(doc, interfaceRef)
+				implementsClause.WriteString(getFieldType(doc, interfaceRef))
 			}
 		}
 
-		result += fmt.Sprintf("type %s%s {\n", objName, implementsClause)
+		fmt.Fprintf(&result, "type %s%s {\n", objName, implementsClause.String())
 
 		for _, fieldRef := range obj.FieldsDefinition.Refs {
 			field := doc.FieldDefinitions[fieldRef]
-			result += renderObjectField(doc, field)
+			result.WriteString(renderObjectField(doc, field))
 		}
 
-		result += blockClose
+		result.WriteString(blockClose)
 	}
 
-	return result
+	return result.String()
 }
 
 func getDescription(doc *ast.Document, desc ast.Description) string {

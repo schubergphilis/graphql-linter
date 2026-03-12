@@ -14,7 +14,7 @@ type TestCase struct {
 	SchemaContent string
 	SearchText    string
 	Input         string
-	Expected      interface{}
+	Expected      any
 	ExpectError   bool
 	ExpectMsg     string
 	WantLine      int

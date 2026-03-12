@@ -151,10 +151,10 @@ func ErrorTypeCounts(errors []models.DescriptionError) map[string]int {
 		msg := err.Message
 
 		typeKey := msg
-		if idx := strings.Index(msg, ":"); idx != -1 {
-			typeKey = msg[:idx]
-		} else if idx := strings.Index(msg, " "); idx != -1 {
-			typeKey = msg[:idx]
+		if before, _, found := strings.Cut(msg, ":"); found {
+			typeKey = before
+		} else if before, _, found := strings.Cut(msg, " "); found {
+			typeKey = before
 		}
 
 		counts[typeKey]++
