@@ -666,7 +666,7 @@ func writeSuppressionsYAML(suppressions []SuppressionEntry, yamlPath string) err
 		}
 
 		if suppression.Line != 0 {
-			suppressionsYAML.WriteString(fmt.Sprintf("    line: %d\n", suppression.Line))
+			fmt.Fprintf(&suppressionsYAML, "    line: %d\n", suppression.Line)
 		}
 
 		if suppression.Value != "" {

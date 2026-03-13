@@ -151,15 +151,15 @@ func suggestCorrectEnumValue(value string) string {
 }
 
 func removeAllDigits(value string) string {
-	result := ""
+	var result strings.Builder
 
 	for _, char := range value {
 		if char < '0' || char > '9' {
-			result += string(char)
+			result.WriteRune(char)
 		}
 	}
 
-	return result
+	return result.String()
 }
 
 func findFieldDefinitionLine(schemaContent string, fieldName string, typeName string) int {
