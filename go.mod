@@ -6,7 +6,7 @@ require (
 	github.com/schubergphilis/mcvs-golang-project-root v0.1.6
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.264
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.265
 	gopkg.in/yaml.v3 v3.0.1
 )
 
