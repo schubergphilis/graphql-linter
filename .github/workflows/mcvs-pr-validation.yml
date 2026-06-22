@@ -15,5 +15,5 @@ jobs:
   MCVS-PR-validation-action:
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v7.0.0
       - uses: schubergphilis/mcvs-pr-validation-action@v0.2.2
