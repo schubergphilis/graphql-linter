@@ -1,0 +1,10 @@
+---
+- id: graphql-linter
+  name: graphql-linter
+  description: >-
+    Lint GraphQL SDL files for syntax, best practices, and Apollo Federation
+    directives.
+  entry: graphql-linter
+  language: golang
+  files: \.(graphql|graphqls)$
+  pass_filenames: false

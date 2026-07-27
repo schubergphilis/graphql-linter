@@ -94,3 +94,33 @@ suppressions:
   - path: "test/testdata/graphql/invalid/ignore_this.graphql"
     rules: ["require-descriptions"]
 ```
+
+## Pre-commit hook
+
+`graphql-linter` ships a [pre-commit](https://pre-commit.com) hook so schemas
+are linted automatically before every commit.
+
+Add the following to the `.pre-commit-config.yaml` in your repository:
+
+```yaml
+repos:
+  - repo: https://github.com/schubergphilis/graphql-linter
+    rev: v0.1.0
+    hooks:
+      - id: graphql-linter
+```
+
+Then install and run it:
+
+```zsh
+pre-commit install
+pre-commit run graphql-linter --all-files
+```
+
+The hook is triggered whenever a `.graphql` or `.graphqls` file is staged. It
+lints the whole project (so cross-file Apollo Federation composition is
+validated) and fails the commit when linting errors are found.
+
+Configuration and suppressions are picked up from the `.graphql-linter.yaml`
+file in the repository root, as described above.
+
