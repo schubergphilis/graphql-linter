@@ -42,7 +42,7 @@ graphql-linter --version
 ### Command-line Parameters
 
 - `-configPath string`
-  The path to the configuration file (optional, defaults to `.graphql-linter.yaml` in the current directory).
+  The path to the configuration file (optional, defaults to `.graphql-linter.yml` in the current directory).
 - `-targetPath string`
   The directory with GraphQL files that should be checked.
 - `-verbose`
@@ -78,7 +78,7 @@ go run cmd/graphql-linter/main.go \
 
 ### Example configuration file
 
-By default, the linter looks for a `.graphql-linter.yaml` file in the current directory.
+By default, the linter looks for a `.graphql-linter.yml` file in the current directory.
 
 For a full example with all options and comments, see the provided `.graphql-linter.yml.example` file in the repository root.
 
@@ -105,6 +105,7 @@ Add the following to the `.pre-commit-config.yaml` in your repository:
 ```yaml
 repos:
   - repo: https://github.com/schubergphilis/graphql-linter
+    # Replace with the latest released tag; run `pre-commit autoupdate` to bump.
     rev: v0.1.4
     hooks:
       - id: graphql-linter
@@ -121,6 +122,6 @@ The hook is triggered whenever a `.graphql` or `.graphqls` file is staged. It
 lints the whole project (so cross-file Apollo Federation composition is
 validated) and fails the commit when linting errors are found.
 
-Configuration and suppressions are picked up from the `.graphql-linter.yaml`
+Configuration and suppressions are picked up from the `.graphql-linter.yml`
 file in the repository root, as described above.
 
