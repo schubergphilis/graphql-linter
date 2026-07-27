@@ -105,7 +105,7 @@ Add the following to the `.pre-commit-config.yaml` in your repository:
 ```yaml
 repos:
   - repo: https://github.com/schubergphilis/graphql-linter
-    rev: v0.1.0
+    rev: v0.1.4
     hooks:
       - id: graphql-linter
 ```
