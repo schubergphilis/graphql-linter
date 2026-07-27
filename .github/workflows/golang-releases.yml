@@ -1,3 +1,4 @@
+# yamllint disable rule:line-length
 ---
 name: golang-releases
 "on": push
@@ -28,8 +29,10 @@ jobs:
     env:
       TASK_X_REMOTE_TASKFILES: 1
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: schubergphilis/mcvs-golang-action@v3.11.24
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: schubergphilis/mcvs-golang-action@ae2f6b574119123e8ee0f457a1aace702947931b
         with:
           release-application-name: ${{ matrix.args.release-application-name }}
           release-architecture: ${{ matrix.args.release-architecture }}

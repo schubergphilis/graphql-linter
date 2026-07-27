@@ -1,3 +1,4 @@
+# yamllint disable rule:line-length
 ---
 name: General
 "on": pull_request
@@ -15,7 +16,9 @@ jobs:
           - testing-type: yamllint
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: schubergphilis/mcvs-general-action@v0.5.8
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: schubergphilis/mcvs-general-action@f52c4433add29d8eff9036bf37b5b69a2c4cf28b
         with:
           testing-type: ${{ matrix.args.testing-type }}
