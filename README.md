@@ -1,3 +1,5 @@
+# GraphQL Linter
+
 A fast, opinionated linter for GraphQL SDL (Schema Definition Language) with
 first-class **Apollo Federation** support.
 
@@ -106,12 +108,12 @@ graphql-linter [flags]
 
 ### Flags
 
-| Flag          | Description                                                                                  |
-| ------------- | -------------------------------------------------------------------------------------------- |
-| `-targetPath` | Directory or file containing the GraphQL schemas to check. **Required.**                     |
-| `-configPath` | Path to the configuration file. Defaults to `.graphql-linter.yml` in the current directory.  |
-| `-verbose`    | Enable verbose output.                                                                        |
-| `-version`    | Print version information and exit.                                                           |
+| Flag          | Description                                                                                     |
+| ------------- | ----------------------------------------------------------------------------------------------- |
+| `-targetPath` | Directory or file containing the GraphQL schemas to check. Defaults to the project root.         |
+| `-configPath` | Path to the configuration file. Defaults to `.graphql-linter.yml` in the project root.           |
+| `-verbose`    | Enable verbose output.                                                                           |
+| `-version`    | Print version information and exit.                                                              |
 
 ### Examples
 
@@ -135,8 +137,9 @@ go run ./cmd/graphql-linter -targetPath test/testdata/graphql/base/invalid
 
 ## Configuration
 
-By default the linter looks for `.graphql-linter.yml` (or `.graphql-linter.yaml`)
-in the current directory. Use `-configPath` to point at a different file.
+When `-configPath` is not set, the linter looks for a `.graphql-linter.yml` file
+in the project root. Use `-configPath` to point at a different file. If no
+configuration is found, the built-in defaults below are used.
 
 ```yaml
 ---
@@ -165,7 +168,7 @@ A fully commented reference configuration is available in
 
 | Setting              | Default | Description                                        |
 | -------------------- | ------- | -------------------------------------------------- |
-| `strictMode`         | `false` | Treat warnings as errors.                          |
+| `strictMode`         | `true`  | Treat warnings as errors.                          |
 | `validateFederation` | `true`  | Validate Apollo Federation directives.             |
 | `checkDescriptions`  | `true`  | Require descriptions on types, fields, and enums.  |
 
@@ -209,9 +212,10 @@ usage, including:
 
 ## Suppressing findings
 
-Individual findings can be suppressed in the configuration file. A suppression
-matches on file, line, and rule (with an optional `value`), and requires a
-`reason` for auditability:
+Individual findings can be suppressed in the configuration file. Every field is
+optional and acts as a filter: an omitted field matches anything, so narrow the
+suppression by combining fields. Always include a `reason` for auditability,
+even though it is not enforced.
 
 ```yaml
 suppressions:
@@ -222,13 +226,13 @@ suppressions:
     reason: PageInfo is intentionally unused in this test schema.
 ```
 
-| Field    | Required | Description                                          |
-| -------- | -------- | ---------------------------------------------------- |
-| `file`   | yes      | Path to the schema file, relative to the run.        |
-| `line`   | yes      | Line number of the finding.                          |
-| `rule`   | yes      | Rule identifier to suppress.                         |
-| `value`  | no       | Specific symbol (type, field, enum value) to match.  |
-| `reason` | yes      | Human-readable justification for the suppression.    |
+| Field    | Matching behaviour                                                              |
+| -------- | ------------------------------------------------------------------------------- |
+| `file`   | Matches when the schema path ends with this value; omit to match any file.      |
+| `line`   | Matches this line number; omit (or `0`) to match any line.                      |
+| `rule`   | Matches this rule identifier; omit to match any rule.                           |
+| `value`  | Matches a specific symbol (type, field, enum value); omit to match any value.   |
+| `reason` | Free-form justification for the suppression (recommended, not enforced).        |
 
 ## Pre-commit hook
 
