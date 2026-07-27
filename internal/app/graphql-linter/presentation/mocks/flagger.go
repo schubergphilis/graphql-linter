@@ -51,7 +51,7 @@ type Flagger_BoolVar_Call struct {
 //   - name string
 //   - value bool
 //   - usage string
-func (_e *Flagger_Expecter) BoolVar(p interface{}, name interface{}, value interface{}, usage interface{}) *Flagger_BoolVar_Call {
+func (_e *Flagger_Expecter) BoolVar(p any, name any, value any, usage any) *Flagger_BoolVar_Call {
 	return &Flagger_BoolVar_Call{Call: _e.mock.On("BoolVar", p, name, value, usage)}
 }
 
@@ -142,7 +142,7 @@ type Flagger_StringVar_Call struct {
 //   - name string
 //   - value string
 //   - usage string
-func (_e *Flagger_Expecter) StringVar(p interface{}, name interface{}, value interface{}, usage interface{}) *Flagger_StringVar_Call {
+func (_e *Flagger_Expecter) StringVar(p any, name any, value any, usage any) *Flagger_StringVar_Call {
 	return &Flagger_StringVar_Call{Call: _e.mock.On("StringVar", p, name, value, usage)}
 }
 

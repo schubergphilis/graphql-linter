@@ -13,6 +13,10 @@ linters:
     # gochecknoglobals is disabled as there are global errors and component
     # test variables.
     - gochecknoglobals
+    # goconst is disabled as most repeated literals are string values in table
+    # driven tests and GraphQL built-in type names (e.g. String, BOOLEAN) that
+    # do not benefit from being extracted into constants.
+    - goconst
     # testpackage is disabled as it is a bad practice to make methods public to
     # be able to test them.
     - testpackage
