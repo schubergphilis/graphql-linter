@@ -133,7 +133,7 @@ type Storer_LintSchemaFiles_Call struct {
 
 // LintSchemaFiles is a helper method to define mock.On call
 //   - schemaFiles []string
-func (_e *Storer_Expecter) LintSchemaFiles(schemaFiles interface{}) *Storer_LintSchemaFiles_Call {
+func (_e *Storer_Expecter) LintSchemaFiles(schemaFiles any) *Storer_LintSchemaFiles_Call {
 	return &Storer_LintSchemaFiles_Call{Call: _e.mock.On("LintSchemaFiles", schemaFiles)}
 }
 
@@ -242,7 +242,7 @@ type Storer_UnsortedTypeFields_Call struct {
 // UnsortedTypeFields is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Storer_Expecter) UnsortedTypeFields(doc interface{}, schemaString interface{}) *Storer_UnsortedTypeFields_Call {
+func (_e *Storer_Expecter) UnsortedTypeFields(doc any, schemaString any) *Storer_UnsortedTypeFields_Call {
 	return &Storer_UnsortedTypeFields_Call{Call: _e.mock.On("UnsortedTypeFields", doc, schemaString)}
 }
 

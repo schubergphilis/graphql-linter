@@ -52,7 +52,7 @@ type Executor_PrintReport_Call struct {
 //   - totalErrors int
 //   - passedFiles int
 //   - allErrors []models.DescriptionError
-func (_e *Executor_Expecter) PrintReport(schemaFiles interface{}, totalErrors interface{}, passedFiles interface{}, allErrors interface{}) *Executor_PrintReport_Call {
+func (_e *Executor_Expecter) PrintReport(schemaFiles any, totalErrors any, passedFiles any, allErrors any) *Executor_PrintReport_Call {
 	return &Executor_PrintReport_Call{Call: _e.mock.On("PrintReport", schemaFiles, totalErrors, passedFiles, allErrors)}
 }
 

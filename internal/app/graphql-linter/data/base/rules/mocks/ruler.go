@@ -66,7 +66,7 @@ type Ruler_EnumValuesSortedAlphabetically_Call struct {
 //   - modelsLinterConfig *models.LinterConfig
 //   - schemaString string
 //   - schemaPath string
-func (_e *Ruler_Expecter) EnumValuesSortedAlphabetically(doc interface{}, modelsLinterConfig interface{}, schemaString interface{}, schemaPath interface{}) *Ruler_EnumValuesSortedAlphabetically_Call {
+func (_e *Ruler_Expecter) EnumValuesSortedAlphabetically(doc any, modelsLinterConfig any, schemaString any, schemaPath any) *Ruler_EnumValuesSortedAlphabetically_Call {
 	return &Ruler_EnumValuesSortedAlphabetically_Call{Call: _e.mock.On("EnumValuesSortedAlphabetically", doc, modelsLinterConfig, schemaString, schemaPath)}
 }
 
@@ -135,7 +135,7 @@ type Ruler_FieldsAreCamelCased_Call struct {
 // FieldsAreCamelCased is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) FieldsAreCamelCased(doc interface{}, schemaString interface{}) *Ruler_FieldsAreCamelCased_Call {
+func (_e *Ruler_Expecter) FieldsAreCamelCased(doc any, schemaString any) *Ruler_FieldsAreCamelCased_Call {
 	return &Ruler_FieldsAreCamelCased_Call{Call: _e.mock.On("FieldsAreCamelCased", doc, schemaString)}
 }
 
@@ -194,7 +194,7 @@ type Ruler_InputObjectFieldsSortedAlphabetically_Call struct {
 // InputObjectFieldsSortedAlphabetically is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) InputObjectFieldsSortedAlphabetically(doc interface{}, schemaString interface{}) *Ruler_InputObjectFieldsSortedAlphabetically_Call {
+func (_e *Ruler_Expecter) InputObjectFieldsSortedAlphabetically(doc any, schemaString any) *Ruler_InputObjectFieldsSortedAlphabetically_Call {
 	return &Ruler_InputObjectFieldsSortedAlphabetically_Call{Call: _e.mock.On("InputObjectFieldsSortedAlphabetically", doc, schemaString)}
 }
 
@@ -253,7 +253,7 @@ type Ruler_InputObjectValuesCamelCased_Call struct {
 // InputObjectValuesCamelCased is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) InputObjectValuesCamelCased(doc interface{}, schemaString interface{}) *Ruler_InputObjectValuesCamelCased_Call {
+func (_e *Ruler_Expecter) InputObjectValuesCamelCased(doc any, schemaString any) *Ruler_InputObjectValuesCamelCased_Call {
 	return &Ruler_InputObjectValuesCamelCased_Call{Call: _e.mock.On("InputObjectValuesCamelCased", doc, schemaString)}
 }
 
@@ -312,7 +312,7 @@ type Ruler_MissingArgumentDescriptions_Call struct {
 // MissingArgumentDescriptions is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) MissingArgumentDescriptions(doc interface{}, schemaString interface{}) *Ruler_MissingArgumentDescriptions_Call {
+func (_e *Ruler_Expecter) MissingArgumentDescriptions(doc any, schemaString any) *Ruler_MissingArgumentDescriptions_Call {
 	return &Ruler_MissingArgumentDescriptions_Call{Call: _e.mock.On("MissingArgumentDescriptions", doc, schemaString)}
 }
 
@@ -371,7 +371,7 @@ type Ruler_MissingDeprecationReasons_Call struct {
 // MissingDeprecationReasons is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) MissingDeprecationReasons(doc interface{}, schemaString interface{}) *Ruler_MissingDeprecationReasons_Call {
+func (_e *Ruler_Expecter) MissingDeprecationReasons(doc any, schemaString any) *Ruler_MissingDeprecationReasons_Call {
 	return &Ruler_MissingDeprecationReasons_Call{Call: _e.mock.On("MissingDeprecationReasons", doc, schemaString)}
 }
 
@@ -430,7 +430,7 @@ type Ruler_MissingEnumValueDescriptions_Call struct {
 // MissingEnumValueDescriptions is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) MissingEnumValueDescriptions(doc interface{}, schemaString interface{}) *Ruler_MissingEnumValueDescriptions_Call {
+func (_e *Ruler_Expecter) MissingEnumValueDescriptions(doc any, schemaString any) *Ruler_MissingEnumValueDescriptions_Call {
 	return &Ruler_MissingEnumValueDescriptions_Call{Call: _e.mock.On("MissingEnumValueDescriptions", doc, schemaString)}
 }
 
@@ -489,7 +489,7 @@ type Ruler_MissingFieldDescriptions_Call struct {
 // MissingFieldDescriptions is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) MissingFieldDescriptions(doc interface{}, schemaString interface{}) *Ruler_MissingFieldDescriptions_Call {
+func (_e *Ruler_Expecter) MissingFieldDescriptions(doc any, schemaString any) *Ruler_MissingFieldDescriptions_Call {
 	return &Ruler_MissingFieldDescriptions_Call{Call: _e.mock.On("MissingFieldDescriptions", doc, schemaString)}
 }
 
@@ -548,7 +548,7 @@ type Ruler_MissingInputObjectValueDescriptions_Call struct {
 // MissingInputObjectValueDescriptions is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) MissingInputObjectValueDescriptions(doc interface{}, schemaString interface{}) *Ruler_MissingInputObjectValueDescriptions_Call {
+func (_e *Ruler_Expecter) MissingInputObjectValueDescriptions(doc any, schemaString any) *Ruler_MissingInputObjectValueDescriptions_Call {
 	return &Ruler_MissingInputObjectValueDescriptions_Call{Call: _e.mock.On("MissingInputObjectValueDescriptions", doc, schemaString)}
 }
 
@@ -607,7 +607,7 @@ type Ruler_MissingQueryRootType_Call struct {
 // MissingQueryRootType is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) MissingQueryRootType(doc interface{}, schemaString interface{}) *Ruler_MissingQueryRootType_Call {
+func (_e *Ruler_Expecter) MissingQueryRootType(doc any, schemaString any) *Ruler_MissingQueryRootType_Call {
 	return &Ruler_MissingQueryRootType_Call{Call: _e.mock.On("MissingQueryRootType", doc, schemaString)}
 }
 
@@ -666,7 +666,7 @@ type Ruler_MissingTypeDescriptions_Call struct {
 // MissingTypeDescriptions is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) MissingTypeDescriptions(doc interface{}, schemaString interface{}) *Ruler_MissingTypeDescriptions_Call {
+func (_e *Ruler_Expecter) MissingTypeDescriptions(doc any, schemaString any) *Ruler_MissingTypeDescriptions_Call {
 	return &Ruler_MissingTypeDescriptions_Call{Call: _e.mock.On("MissingTypeDescriptions", doc, schemaString)}
 }
 
@@ -725,7 +725,7 @@ type Ruler_RelayConnectionArgumentsSpec_Call struct {
 // RelayConnectionArgumentsSpec is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) RelayConnectionArgumentsSpec(doc interface{}, schemaString interface{}) *Ruler_RelayConnectionArgumentsSpec_Call {
+func (_e *Ruler_Expecter) RelayConnectionArgumentsSpec(doc any, schemaString any) *Ruler_RelayConnectionArgumentsSpec_Call {
 	return &Ruler_RelayConnectionArgumentsSpec_Call{Call: _e.mock.On("RelayConnectionArgumentsSpec", doc, schemaString)}
 }
 
@@ -784,7 +784,7 @@ type Ruler_RelayConnectionTypesSpec_Call struct {
 // RelayConnectionTypesSpec is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) RelayConnectionTypesSpec(doc interface{}, schemaString interface{}) *Ruler_RelayConnectionTypesSpec_Call {
+func (_e *Ruler_Expecter) RelayConnectionTypesSpec(doc any, schemaString any) *Ruler_RelayConnectionTypesSpec_Call {
 	return &Ruler_RelayConnectionTypesSpec_Call{Call: _e.mock.On("RelayConnectionTypesSpec", doc, schemaString)}
 }
 
@@ -843,7 +843,7 @@ type Ruler_RelayPageInfoSpec_Call struct {
 // RelayPageInfoSpec is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) RelayPageInfoSpec(doc interface{}, schemaString interface{}) *Ruler_RelayPageInfoSpec_Call {
+func (_e *Ruler_Expecter) RelayPageInfoSpec(doc any, schemaString any) *Ruler_RelayPageInfoSpec_Call {
 	return &Ruler_RelayPageInfoSpec_Call{Call: _e.mock.On("RelayPageInfoSpec", doc, schemaString)}
 }
 
@@ -905,7 +905,7 @@ type Ruler_ReportUncapitalizedDescription_Call struct {
 //   - name string
 //   - desc string
 //   - schemaString string
-func (_e *Ruler_Expecter) ReportUncapitalizedDescription(kind interface{}, parent interface{}, name interface{}, desc interface{}, schemaString interface{}) *Ruler_ReportUncapitalizedDescription_Call {
+func (_e *Ruler_Expecter) ReportUncapitalizedDescription(kind any, parent any, name any, desc any, schemaString any) *Ruler_ReportUncapitalizedDescription_Call {
 	return &Ruler_ReportUncapitalizedDescription_Call{Call: _e.mock.On("ReportUncapitalizedDescription", kind, parent, name, desc, schemaString)}
 }
 
@@ -979,7 +979,7 @@ type Ruler_TypesAreCapitalized_Call struct {
 // TypesAreCapitalized is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) TypesAreCapitalized(doc interface{}, schemaString interface{}) *Ruler_TypesAreCapitalized_Call {
+func (_e *Ruler_Expecter) TypesAreCapitalized(doc any, schemaString any) *Ruler_TypesAreCapitalized_Call {
 	return &Ruler_TypesAreCapitalized_Call{Call: _e.mock.On("TypesAreCapitalized", doc, schemaString)}
 }
 
@@ -1041,7 +1041,7 @@ type Ruler_UnsortedFields_Call struct {
 //   - typeLabel string
 //   - typeName string
 //   - schemaString string
-func (_e *Ruler_Expecter) UnsortedFields(fieldDefs interface{}, getFieldName interface{}, typeLabel interface{}, typeName interface{}, schemaString interface{}) *Ruler_UnsortedFields_Call {
+func (_e *Ruler_Expecter) UnsortedFields(fieldDefs any, getFieldName any, typeLabel any, typeName any, schemaString any) *Ruler_UnsortedFields_Call {
 	return &Ruler_UnsortedFields_Call{Call: _e.mock.On("UnsortedFields", fieldDefs, getFieldName, typeLabel, typeName, schemaString)}
 }
 
@@ -1115,7 +1115,7 @@ type Ruler_UnusedTypes_Call struct {
 // UnusedTypes is a helper method to define mock.On call
 //   - doc *ast.Document
 //   - schemaString string
-func (_e *Ruler_Expecter) UnusedTypes(doc interface{}, schemaString interface{}) *Ruler_UnusedTypes_Call {
+func (_e *Ruler_Expecter) UnusedTypes(doc any, schemaString any) *Ruler_UnusedTypes_Call {
 	return &Ruler_UnusedTypes_Call{Call: _e.mock.On("UnusedTypes", doc, schemaString)}
 }
 
@@ -1195,7 +1195,7 @@ type Ruler_ValidateEnumTypes_Call struct {
 //   - modelsLinterConfig *models.LinterConfig
 //   - schemaContent string
 //   - schemaPath string
-func (_e *Ruler_Expecter) ValidateEnumTypes(doc interface{}, modelsLinterConfig interface{}, schemaContent interface{}, schemaPath interface{}) *Ruler_ValidateEnumTypes_Call {
+func (_e *Ruler_Expecter) ValidateEnumTypes(doc any, modelsLinterConfig any, schemaContent any, schemaPath any) *Ruler_ValidateEnumTypes_Call {
 	return &Ruler_ValidateEnumTypes_Call{Call: _e.mock.On("ValidateEnumTypes", doc, modelsLinterConfig, schemaContent, schemaPath)}
 }
 
@@ -1277,7 +1277,7 @@ type Ruler_ValidateFieldTypes_Call struct {
 //   - schemaContent string
 //   - builtInScalars map[string]bool
 //   - definedTypes map[string]bool
-func (_e *Ruler_Expecter) ValidateFieldTypes(doc interface{}, schemaContent interface{}, builtInScalars interface{}, definedTypes interface{}) *Ruler_ValidateFieldTypes_Call {
+func (_e *Ruler_Expecter) ValidateFieldTypes(doc any, schemaContent any, builtInScalars any, definedTypes any) *Ruler_ValidateFieldTypes_Call {
 	return &Ruler_ValidateFieldTypes_Call{Call: _e.mock.On("ValidateFieldTypes", doc, schemaContent, builtInScalars, definedTypes)}
 }
 
@@ -1359,7 +1359,7 @@ type Ruler_ValidateInputFieldTypes_Call struct {
 //   - schemaContent string
 //   - builtInScalars map[string]bool
 //   - definedTypes map[string]bool
-func (_e *Ruler_Expecter) ValidateInputFieldTypes(doc interface{}, schemaContent interface{}, builtInScalars interface{}, definedTypes interface{}) *Ruler_ValidateInputFieldTypes_Call {
+func (_e *Ruler_Expecter) ValidateInputFieldTypes(doc any, schemaContent any, builtInScalars any, definedTypes any) *Ruler_ValidateInputFieldTypes_Call {
 	return &Ruler_ValidateInputFieldTypes_Call{Call: _e.mock.On("ValidateInputFieldTypes", doc, schemaContent, builtInScalars, definedTypes)}
 }
 
