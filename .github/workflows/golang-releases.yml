@@ -1,4 +1,3 @@
-# yamllint disable rule:line-length
 ---
 name: golang-releases
 "on": push
@@ -32,6 +31,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           persist-credentials: false
+      # yamllint disable-line rule:line-length
       - uses: schubergphilis/mcvs-golang-action@ae2f6b574119123e8ee0f457a1aace702947931b
         with:
           release-application-name: ${{ matrix.args.release-application-name }}

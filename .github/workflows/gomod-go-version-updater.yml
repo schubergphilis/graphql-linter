@@ -1,4 +1,3 @@
-# yamllint disable rule:line-length
 ---
 name: gomod-go-version-updater-action
 "on":
@@ -11,4 +10,5 @@ jobs:
   gomod-go-version-updater-action:
     runs-on: ubuntu-slim
     steps:
+      # yamllint disable-line rule:line-length
       - uses: schubergphilis/gomod-go-version-updater-action@c12bc6c5e4ae85e82ee346115d1657e43121c195
