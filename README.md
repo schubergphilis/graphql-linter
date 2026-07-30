@@ -1,5 +1,10 @@
 # GraphQL Linter
 
+[![GitHub release](https://img.shields.io/github/v/release/schubergphilis/graphql-linter)](https://github.com/schubergphilis/graphql-linter/releases)
+[![License](https://img.shields.io/github/license/schubergphilis/graphql-linter)](LICENSE)
+
+<img src="./assets/logos/graphql-linter.png" width="250"></a>
+
 A fast, opinionated linter for GraphQL SDL (Schema Definition Language) with
 first-class **Apollo Federation** support.
 
@@ -108,12 +113,12 @@ graphql-linter [flags]
 
 ### Flags
 
-| Flag          | Description                                                                                     |
-| ------------- | ----------------------------------------------------------------------------------------------- |
-| `-targetPath` | Directory or file containing the GraphQL schemas to check. Defaults to the project root.         |
-| `-configPath` | Path to the configuration file. Defaults to `.graphql-linter.yml` in the project root.           |
-| `-verbose`    | Enable verbose output.                                                                           |
-| `-version`    | Print version information and exit.                                                              |
+| Flag          | Description                                                                              |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| `-targetPath` | Directory or file containing the GraphQL schemas to check. Defaults to the project root. |
+| `-configPath` | Path to the configuration file. Defaults to `.graphql-linter.yml` in the project root.   |
+| `-verbose`    | Enable verbose output.                                                                   |
+| `-version`    | Print version information and exit.                                                      |
 
 ### Examples
 
@@ -166,11 +171,11 @@ A fully commented reference configuration is available in
 
 ### Settings
 
-| Setting              | Default | Description                                        |
-| -------------------- | ------- | -------------------------------------------------- |
-| `strictMode`         | `true`  | Treat warnings as errors.                          |
-| `validateFederation` | `true`  | Validate Apollo Federation directives.             |
-| `checkDescriptions`  | `true`  | Require descriptions on types, fields, and enums.  |
+| Setting              | Default | Description                                       |
+| -------------------- | ------- | ------------------------------------------------- |
+| `strictMode`         | `true`  | Treat warnings as errors.                         |
+| `validateFederation` | `true`  | Validate Apollo Federation directives.            |
+| `checkDescriptions`  | `true`  | Require descriptions on types, fields, and enums. |
 
 ## Rules
 
@@ -226,13 +231,13 @@ suppressions:
     reason: PageInfo is intentionally unused in this test schema.
 ```
 
-| Field    | Matching behaviour                                                              |
-| -------- | ------------------------------------------------------------------------------- |
-| `file`   | Matches when the schema path ends with this value; omit to match any file.      |
-| `line`   | Matches this line number; omit (or `0`) to match any line.                      |
-| `rule`   | Matches this rule identifier; omit to match any rule.                           |
-| `value`  | Matches a specific symbol (type, field, enum value); omit to match any value.   |
-| `reason` | Free-form justification for the suppression (recommended, not enforced).        |
+| Field    | Matching behaviour                                                            |
+| -------- | ----------------------------------------------------------------------------- |
+| `file`   | Matches when the schema path ends with this value; omit to match any file.    |
+| `line`   | Matches this line number; omit (or `0`) to match any line.                    |
+| `rule`   | Matches this rule identifier; omit to match any rule.                         |
+| `value`  | Matches a specific symbol (type, field, enum value); omit to match any value. |
+| `reason` | Free-form justification for the suppression (recommended, not enforced).      |
 
 ## Pre-commit hook
 
