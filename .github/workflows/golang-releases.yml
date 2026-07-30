@@ -28,8 +28,11 @@ jobs:
     env:
       TASK_X_REMOTE_TASKFILES: 1
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: schubergphilis/mcvs-golang-action@v3.11.24
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # yamllint disable-line rule:line-length
+      - uses: schubergphilis/mcvs-golang-action@9b7db5c46231cd20ad16b41e00cd952918e63410
         with:
           release-application-name: ${{ matrix.args.release-application-name }}
           release-architecture: ${{ matrix.args.release-architecture }}
