@@ -36,7 +36,7 @@ jobs:
         with:
           persist-credentials: false
       # yamllint disable-line rule:line-length
-      - uses: schubergphilis/mcvs-golang-action@9b7db5c46231cd20ad16b41e00cd952918e63410
+      - uses: schubergphilis/mcvs-golang-action@3ff1002c2a11fd6b54a6799f83542a3a96284d67
         env:
           test-timeout: 10m0s
         with:
