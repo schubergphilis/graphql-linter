@@ -11,5 +11,4 @@ jobs:
     runs-on: ubuntu-slim
     steps:
       # yamllint disable rule:line-length
-      - uses: schubergphilis/mcvs-golang-action-taskfile-remote-url-ref-updater@bac758bc0d4e3ee9b174ae4c24b43717e371f248
-      # yamllint enable rule:line-length
+      - uses: schubergphilis/mcvs-golang-action-taskfile-remote-url-ref-updater@bac758bc0d4e3ee9b174ae4c24b43717e371f248 # v0.2.0
