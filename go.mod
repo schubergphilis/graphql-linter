@@ -1,6 +1,6 @@
 module github.com/schubergphilis/graphql-linter
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/schubergphilis/mcvs-golang-project-root v0.1.6
