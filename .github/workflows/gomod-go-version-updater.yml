@@ -11,4 +11,4 @@ jobs:
     runs-on: ubuntu-slim
     steps:
       # yamllint disable-line rule:line-length
-      - uses: schubergphilis/gomod-go-version-updater-action@c12bc6c5e4ae85e82ee346115d1657e43121c195 # v0.3.5
+      - uses: schubergphilis/gomod-go-version-updater-action@773e180a2d3700d164a7ded2157f466ce8bc6cd6 # v0.3.7
