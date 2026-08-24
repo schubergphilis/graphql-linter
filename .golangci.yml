@@ -10,6 +10,10 @@ linters:
     # exhaustruct is disabled as there are scenarios in this code base where a
     # some keys of a struct should be empty while testing.
     - exhaustruct
+    # The linter 'exhaustruct' is deprecated (since v2.13.0) due to: new major
+    # version. Replaced by exhaustruct_v5, which is disabled for the same
+    # reason as exhaustruct.
+    - exhaustruct_v5
     # gochecknoglobals is disabled as there are global errors and component
     # test variables.
     - gochecknoglobals
