@@ -32,7 +32,7 @@ jobs:
         with:
           persist-credentials: false
       # yamllint disable-line rule:line-length
-      - uses: schubergphilis/mcvs-golang-action@d802ce11660d811a1440e898a2e2721f49521627 # v3.12.11
+      - uses: schubergphilis/mcvs-golang-action@7579f67fc1b878af701642b36cec45839860d206 # v3.12.12
         with:
           release-application-name: ${{ matrix.args.release-application-name }}
           release-architecture: ${{ matrix.args.release-architecture }}
