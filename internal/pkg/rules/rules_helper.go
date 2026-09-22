@@ -1,10 +1,11 @@
 package rules
 
 import (
+	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 func SuggestDirective(directiveName, validName string) {
 	if strings.Contains(directiveName, validName) ||
 		LevenshteinDistance(directiveName, validName) <= LevenshteinThreshold {
-		log.Errorf("  Did you mean '@%s'?", validName)
+		slog.Error(fmt.Sprintf("  Did you mean '@%s'?", validName))
 	}
 }
 
@@ -91,8 +92,10 @@ func IsSuppressed(
 	normalizedFilePath := strings.ReplaceAll(filePath, "\\", "/")
 	for _, suppression := range modelsLinterConfig.Suppressions {
 		if Matches(normalizedFilePath, line, rule, suppression, value) {
-			log.Debugf("SUPPRESSED: %s at line %d in %s (reason: %s)",
-				rule, line, filePath, suppression.Reason)
+			slog.Debug(fmt.Sprintf(
+				"SUPPRESSED: %s at line %d in %s (reason: %s)",
+				rule, line, filePath, suppression.Reason,
+			))
 
 			return true
 		}

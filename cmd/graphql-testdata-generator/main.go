@@ -1,8 +1,10 @@
 package main
 
 import (
+	"log/slog"
+	"os"
+
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-testdata-generator/presentation"
-	log "github.com/sirupsen/logrus"
 )
 
 var Version string
@@ -10,11 +12,13 @@ var Version string
 func main() {
 	cliPresent, err := presentation.NewCLI()
 	if err != nil {
-		log.WithError(err).Fatal("failed to construct CLIPresent")
+		slog.Error("failed to construct CLIPresent", "error", err)
+		os.Exit(1)
 	}
 
 	err = cliPresent.Run()
 	if err != nil {
-		log.WithError(err).Fatal("unable to run presentation layer")
+		slog.Error("unable to run presentation layer", "error", err)
+		os.Exit(1)
 	}
 }

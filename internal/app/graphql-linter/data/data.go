@@ -2,6 +2,7 @@ package data
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/rules"
 	pkg_rules "github.com/schubergphilis/graphql-linter/internal/pkg/rules"
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
-	log "github.com/sirupsen/logrus"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -97,7 +97,7 @@ func (s Store) LoadConfig() (*models.LinterConfig, error) {
 	}
 
 	if s.Verbose {
-		log.Infof("loaded config with %d suppressions", len(config.Suppressions))
+		slog.Info(fmt.Sprintf("loaded config with %d suppressions", len(config.Suppressions)))
 	}
 
 	return config, nil
@@ -106,7 +106,7 @@ func (s Store) LoadConfig() (*models.LinterConfig, error) {
 func readSchemaFile(schemaPath string) (string, bool) {
 	schemaBytes, err := os.ReadFile(schemaPath)
 	if err != nil {
-		log.WithError(err).Error("failed to read schema file")
+		slog.Error("failed to read schema file", "error", err)
 
 		return "", false
 	}
@@ -159,12 +159,12 @@ func (s Store) ValidateDataTypes(
 	)
 
 	if hasErrors {
-		log.Error("Data type validation FAILED - schema contains invalid type references")
+		slog.Error("Data type validation FAILED - schema contains invalid type references")
 
 		return false, errorLines, enumDescErrors
 	}
 
-	log.Debug("Data type validation PASSED")
+	slog.Debug("Data type validation PASSED")
 
 	return true, errorLines, enumDescErrors
 }
@@ -438,7 +438,7 @@ func (s Store) uncapitalizedArgumentDescriptions(
 }
 
 func loadDefaultConfig(config *models.LinterConfig) (*models.LinterConfig, error) {
-	log.Debug("No config path provided, using default project root search")
+	slog.Debug("No config path provided, using default project root search")
 
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {

@@ -1,7 +1,9 @@
 package federation
 
 import (
-	log "github.com/sirupsen/logrus"
+	"fmt"
+	"log/slog"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/federation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
@@ -14,7 +16,7 @@ func ValidateFederationSchema(filteredSchema string) bool {
 		filteredSchema,
 	)
 	if federationErr != nil {
-		log.Infof("Federation schema build failed: %v\n", federationErr)
+		slog.Info(fmt.Sprintf("Federation schema build failed: %v", federationErr))
 
 		return false
 	}
@@ -22,20 +24,20 @@ func ValidateFederationSchema(filteredSchema string) bool {
 	_ = federationSchema
 
 	if report.HasErrors() {
-		log.Error("Federation validation errors:")
+		slog.Error("Federation validation errors:")
 
 		for _, internalErr := range report.InternalErrors {
-			log.Errorf("  - %v\n", internalErr)
+			slog.Error(fmt.Sprintf("  - %v", internalErr))
 		}
 
 		for _, externalErr := range report.ExternalErrors {
-			log.Errorf("  - %s\n", externalErr.Message)
+			slog.Error("  - " + externalErr.Message)
 		}
 
 		return false
 	}
 
-	log.Debug("Federation schema validation passed")
+	slog.Debug("Federation schema validation passed")
 
 	return true
 }

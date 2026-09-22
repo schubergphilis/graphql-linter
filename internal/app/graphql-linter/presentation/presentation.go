@@ -3,9 +3,10 @@ package presentation
 import (
 	"flag"
 	"fmt"
+	"log/slog"
+	"os"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application"
-	log "github.com/sirupsen/logrus"
 )
 
 type Presenter interface {
@@ -56,6 +57,16 @@ func NewFlag() Flag {
 }
 
 func (c CLI) Run() error {
+	level := slog.LevelInfo
+	if c.verboseFlag {
+		level = slog.LevelDebug
+	}
+
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource: c.verboseFlag,
+		Level:     level,
+	})))
+
 	applicationExecute, err := application.NewExecute(
 		application.NewDebug(),
 		c.configPathFlag,
@@ -68,15 +79,13 @@ func (c CLI) Run() error {
 	}
 
 	if c.versionFlag {
-		log.Info(applicationExecute.Version())
+		slog.Info(applicationExecute.Version())
 
 		return nil
 	}
 
 	if c.verboseFlag {
-		log.Info("Verbose output enabled")
-		log.SetLevel(log.DebugLevel)
-		log.SetReportCaller(true)
+		slog.Debug("Verbose output enabled")
 	}
 
 	err = applicationExecute.Run()

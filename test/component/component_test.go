@@ -4,6 +4,7 @@ package component
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,7 +17,11 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	setup()
+	err := setup()
+	if err != nil {
+		slog.Error("failed to set up component tests", "error", err)
+		os.Exit(1)
+	}
 
 	code := m.Run()
 
@@ -101,11 +106,11 @@ func TestOutput(t *testing.T) {
 		required := []string{
 			"linting summary",
 			"passedFiles=0",
-			"percentPassed=\"0.00%\"",
+			"percentPassed=0.00%",
 			"totalFiles=20",
 			"files with at least one error",
 			"filesWithAtLeastOneError=20",
-			"percentage=\"100.00%\"",
+			"percentage=100.00%",
 			"totalErrors: 69",
 			"exit status 1",
 		}
@@ -182,7 +187,7 @@ func TestSuppressAllScenarios(t *testing.T) {
 	}
 
 	if !strings.Contains(outputStr, "passedFiles=") ||
-		!strings.Contains(outputStr, "percentPassed=\"100.00%\"") {
+		!strings.Contains(outputStr, "percentPassed=100.00%") {
 		t.Errorf("expected all files to pass, but did not. Output:\n%s", outputStr)
 	}
 }

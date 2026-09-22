@@ -2,11 +2,12 @@ package report
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
 	"sort"
 	"strings"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
-	log "github.com/sirupsen/logrus"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
@@ -93,24 +94,24 @@ func Print(
 	printDetailedErrors(summary.AllErrors)
 	printErrorTypeSummary(summary.AllErrors)
 
-	log.WithFields(log.Fields{
-		"passedFiles":   summary.PassedFiles,
-		"totalFiles":    summary.TotalFiles,
-		"percentPassed": fmt.Sprintf("%.2f%%", summary.PercentPassed),
-	}).Info("linting summary")
+	slog.Info(
+		"linting summary",
+		"passedFiles", summary.PassedFiles,
+		"totalFiles", summary.TotalFiles,
+		"percentPassed", fmt.Sprintf("%.2f%%", summary.PercentPassed),
+	)
 
 	if summary.TotalErrors > 0 {
-		log.WithFields(log.Fields{
-			"filesWithAtLeastOneError": summary.FilesWithAtLeastOneError,
-			"percentage":               fmt.Sprintf("%.2f%%", summary.PercentageFilesWithErrors),
-		}).Error("files with at least one error")
-
-		log.Fatalf("totalErrors: %d", summary.TotalErrors)
-
-		return
+		slog.Error(
+			"files with at least one error",
+			"filesWithAtLeastOneError", summary.FilesWithAtLeastOneError,
+			"percentage", fmt.Sprintf("%.2f%%", summary.PercentageFilesWithErrors),
+		)
+		slog.Error(fmt.Sprintf("totalErrors: %d", summary.TotalErrors))
+		os.Exit(1)
 	}
 
-	log.Infof("All %d schema file(s) passed linting successfully!", summary.TotalFiles)
+	slog.Info(fmt.Sprintf("All %d schema file(s) passed linting successfully!", summary.TotalFiles))
 }
 
 func printDetailedErrors(errors []models.DescriptionError) {
@@ -119,7 +120,7 @@ func printDetailedErrors(errors []models.DescriptionError) {
 	}
 
 	for _, err := range errors {
-		log.Errorf("%s:%d: %s\n  %s", err.FilePath, err.LineNum, err.Message, err.LineContent)
+		slog.Error(fmt.Sprintf("%s:%d: %s\n  %s", err.FilePath, err.LineNum, err.Message, err.LineContent))
 	}
 }
 
@@ -130,7 +131,7 @@ func printErrorTypeSummary(errors []models.DescriptionError) {
 		return
 	}
 
-	log.Error("Error type summary:")
+	slog.Error("Error type summary:")
 
 	keys := make([]string, 0, len(errorTypeCountsMap))
 	for k := range errorTypeCountsMap {
@@ -140,7 +141,7 @@ func printErrorTypeSummary(errors []models.DescriptionError) {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		log.Errorf("  %s: %d", k, errorTypeCountsMap[k])
+		slog.Error(fmt.Sprintf("  %s: %d", k, errorTypeCountsMap[k]))
 	}
 }
 
@@ -165,7 +166,7 @@ func ErrorTypeCounts(errors []models.DescriptionError) map[string]int {
 
 func InternalErrors(parseReport *operationreport.Report) {
 	for i, internalErr := range parseReport.InternalErrors {
-		log.Errorf("Internal Error %d: %v\n", i+1, internalErr)
+		slog.Error(fmt.Sprintf("Internal Error %d: %v", i+1, internalErr))
 	}
 }
 
@@ -177,9 +178,9 @@ func ExternalErrors(
 	lines := strings.Split(schemaString, "\n")
 
 	for index, externalErr := range parseReport.ExternalErrors {
-		log.Errorf("External Error %d:\n", index+1)
-		log.Errorf("  Message: %s\n", externalErr.Message)
-		log.Errorf("  Path: %s\n", externalErr.Path)
+		slog.Error(fmt.Sprintf("External Error %d:", index+1))
+		slog.Error("  Message: " + externalErr.Message)
+		slog.Error(fmt.Sprintf("  Path: %s", externalErr.Path))
 		reportExternalErrorLocations(lines, externalErr, linesBeforeContext, linesAfterContext)
 	}
 }
@@ -194,7 +195,7 @@ func reportExternalErrorLocations(
 	}
 
 	for _, location := range externalErr.Locations {
-		log.Infof("  Location: Line %d, Column %d\n", location.Line, location.Column)
+		slog.Info(fmt.Sprintf("  Location: Line %d, Column %d", location.Line, location.Column))
 		reportContextLines(lines, int(location.Line), linesBeforeContext, linesAfterContext)
 	}
 }
@@ -209,12 +210,12 @@ func reportContextLines(
 		return
 	}
 
-	log.Infof("  Problematic line: %s\n", lines[errorLineIdx])
+	slog.Info("  Problematic line: " + lines[errorLineIdx])
 
 	startIdx := max(0, errorLineIdx-linesBeforeContext)
 	endIdx := min(len(lines), errorLineIdx+linesAfterContext+1)
 
-	log.Infof("  Context:")
+	slog.Info("  Context:")
 
 	for contextIdx := startIdx; contextIdx < endIdx; contextIdx++ {
 		marker := "  "
@@ -222,6 +223,6 @@ func reportContextLines(
 			marker = ">>>"
 		}
 
-		log.Infof("  %s Line %d: %s\n", marker, contextIdx+1, lines[contextIdx])
+		slog.Info(fmt.Sprintf("  %s Line %d: %s", marker, contextIdx+1, lines[contextIdx]))
 	}
 }

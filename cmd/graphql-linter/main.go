@@ -1,8 +1,10 @@
 package main
 
 import (
+	"log/slog"
+	"os"
+
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/presentation"
-	log "github.com/sirupsen/logrus"
 )
 
 var Version string
@@ -12,6 +14,7 @@ func main() {
 
 	err := cliPresent.Run()
 	if err != nil {
-		log.WithError(err).Fatal("unable to run presentation layer")
+		slog.Error("unable to run presentation layer", "error", err)
+		os.Exit(1)
 	}
 }

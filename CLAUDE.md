@@ -127,7 +127,7 @@ This project follows **Clean Architecture** with three distinct layers:
 
 ### Key Dependencies
 - `wundergraph/graphql-go-tools/v2`: GraphQL AST parsing and federation support
-- `sirupsen/logrus`: Structured logging
+- `log/slog`: Structured logging (stdlib; handler installed in `presentation.Run()`)
 - `gopkg.in/yaml.v3`: Config file parsing
 
 ### Testing Strategy
