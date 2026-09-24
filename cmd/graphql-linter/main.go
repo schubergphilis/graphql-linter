@@ -5,11 +5,14 @@ import (
 	"os"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/presentation"
+	"github.com/schubergphilis/graphql-linter/internal/pkg/logging"
 )
 
 var Version string
 
 func main() {
+	logging.Setup(false)
+
 	cliPresent := presentation.NewCLI(presentation.NewFlag(), Version)
 
 	err := cliPresent.Run()

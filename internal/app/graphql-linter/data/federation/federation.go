@@ -27,11 +27,11 @@ func ValidateFederationSchema(filteredSchema string) bool {
 		slog.Error("Federation validation errors:")
 
 		for _, internalErr := range report.InternalErrors {
-			slog.Error(fmt.Sprintf("  - %v", internalErr))
+			slog.Error("federation internal error", "error", internalErr)
 		}
 
 		for _, externalErr := range report.ExternalErrors {
-			slog.Error("  - " + externalErr.Message)
+			slog.Error("federation external error", "message", externalErr.Message)
 		}
 
 		return false

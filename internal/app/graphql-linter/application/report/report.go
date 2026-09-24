@@ -15,6 +15,13 @@ const (
 	percentMultiplier = 100
 )
 
+// diagf prints a human readable diagnostic to stderr. It deliberately bypasses
+// slog: the TextHandler quotes msg, which turns multi line diagnostics into
+// literal \n escapes.
+func diagf(format string, a ...any) {
+	fmt.Fprintf(os.Stderr, format+"\n", a...)
+}
+
 type Summary struct {
 	TotalFiles                int
 	PassedFiles               int
@@ -88,7 +95,7 @@ func Print(
 	totalErrors int,
 	passedFiles int,
 	allErrors []models.DescriptionError,
-) {
+) bool {
 	summary := NewSummary(schemaFiles, totalErrors, passedFiles, allErrors)
 
 	printDetailedErrors(summary.AllErrors)
@@ -108,10 +115,13 @@ func Print(
 			"percentage", fmt.Sprintf("%.2f%%", summary.PercentageFilesWithErrors),
 		)
 		slog.Error(fmt.Sprintf("totalErrors: %d", summary.TotalErrors))
-		os.Exit(1)
+
+		return true
 	}
 
 	slog.Info(fmt.Sprintf("All %d schema file(s) passed linting successfully!", summary.TotalFiles))
+
+	return false
 }
 
 func printDetailedErrors(errors []models.DescriptionError) {
@@ -120,7 +130,7 @@ func printDetailedErrors(errors []models.DescriptionError) {
 	}
 
 	for _, err := range errors {
-		slog.Error(fmt.Sprintf("%s:%d: %s\n  %s", err.FilePath, err.LineNum, err.Message, err.LineContent))
+		diagf("%s:%d: %s\n  %s", err.FilePath, err.LineNum, err.Message, err.LineContent)
 	}
 }
 
@@ -131,7 +141,7 @@ func printErrorTypeSummary(errors []models.DescriptionError) {
 		return
 	}
 
-	slog.Error("Error type summary:")
+	diagf("Error type summary:")
 
 	keys := make([]string, 0, len(errorTypeCountsMap))
 	for k := range errorTypeCountsMap {
@@ -141,7 +151,7 @@ func printErrorTypeSummary(errors []models.DescriptionError) {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		slog.Error(fmt.Sprintf("  %s: %d", k, errorTypeCountsMap[k]))
+		diagf("  %s: %d", k, errorTypeCountsMap[k])
 	}
 }
 
@@ -166,7 +176,7 @@ func ErrorTypeCounts(errors []models.DescriptionError) map[string]int {
 
 func InternalErrors(parseReport *operationreport.Report) {
 	for i, internalErr := range parseReport.InternalErrors {
-		slog.Error(fmt.Sprintf("Internal Error %d: %v", i+1, internalErr))
+		diagf("Internal Error %d: %v", i+1, internalErr)
 	}
 }
 
@@ -178,9 +188,9 @@ func ExternalErrors(
 	lines := strings.Split(schemaString, "\n")
 
 	for index, externalErr := range parseReport.ExternalErrors {
-		slog.Error(fmt.Sprintf("External Error %d:", index+1))
-		slog.Error("  Message: " + externalErr.Message)
-		slog.Error(fmt.Sprintf("  Path: %s", externalErr.Path))
+		diagf("External Error %d:", index+1)
+		diagf("  Message: %s", externalErr.Message)
+		diagf("  Path: %s", externalErr.Path)
 		reportExternalErrorLocations(lines, externalErr, linesBeforeContext, linesAfterContext)
 	}
 }
@@ -195,7 +205,7 @@ func reportExternalErrorLocations(
 	}
 
 	for _, location := range externalErr.Locations {
-		slog.Info(fmt.Sprintf("  Location: Line %d, Column %d", location.Line, location.Column))
+		diagf("  Location: Line %d, Column %d", location.Line, location.Column)
 		reportContextLines(lines, int(location.Line), linesBeforeContext, linesAfterContext)
 	}
 }
@@ -210,12 +220,12 @@ func reportContextLines(
 		return
 	}
 
-	slog.Info("  Problematic line: " + lines[errorLineIdx])
+	diagf("  Problematic line: %s", lines[errorLineIdx])
 
 	startIdx := max(0, errorLineIdx-linesBeforeContext)
 	endIdx := min(len(lines), errorLineIdx+linesAfterContext+1)
 
-	slog.Info("  Context:")
+	diagf("  Context:")
 
 	for contextIdx := startIdx; contextIdx < endIdx; contextIdx++ {
 		marker := "  "
@@ -223,6 +233,6 @@ func reportContextLines(
 			marker = ">>>"
 		}
 
-		slog.Info(fmt.Sprintf("  %s Line %d: %s", marker, contextIdx+1, lines[contextIdx]))
+		diagf("  %s Line %d: %s", marker, contextIdx+1, lines[contextIdx])
 	}
 }

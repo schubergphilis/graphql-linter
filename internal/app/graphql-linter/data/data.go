@@ -96,9 +96,7 @@ func (s Store) LoadConfig() (*models.LinterConfig, error) {
 		config = cfg
 	}
 
-	if s.Verbose {
-		slog.Info(fmt.Sprintf("loaded config with %d suppressions", len(config.Suppressions)))
-	}
+	slog.Debug(fmt.Sprintf("loaded config with %d suppressions", len(config.Suppressions)))
 
 	return config, nil
 }

@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application"
+	"github.com/schubergphilis/graphql-linter/internal/pkg/logging"
 )
 
 type Presenter interface {
@@ -57,15 +57,7 @@ func NewFlag() Flag {
 }
 
 func (c CLI) Run() error {
-	level := slog.LevelInfo
-	if c.verboseFlag {
-		level = slog.LevelDebug
-	}
-
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		AddSource: c.verboseFlag,
-		Level:     level,
-	})))
+	logging.Setup(c.verboseFlag)
 
 	applicationExecute, err := application.NewExecute(
 		application.NewDebug(),
@@ -84,9 +76,7 @@ func (c CLI) Run() error {
 		return nil
 	}
 
-	if c.verboseFlag {
-		slog.Debug("Verbose output enabled")
-	}
+	slog.Debug("Verbose output enabled")
 
 	err = applicationExecute.Run()
 	if err != nil {

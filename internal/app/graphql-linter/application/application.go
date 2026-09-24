@@ -1,6 +1,7 @@
 package application
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -20,6 +21,10 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
+
+// ErrLintingFailed signals that at least one schema file contains lint errors.
+// It travels up to main, which turns it into a non zero exit code.
+var ErrLintingFailed = errors.New("linting failed")
 
 const (
 	linesAfterContext  = 3
@@ -111,12 +116,14 @@ func (e Execute) Run() error {
 		schemaFiles,
 	)
 
-	report.Print(
+	if report.Print(
 		schemaFiles,
 		totalErrors,
 		len(schemaFiles)-errorFilesCount,
 		dataDescriptionError,
-	)
+	) {
+		return ErrLintingFailed
+	}
 
 	return nil
 }
@@ -152,12 +159,10 @@ func (e Execute) FindAndLogGraphQLSchemaFiles() ([]string, error) {
 		return nil, fmt.Errorf("no GraphQL schema files found in directory: %s", e.TargetPath)
 	}
 
-	if e.Verbose {
-		slog.Info(fmt.Sprintf("found %d GraphQL schema files:", len(schemaFiles)))
+	slog.Debug(fmt.Sprintf("found %d GraphQL schema files:", len(schemaFiles)))
 
-		for _, file := range schemaFiles {
-			slog.Info("  - " + file)
-		}
+	for _, file := range schemaFiles {
+		slog.Debug("  - " + file)
 	}
 
 	return schemaFiles, nil
@@ -231,7 +236,7 @@ func (e Execute) lintDescriptions(
 ) ([]models.DescriptionError, bool) {
 	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, rules.Rule{}, e.Verbose)
 	if err != nil {
-		slog.Error(fmt.Sprintf("unable to load new store: %v", err))
+		slog.Error("unable to load new store", "error", err)
 
 		return nil, false
 	}
@@ -361,13 +366,11 @@ func (e Execute) lintSingleSchemaFile(
 	int,
 	[]models.DescriptionError,
 ) {
-	if e.Verbose {
-		slog.Info(fmt.Sprintf("=== Linting %s ===", schemaFile))
-	}
+	slog.Debug(fmt.Sprintf("=== Linting %s ===", schemaFile))
 
 	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, rules.Rule{}, e.Verbose)
 	if err != nil {
-		slog.Error(fmt.Sprintf("unable to load new store: %v", err))
+		slog.Error("unable to load new store", "error", err)
 	}
 
 	schemaString, ok := dataStore.ReadAndValidateSchemaFile(schemaFile)

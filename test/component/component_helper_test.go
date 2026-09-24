@@ -139,7 +139,8 @@ func parseSections(outputStr string) map[string][]string {
 			sections["summary"] = append(sections["summary"], line)
 		}
 
-		if strings.Contains(line, "level=ERROR") {
+		// Diagnostics are printed plain, events go through slog.
+		if strings.Contains(line, "level=ERROR") || strings.Contains(line, ".graphql:") {
 			sections["errors"] = append(sections["errors"], line)
 		}
 	}
