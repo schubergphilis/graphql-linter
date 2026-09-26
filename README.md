@@ -115,8 +115,8 @@ graphql-linter [flags]
 
 | Flag          | Description                                                                              |
 | ------------- | ---------------------------------------------------------------------------------------- |
-| `-targetPath` | Directory or file containing the GraphQL schemas to check. Defaults to the project root. |
-| `-configPath` | Path to the configuration file. Defaults to `.graphql-linter.yml` in the project root.   |
+| `-targetPath` | Directory or file containing the GraphQL schemas to check. Defaults to the current directory. |
+| `-configPath` | Path to the configuration file. Defaults to `.graphql-linter.yml` or `.graphql-linter.yaml` in the current directory. |
 | `-verbose`    | Enable verbose output.                                                                   |
 | `-version`    | Print version information and exit.                                                      |
 
@@ -142,16 +142,14 @@ go run ./cmd/graphql-linter -targetPath test/testdata/graphql/base/invalid
 
 ## Configuration
 
-When `-configPath` is not set, the linter looks for a `.graphql-linter.yml` file
-in the project root. Use `-configPath` to point at a different file. If no
+When `-configPath` is not set, the linter looks for `.graphql-linter.yml`, then
+`.graphql-linter.yaml`, in the current directory. Use `-configPath` to point at a different file. If no
 configuration is found, the built-in defaults below are used.
 
 ```yaml
 ---
 # Global behaviour
 settings:
-  # Treat warnings as errors.
-  strictMode: true
   # Validate Apollo Federation directives.
   validateFederation: true
   # Require descriptions on schema elements.
@@ -171,11 +169,10 @@ A fully commented reference configuration is available in
 
 ### Settings
 
-| Setting              | Default | Description                                       |
-| -------------------- | ------- | ------------------------------------------------- |
-| `strictMode`         | `true`  | Treat warnings as errors.                         |
-| `validateFederation` | `true`  | Validate Apollo Federation directives.            |
-| `checkDescriptions`  | `true`  | Require descriptions on types, fields, and enums. |
+| Setting              | Default | Description                                                                |
+| -------------------- | ------- | -------------------------------------------------------------------------- |
+| `validateFederation` | `true`  | Build the federation schema and validate Apollo Federation directives.     |
+| `checkDescriptions`  | `true`  | Run the `*-have-descriptions` rules. Set to `false` to skip them.          |
 
 ## Rules
 

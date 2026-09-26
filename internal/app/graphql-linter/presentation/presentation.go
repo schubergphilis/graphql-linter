@@ -28,7 +28,8 @@ func NewCLI(args []string, version string) CLI {
 		&cli.configPathFlag,
 		"configPath",
 		"",
-		"The path to the configuration file (optional, defaults to .graphql-linter.yaml in the current directory)",
+		"The path to the configuration file (optional, defaults to .graphql-linter.yml or "+
+			".graphql-linter.yaml in the current directory)",
 	)
 	flags.StringVar(
 		&cli.targetPathFlag,

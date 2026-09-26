@@ -39,13 +39,7 @@ func NewStore(configPath, targetPath string) Store {
 
 func (s Store) LoadConfig() (*models.LinterConfig, error) {
 	configPath := s.ConfigPath
-	config := &models.LinterConfig{
-		Settings: models.Settings{
-			StrictMode:         true,
-			ValidateFederation: true,
-			CheckDescriptions:  true,
-		},
-	}
+	config := models.NewLinterConfig()
 
 	if configPath == "" {
 		cfg, err := loadDefaultConfig(config)
@@ -385,21 +379,16 @@ func (s Store) uncapitalizedArgumentDescriptions(
 	return errors
 }
 
+// defaultConfigFiles are looked up in the working directory, in this order.
+var defaultConfigFiles = []string{".graphql-linter.yml", ".graphql-linter.yaml"}
+
 func loadDefaultConfig(config *models.LinterConfig) (*models.LinterConfig, error) {
-	slog.Debug("No config path provided, looking for .graphql-linter.yml in the current directory")
+	for _, defaultConfigPath := range defaultConfigFiles {
+		_, err := os.Stat(defaultConfigPath)
+		if err == nil {
+			slog.Debug("No config path provided, using " + defaultConfigPath)
 
-	defaultConfigPath := ".graphql-linter.yml"
-
-	_, statErr := os.Stat(defaultConfigPath)
-	if statErr == nil {
-		data, readErr := os.ReadFile(defaultConfigPath)
-		if readErr != nil {
-			return nil, fmt.Errorf("failed to read config file: %w", readErr)
-		}
-
-		yamlErr := yaml.Unmarshal(data, config)
-		if yamlErr != nil {
-			return nil, fmt.Errorf("failed to parse config file: %w", yamlErr)
+			return loadCustomConfig(defaultConfigPath, config)
 		}
 	}
 

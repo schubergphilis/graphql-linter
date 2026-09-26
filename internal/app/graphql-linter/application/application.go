@@ -63,15 +63,10 @@ func (e Execute) Run() error {
 		return fmt.Errorf("schema file discovery failed: %w", err)
 	}
 
-	for _, schemaFile := range schemaFiles {
-		schemaBytes, err := os.ReadFile(schemaFile)
+	if linterConfig.Settings.ValidateFederation {
+		err = validateFederation(schemaFiles)
 		if err != nil {
-			return fmt.Errorf("failed to read schema file: %w", err)
-		}
-
-		filteredSchema := data.FilterSchemaComments(string(schemaBytes))
-		if !federation.ValidateFederationSchema(filteredSchema) {
-			return fmt.Errorf("federation validation failed for: %s", schemaFile)
+			return err
 		}
 	}
 
@@ -87,6 +82,22 @@ func (e Execute) Run() error {
 		dataDescriptionError,
 	) {
 		return ErrLintingFailed
+	}
+
+	return nil
+}
+
+func validateFederation(schemaFiles []string) error {
+	for _, schemaFile := range schemaFiles {
+		schemaBytes, err := os.ReadFile(schemaFile)
+		if err != nil {
+			return fmt.Errorf("failed to read schema file: %w", err)
+		}
+
+		filteredSchema := data.FilterSchemaComments(string(schemaBytes))
+		if !federation.ValidateFederationSchema(filteredSchema) {
+			return fmt.Errorf("federation validation failed for: %s", schemaFile)
+		}
 	}
 
 	return nil
@@ -276,6 +287,10 @@ func getUnsuppressedDescriptionErrors(
 			rule = rule[:idx]
 		}
 
+		if !modelsLinterConfig.Settings.CheckDescriptions && strings.HasSuffix(rule, "-have-descriptions") {
+			continue
+		}
+
 		if !pkg_rules.IsSuppressedNoValue(schemaFile, err.LineNum, modelsLinterConfig, rule) {
 			unsuppressed = append(unsuppressed, err)
 		}
@@ -391,7 +406,8 @@ func (e Execute) collectLintErrors(
 		schemaFile,
 	)
 	allErrors := append([]models.DescriptionError{}, dataTypeErrors...)
-	unsuppressedDirectiveOrFederationError := !federation_rules.ValidateDirectiveNames(doc)
+	unsuppressedDirectiveOrFederationError := modelsLinterConfig.Settings.ValidateFederation &&
+		!federation_rules.ValidateDirectiveNames(doc)
 
 	totalErrors, errorFilesCount := report.SummarizeLintResults(
 		len(unsuppressedDescriptionErrors),

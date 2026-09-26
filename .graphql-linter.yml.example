@@ -34,9 +34,7 @@ suppressions:
 
 # Global settings
 settings:
-  # Whether to treat warnings as errors (default: false)
-  strictMode: true
   # Whether to validate federation directives (default: true)
   validateFederation: true
-  # Whether to check for missing descriptions (default: true)
+  # Whether to run the *-have-descriptions rules (default: true)
   checkDescriptions: true
