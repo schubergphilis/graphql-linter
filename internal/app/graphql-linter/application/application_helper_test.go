@@ -2,16 +2,12 @@ package application
 
 import (
 	"os"
-	"runtime/debug"
 	"strings"
 	"testing"
 
-	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application/mocks"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
-	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/rules"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func runValidateDataTypesTest(
@@ -25,8 +21,7 @@ func runValidateDataTypesTest(
 
 	doc := parseGraphQLDocument(schemaContent)
 
-	dataStore, err := data.NewStore("", "", rules.Rule{}, true)
-	require.NoError(t, err, "Failed to create data store")
+	dataStore := data.NewStore("", "")
 
 	valid, errorLines, _ := dataStore.ValidateDataTypes(
 		doc,
@@ -52,14 +47,7 @@ func runLintDescriptionsTest(
 ) {
 	t.Helper()
 
-	mocksDebugger := &mocks.Debugger{}
-	mocksDebugger.EXPECT().ReadBuildInfo().Return(&debug.BuildInfo{Main: debug.Module{Version: "4.3.2"}}, true).Times(1)
-
-	execute, err := NewExecute(mocksDebugger, "", "", "", false)
-	require.NoError(t, err, "failed to create execute instance")
-
-	version := execute.Version()
-	assert.Equal(t, "4.3.2", version, "expected version to be 4.3.2, got %s", version)
+	execute := NewExecute("", "", "")
 
 	doc := parseGraphQLDocument(schemaContent)
 	descriptionErrors, hasDeprecationReasonError := execute.lintDescriptions(
@@ -116,10 +104,4 @@ func createTestDirectory(t *testing.T, files map[string]string) string {
 	}
 
 	return dir
-}
-
-func createTestExecute(verbose bool) Execute {
-	execute := Execute{Verbose: verbose}
-
-	return execute
 }

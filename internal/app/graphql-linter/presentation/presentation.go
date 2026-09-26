@@ -10,18 +10,6 @@ import (
 	"github.com/schubergphilis/graphql-linter/internal/pkg/logging"
 )
 
-type Presenter interface {
-	Run() error
-}
-
-type Flagger interface {
-	BoolVar(p *bool, name string, value bool, usage string)
-	StringVar(p *string, name string, value string, usage string)
-	Parse()
-}
-
-type Flag struct{}
-
 type CLI struct {
 	configPathFlag string
 	targetPathFlag string
@@ -30,49 +18,42 @@ type CLI struct {
 	verboseFlag    bool
 }
 
-func NewCLI(flagger Flagger, version string) CLI {
+func NewCLI(args []string, version string) CLI {
 	cli := CLI{
 		version: version,
 	}
-	flagger.StringVar(
+
+	flags := flag.NewFlagSet("graphql-linter", flag.ExitOnError)
+	flags.StringVar(
 		&cli.configPathFlag,
 		"configPath",
 		"",
 		"The path to the configuration file (optional, defaults to .graphql-linter.yaml in the current directory)",
 	)
-	flagger.StringVar(
+	flags.StringVar(
 		&cli.targetPathFlag,
 		"targetPath",
 		"",
 		"The directory with GraphQL files that should be checked",
 	)
-	flagger.BoolVar(&cli.versionFlag, "version", false, "Show version")
-	flagger.BoolVar(&cli.verboseFlag, "verbose", false, "Enable verbose output")
-	flagger.Parse()
+	flags.BoolVar(&cli.versionFlag, "version", false, "Show version")
+	flags.BoolVar(&cli.verboseFlag, "verbose", false, "Enable verbose output")
+	_ = flags.Parse(args) // ExitOnError: Parse exits instead of returning an error
 
 	return cli
-}
-
-func NewFlag() Flag {
-	return Flag{}
 }
 
 func (c CLI) Run() error {
 	logging.Setup(c.verboseFlag)
 
-	applicationExecute, err := application.NewExecute(
-		application.NewDebug(),
+	applicationExecute := application.NewExecute(
 		c.configPathFlag,
 		c.targetPathFlag,
 		c.version,
-		c.verboseFlag,
 	)
-	if err != nil {
-		return fmt.Errorf("unable to load new execute: %w", err)
-	}
 
 	if c.versionFlag {
-		_, err = fmt.Fprintln(os.Stdout, applicationExecute.Version())
+		_, err := fmt.Fprintln(os.Stdout, applicationExecute.Version())
 		if err != nil {
 			return fmt.Errorf("unable to print version: %w", err)
 		}
@@ -82,22 +63,10 @@ func (c CLI) Run() error {
 
 	slog.Debug("Verbose output enabled")
 
-	err = applicationExecute.Run()
+	err := applicationExecute.Run()
 	if err != nil {
 		return fmt.Errorf("unable to run execute: %w", err)
 	}
 
 	return nil
-}
-
-func (f Flag) BoolVar(p *bool, name string, value bool, usage string) {
-	flag.BoolVar(p, name, value, usage)
-}
-
-func (f Flag) StringVar(p *string, name string, value string, usage string) {
-	flag.StringVar(p, name, value, usage)
-}
-
-func (f Flag) Parse() {
-	flag.Parse()
 }

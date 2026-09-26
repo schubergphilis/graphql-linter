@@ -7,17 +7,14 @@ import (
 	"runtime/debug"
 	"testing"
 
-	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application/mocks"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application/report"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
-	ruler_mocks "github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/rules/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
+//nolint:paralleltest //swaps the package level readBuildInfo
 func TestExecute_Version(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name          string
 		versionString string
@@ -50,20 +47,12 @@ func TestExecute_Version(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
+			readBuildInfo = func() (*debug.BuildInfo, bool) { return test.buildInfo, test.buildInfoOK }
 
-			mockDebugger := new(mocks.Debugger)
-			if test.versionString == "" {
-				mockDebugger.On("ReadBuildInfo").Return(test.buildInfo, test.buildInfoOK)
-			}
+			t.Cleanup(func() { readBuildInfo = debug.ReadBuildInfo })
 
-			e := Execute{
-				Debugger:      mockDebugger,
-				VersionString: test.versionString,
-			}
-			got := e.Version()
+			got := Execute{VersionString: test.versionString}.Version()
 			assert.Equal(t, test.expected, got)
-			mockDebugger.AssertExpectations(t)
 		})
 	}
 }
@@ -126,7 +115,6 @@ func TestLintDescriptions(t *testing.T) {
 		name                          string
 		errorSubstring                string
 		schemaContent                 string
-		setupMockRuler                func(*ruler_mocks.Ruler)
 		wantNumberOfDescriptionErrors int
 		wantHasDeprecationReasonError bool
 	}{
@@ -235,7 +223,7 @@ func TestFindAndLogGraphQLSchemaFiles(t *testing.T) {
 	}
 	dir := createTestDirectory(t, files)
 
-	e := Execute{TargetPath: dir, Verbose: false}
+	e := Execute{TargetPath: dir}
 
 	foundFiles, err := e.FindAndLogGraphQLSchemaFiles()
 	if err != nil || len(foundFiles) != 1 {
@@ -257,7 +245,7 @@ type Query { """ID field""" id: ID }`
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
-	e := createTestExecute(false)
+	e := Execute{}
 
 	total, errorFiles, _ := e.lintSchemaFiles(&models.LinterConfig{}, []string{file})
 	if total != 1 || errorFiles != 1 {
@@ -279,7 +267,7 @@ func TestFindAndLogGraphQLSchemaFiles_Errors(t *testing.T) {
 func TestLintSchemaFiles_Errors(t *testing.T) {
 	t.Parallel()
 
-	execute := Execute{Verbose: false}
+	execute := Execute{}
 
 	total, errorFiles, _ := execute.lintSchemaFiles(nil, []string{"/does/not/exist.graphql"})
 	if total == 0 || errorFiles == 0 {
