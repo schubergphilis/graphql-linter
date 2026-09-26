@@ -3,11 +3,14 @@ package application
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"reflect"
 	"runtime/debug"
+	"strings"
 	"testing"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application/report"
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -346,4 +349,46 @@ type PageInfo {
 
 	require.NoError(t, os.WriteFile(".graphql-linter.yml", []byte("settings:\n  validateFederation: false\n"), 0o600))
 	require.NoError(t, Execute{}.Run())
+}
+
+func TestSuppressionValueMatchesEveryRule(t *testing.T) {
+	t.Parallel()
+
+	files, err := filepath.Glob("../../../../test/testdata/graphql/base/invalid/*.graphql")
+	require.NoError(t, err)
+	require.NotEmpty(t, files)
+
+	seenRules := map[string]bool{}
+
+	for _, file := range files {
+		schemaBytes, err := os.ReadFile(file)
+		require.NoError(t, err)
+
+		schema := string(schemaBytes)
+		doc := parseGraphQLDocument(schema)
+		config := models.NewLinterConfig()
+
+		findings, _ := Execute{}.lintDescriptions(doc, config, schema, file)
+		_, dataTypeErrors := data.NewStore("", "").CollectUnsuppressedDataTypeErrors(doc, config, schema, file)
+		findings = append(findings, dataTypeErrors...)
+
+		for _, finding := range findings {
+			rule, _, _ := strings.Cut(finding.Message, ":")
+			seenRules[rule] = true
+
+			require.NotEmpty(t, finding.Value, "%s: %s has no value", file, finding.Message)
+
+			matching := models.NewLinterConfig()
+			matching.Suppressions = []models.Suppression{{Rule: rule, Value: finding.Value}}
+			assert.Empty(t, getUnsuppressedDescriptionErrors([]models.DescriptionError{finding}, matching, file),
+				"%s: value %q should suppress %s", file, finding.Value, finding.Message)
+
+			other := models.NewLinterConfig()
+			other.Suppressions = []models.Suppression{{Rule: rule, Value: "no-such-value"}}
+			assert.Len(t, getUnsuppressedDescriptionErrors([]models.DescriptionError{finding}, other, file), 1,
+				"%s: other value should not suppress %s", file, finding.Message)
+		}
+	}
+
+	assert.GreaterOrEqual(t, len(seenRules), 15, "rules covered: %v", seenRules)
 }

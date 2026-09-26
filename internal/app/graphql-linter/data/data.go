@@ -191,7 +191,7 @@ func (s Store) CollectUnsuppressedDataTypeErrors(
 			rule = rule[:idx]
 		}
 
-		if !pkg_rules.IsSuppressedNoValue(schemaFile, enumErr.LineNum, modelsLinterConfig, rule) {
+		if !pkg_rules.IsSuppressed(schemaFile, enumErr.LineNum, modelsLinterConfig, rule, enumErr.Value) {
 			allErrors = append(allErrors, enumErr)
 			unsuppressedDataTypeErrors++
 		}

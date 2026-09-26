@@ -261,7 +261,7 @@ func (e Execute) collectDescriptionErrors(
 					rule = rule[:idx]
 				}
 
-				if !pkg_rules.IsSuppressedNoValue(schemaPath, err.LineNum, modelsLinterConfig, rule) {
+				if !pkg_rules.IsSuppressed(schemaPath, err.LineNum, modelsLinterConfig, rule, err.Value) {
 					hasUnsuppressedDeprecationReasonError = true
 				}
 			}
@@ -291,7 +291,7 @@ func getUnsuppressedDescriptionErrors(
 			continue
 		}
 
-		if !pkg_rules.IsSuppressedNoValue(schemaFile, err.LineNum, modelsLinterConfig, rule) {
+		if !pkg_rules.IsSuppressed(schemaFile, err.LineNum, modelsLinterConfig, rule, err.Value) {
 			unsuppressed = append(unsuppressed, err)
 		}
 	}
