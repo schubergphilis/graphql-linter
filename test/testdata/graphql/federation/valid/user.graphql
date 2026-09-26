@@ -1,0 +1,17 @@
+"""A user, resolvable by id or email."""
+type User @key(fields: "id") @key(fields: "email") {
+  """The email address."""
+  email: String! @shareable
+  """The identifier."""
+  id: ID!
+  """The role of the user."""
+  role: Role @audit
+}
+
+"""The role of a user."""
+enum Role {
+  """An administrator."""
+  ADMIN
+  """A regular member."""
+  MEMBER
+}

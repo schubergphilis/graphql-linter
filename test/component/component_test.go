@@ -93,6 +93,7 @@ func TestOutput(t *testing.T) {
 			"input-object-values-are-camel-cased: 1",
 			"input-object-values-have-descriptions: 1",
 			"interface-fields-sorted-alphabetically: 1",
+			"invalid-federation-schema: 25",
 			"relay-connection-arguments-spec: 2",
 			"relay-connection-types-spec: 1",
 			"suspicious-enum-value: 1",
@@ -106,13 +107,13 @@ func TestOutput(t *testing.T) {
 	t.Run("Summary block", func(t *testing.T) {
 		required := []string{
 			"linting summary",
-			"passedFiles=1",
-			"percentPassed=5.00%",
+			"passedFiles=0",
+			"percentPassed=0.00%",
 			"totalFiles=20",
 			"files with at least one error",
-			"filesWithAtLeastOneError=19",
-			"percentage=95.00%",
-			"totalErrors: 51",
+			"filesWithAtLeastOneError=20",
+			"percentage=100.00%",
+			"totalErrors: 76",
 			"exit status 1",
 		}
 		allLines := sections["all"]
@@ -259,7 +260,7 @@ func TestSuppressTwoScenarios(t *testing.T) {
 			"linting summary",
 			"totalFiles=20",
 			"files with at least one error",
-			"totalErrors: 49",
+			"totalErrors: 74",
 			"exit status 1",
 		}
 		allLines := sections["all"]
@@ -295,4 +296,46 @@ func TestSchemaWideRulesOnSingleFile(t *testing.T) {
 	for _, want := range []string{"invalid-graphql-schema: 1", "relay-page-info-spec: 1"} {
 		assert.Contains(t, string(output), want)
 	}
+}
+
+//nolint:paralleltest //must not run in parallel as it conflicts with TestSuppressAllScenarios.
+func TestFederation(t *testing.T) {
+	projectRoot, err := filepath.Abs("../..")
+	require.NoError(t, err)
+
+	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
+	federationDir := filepath.Join(projectRoot, "test", "testdata", "graphql", "federation")
+
+	run := func(t *testing.T, dir string) (string, error) {
+		t.Helper()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		cmd := exec.CommandContext(ctx, "go", "run", mainPath, "-targetPath", filepath.Join(federationDir, dir))
+		cmd.Dir = projectRoot
+
+		output, err := cmd.CombinedOutput()
+
+		return string(output), err
+	}
+
+	t.Run("subgraph split over files passes", func(t *testing.T) {
+		output, err := run(t, "valid")
+		require.NoError(t, err, output)
+		assert.Contains(t, output, "All 3 schema file(s) passed linting successfully!")
+	})
+
+	t.Run("a broken file does not stop the other files", func(t *testing.T) {
+		output, err := run(t, "invalid")
+		require.Error(t, err)
+
+		for _, want := range []string{
+			"broken.graphql:1: invalid-graphql-syntax:",
+			"typo.graphql:8: invalid-federation-directive: Invalid federation directive '@kye' on type 'Product'. " +
+				"Did you mean '@key'?",
+		} {
+			assert.Contains(t, output, want)
+		}
+	})
 }
