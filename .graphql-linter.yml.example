@@ -1,14 +1,22 @@
 ---
 # GraphQL Linter Configuration
-# This file allows you to suppress specific linter warnings and errors
+# This file allows you to suppress specific linter findings.
+#
+# Every suppression field is optional and acts as a filter:
+#   file:   matches when the schema path ends with this value
+#   line:   matches this line number
+#   rule:   matches this rule id, e.g. types-have-descriptions
+#   value:  matches the name of the offending type, field, argument or
+#           enum value, e.g. User, firstName or PO4_VOLUME
+#   reason: free-form justification (recommended)
 
 suppressions:
-  # Suppress suspicious enum value warnings for specific cases
-  - file: test/testdata/graphql/suspicious-enum-value.graphql
-    line: 4
-    reason: PO4_VOLUME is valid domain-specific enum value phosphate volume
-    rule: suspicious_enum_value
-    value: PO4_VOLUME
+  # Suppress a suspicious enum value for one specific case
+  - file: test/testdata/graphql/base/invalid/20-suspicious-enum-value.graphql
+    line: 13
+    reason: INACTIVE1 is a valid domain-specific enum value
+    rule: suspicious-enum-value
+    value: INACTIVE1
   - file: test/testdata/graphql/base/invalid/07-enum-values-sorted-alphabetically.graphql
     line: 12
     reason: PageInfo is intentionally unused in this test schema
@@ -22,19 +30,19 @@ suppressions:
 # Example suppressions for other rule types:
 # - file: "path/to/schema.graphqls"
 #   line: 42
-#   rule: "undefined_type"
+#   rule: "invalid-field-types"
 #   value: "CustomType"
 #   reason: "CustomType is defined externally in federation"
 #
 # - file: "path/to/schema.graphqls"
-#   line: 15
-#   rule: "invalid_directive"
-#   value: "customDirective"
-#   reason: "Custom directive allowed for this specific use case"
+#   rule: "types-have-descriptions"
+#   value: "LegacyType"
+#   reason: "Documented in the gateway instead"
 
 # Global settings
 settings:
-  # Whether to validate federation directives (default: true)
+  # Whether to build the federation schema and validate federation
+  # directives (default: true)
   validateFederation: true
   # Whether to run the *-have-descriptions rules (default: true)
   checkDescriptions: true
