@@ -3,102 +3,89 @@ package rules
 import (
 	"testing"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
 func TestValidateDirectiveNames(t *testing.T) {
 	t.Parallel()
 
-	doc, _ := astparser.ParseGraphqlDocumentString("type Query { id: ID } directive @key on OBJECT")
-
 	tests := []struct {
-		name string
-		doc  *ast.Document
-		want bool
+		name   string
+		schema string
+		want   []string
 	}{
-		{"valid directives", &doc, true},
+		{
+			name: "federation v2 and built-in directives",
+			schema: `type Query @shareable { me: User @authenticated @requiresScopes(scopes: [["read"]]) }
+type User @key(fields: "id") @key(fields: "email") @federation__tag(name: "a") {
+  id: ID! @cost(weight: 1) name(first: Int @deprecated(reason: "x")): String @policy(policies: [["p"]])
+}
+enum Role @inaccessible { ADMIN @tag(name: "t") }
+input Filter { id: ID @inaccessible }
+scalar Date @specifiedBy(url: "https://example.com")
+union Result @tag(name: "r") = User`,
+		},
+		{
+			name: "directive defined in the schema or composed",
+			schema: `extend schema @composeDirective(name: "@composed")
+directive @custom on FIELD_DEFINITION
+type Query { a: String @custom b: String @composed }`,
+		},
+		{
+			name:   "unknown directive with suggestion",
+			schema: "type Query @kye(fields: \"id\") { id: ID }",
+			want: []string{
+				"invalid-federation-directive: Invalid federation directive '@kye' on type 'Query'. Did you mean '@key'?",
+			},
+		},
+		{
+			name: "unknown directives on every kind",
+			schema: `type Query { a(x: Int @foo): String @foo }
+extend type User @foo { id: ID }
+interface Node @foo { id: ID }
+input In { a: Int @foo }
+enum E { A @foo }
+union U @foo = Query
+scalar S @foo`,
+			want: []string{
+				"invalid-federation-directive: Invalid federation directive '@foo' on field 'Query.a'.",
+				"invalid-federation-directive: Invalid federation directive '@foo' on argument 'Query.a.x'.",
+				"invalid-federation-directive: Invalid federation directive '@foo' on type 'User'.",
+				"invalid-federation-directive: Invalid federation directive '@foo' on interface 'Node'.",
+				"invalid-federation-directive: Invalid federation directive '@foo' on input value 'In.a'.",
+				"invalid-federation-directive: Invalid federation directive '@foo' on enum value 'E.A'.",
+				"invalid-federation-directive: Invalid federation directive '@foo' on union 'U'.",
+				"invalid-federation-directive: Invalid federation directive '@foo' on scalar 'S'.",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := ValidateDirectiveNames(test.doc)
-			if got != test.want {
-				t.Errorf("got %v, want %v", got, test.want)
+			doc, report := astparser.ParseGraphqlDocumentString(test.schema)
+			assert.False(t, report.HasErrors(), report.Error())
+
+			var got []string
+			for _, finding := range ValidateDirectiveNames(&doc, test.schema) {
+				got = append(got, finding.Message)
 			}
+
+			assert.ElementsMatch(t, test.want, got)
 		})
 	}
 }
 
-func TestValidateDirectiveNames_Invalid(t *testing.T) {
+func TestValidateDirectiveNames_LineAndValue(t *testing.T) {
 	t.Parallel()
 
-	doc, _ := astparser.ParseGraphqlDocumentString("type Query @invalid { id: ID }")
+	schema := "type Query {\n  id: ID @foo\n}"
+	doc, _ := astparser.ParseGraphqlDocumentString(schema)
 
-	got := ValidateDirectiveNames(&doc)
-	if got {
-		t.Errorf("expected false for invalid directive, got true")
-	}
-}
-
-func TestValidateDirectives(t *testing.T) {
-	t.Parallel()
-
-	doc, _ := astparser.ParseGraphqlDocumentString("type Query { id: ID } directive @key on OBJECT")
-	valid := map[string]bool{"key": true}
-
-	tests := []struct {
-		name       string
-		directives []int
-		want       bool
-	}{
-		{"valid", []int{}, true},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := validateDirectives(&doc, test.directives, valid, "Query", "type")
-			if got != test.want {
-				t.Errorf("got %v, want %v", got, test.want)
-			}
-		})
-	}
-}
-
-func TestValidateDirectives_MoreCases(t *testing.T) {
-	t.Parallel()
-
-	doc, _ := astparser.ParseGraphqlDocumentString("type Query @invalid { id: ID }")
-	valid := map[string]bool{"key": true}
-	// Find the directive refs for the first object type
-	var directiveRefs []int
-	if len(doc.ObjectTypeDefinitions) > 0 {
-		directiveRefs = doc.ObjectTypeDefinitions[0].Directives.Refs
-	}
-
-	got := validateDirectives(&doc, directiveRefs, valid, "Query", "type")
-	if got {
-		t.Errorf("expected false for invalid directive, got true")
-	}
-
-	invalid := map[string]bool{"invalid": false}
-
-	got2 := validateDirectives(&doc, []int{}, invalid, "Query", "type")
-	if !got2 {
-		t.Errorf("expected true for no directives, got false")
-	}
-}
-
-func TestReportDirectiveError(t *testing.T) {
-	t.Parallel()
-	// Just ensure it doesn't panic
-	reportDirectiveError("invalid", "Query", "type")
-}
-
-func TestReportDirectiveError_AllKinds(t *testing.T) {
-	t.Parallel()
-	reportDirectiveError("invalid", "Query", "type")
-	reportDirectiveError("invalid", "fieldName", "field")
+	got := ValidateDirectiveNames(&doc, schema)
+	assert.Len(t, got, 1)
+	assert.Equal(t, 2, got[0].LineNum)
+	assert.Equal(t, "foo", got[0].Value)
+	assert.Equal(t, "id: ID @foo", got[0].LineContent)
 }

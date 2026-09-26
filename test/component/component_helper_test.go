@@ -587,6 +587,10 @@ func generateSuppressions() []SuppressionEntry {
 			Value:  "",
 			Reason: "suppress for test",
 		},
+		{
+			Rule:   "invalid-federation-schema",
+			Reason: "the fixtures are independent schemas, so their types collide when merged",
+		},
 	}
 }
 

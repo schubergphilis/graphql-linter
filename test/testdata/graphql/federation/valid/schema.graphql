@@ -1,0 +1,23 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.9", import: ["@key", "@shareable", "@authenticated"])
+  @composeDirective(name: "@audit")
+
+"""Root query type."""
+type Query {
+  """The signed in user."""
+  me: User @authenticated
+  """Pagination information."""
+  pageInfo: PageInfo!
+}
+
+"""Pagination information for a connection."""
+type PageInfo {
+  """The cursor of the last node."""
+  endCursor: String
+  """True if there are more pages."""
+  hasNextPage: Boolean!
+  """True if there are previous pages."""
+  hasPreviousPage: Boolean!
+  """The cursor of the first node."""
+  startCursor: String
+}

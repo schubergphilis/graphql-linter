@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -25,10 +26,21 @@ func TestFilterSchemaComments(t *testing.T) {
 func TestValidateFederationSchema(t *testing.T) {
 	t.Parallel()
 
-	got := federation.ValidateFederationSchema("type Query { id: ID }")
-	if !got {
-		t.Errorf("expected federation schema to be valid")
-	}
+	assert.Empty(t, federation.ValidateFederationSchema("type Query { id: ID }"))
+
+	// A subgraph may extend an entity owned by another subgraph and repeat @key.
+	assert.Empty(t, federation.ValidateFederationSchema(
+		`type Query { me: User } extend type User @key(fields: "id") @key(fields: "email") { id: ID! email: String }`,
+	))
+
+	got := federation.ValidateFederationSchema("type Query { a: String }\n\ntype Query {\n  b: Unknown\n}")
+	assert.Equal(t, []string{
+		"3 invalid-federation-schema: there can be only one type named 'Query'",
+		"4 invalid-federation-schema: Unknown type \"Unknown\".",
+	}, []string{
+		fmt.Sprintf("%d %s", got[0].LineNum, got[0].Message),
+		fmt.Sprintf("%d %s", got[1].LineNum, got[1].Message),
+	})
 }
 
 func TestNewStore(t *testing.T) {

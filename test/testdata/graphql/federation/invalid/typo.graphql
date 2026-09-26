@@ -1,0 +1,11 @@
+"""Root query type."""
+type Query {
+  """The product."""
+  product: Product
+}
+
+"""A product."""
+type Product @kye(fields: "id") {
+  """The identifier."""
+  id: ID!
+}
