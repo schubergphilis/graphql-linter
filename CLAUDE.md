@@ -121,22 +121,19 @@ This project follows **Clean Architecture** with three distinct layers:
 
 ## Configuration
 
-Default config location: `.graphql-linter.yml` or `.graphql-linter.yaml` in project root.
+Default config location: `.graphql-linter.yml`, then `.graphql-linter.yaml`, in the current directory.
 
 Example config structure:
 ```yaml
-rules:
-  require-descriptions:
-    types: true
-    fields: true
-    enums: true
 suppressions:
-  - path: "test/testdata/graphql/invalid/ignore_this.graphql"
-    rules: ["require-descriptions"]
+  - file: "test/testdata/graphql/invalid/ignore_this.graphql"
+    line: 12
+    rule: "types-have-descriptions"
+    value: "User"
+    reason: "Documented elsewhere"
 settings:
-  strictMode: true
-  validateFederation: true
-  checkDescriptions: true
+  validateFederation: true   # false skips federation build and directive checks
+  checkDescriptions: true    # false skips the *-have-descriptions rules
 ```
 
 See `.graphql-linter.yml.example` for full configuration options.

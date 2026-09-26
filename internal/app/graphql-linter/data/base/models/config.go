@@ -9,7 +9,6 @@ type Suppression struct {
 }
 
 type Settings struct {
-	StrictMode         bool `yaml:"strictMode"`
 	ValidateFederation bool `yaml:"validateFederation"`
 	CheckDescriptions  bool `yaml:"checkDescriptions"`
 }
@@ -17,4 +16,14 @@ type Settings struct {
 type LinterConfig struct {
 	Suppressions []Suppression `yaml:"suppressions"`
 	Settings     Settings      `yaml:"settings"`
+}
+
+// NewLinterConfig returns a config with the default settings.
+func NewLinterConfig() *LinterConfig {
+	return &LinterConfig{
+		Settings: Settings{
+			ValidateFederation: true,
+			CheckDescriptions:  true,
+		},
+	}
 }

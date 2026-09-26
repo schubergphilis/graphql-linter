@@ -10,6 +10,7 @@ import (
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application/report"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
@@ -299,4 +300,50 @@ func TestRun_OutsideGoModule(t *testing.T) {
 			t.Errorf("targetPath %q: expected lint result, got %v", targetPath, err)
 		}
 	}
+}
+
+func TestGetUnsuppressedDescriptionErrors_CheckDescriptions(t *testing.T) {
+	t.Parallel()
+
+	errs := []models.DescriptionError{
+		{Message: "types-have-descriptions: Object type 'Query' is missing a description"},
+		{Message: "types-are-capitalized: The object type 'foo' should start with a capital letter."},
+	}
+
+	config := models.NewLinterConfig()
+	assert.Len(t, getUnsuppressedDescriptionErrors(errs, config, "s.graphql"), 2)
+
+	config.Settings.CheckDescriptions = false
+	got := getUnsuppressedDescriptionErrors(errs, config, "s.graphql")
+	assert.Equal(t, errs[1:], got)
+}
+
+//nolint:paralleltest //t.Chdir cannot run in parallel
+func TestRun_ValidateFederationDisabled(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	// An unknown directive is rejected by the federation checks only.
+	schema := `"""Q"""
+type Query @foo {
+  """A"""
+  a: PageInfo
+}
+"""P"""
+type PageInfo {
+  """E"""
+  endCursor: String
+  """N"""
+  hasNextPage: Boolean!
+  """P"""
+  hasPreviousPage: Boolean!
+  """S"""
+  startCursor: String
+}
+`
+	require.NoError(t, os.WriteFile("s.graphql", []byte(schema), 0o600))
+
+	require.Error(t, Execute{}.Run(), "federation checks should reject @foo by default")
+
+	require.NoError(t, os.WriteFile(".graphql-linter.yml", []byte("settings:\n  validateFederation: false\n"), 0o600))
+	require.NoError(t, Execute{}.Run())
 }
