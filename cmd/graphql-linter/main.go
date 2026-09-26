@@ -13,7 +13,7 @@ var Version string
 func main() {
 	logging.Setup(false)
 
-	cliPresent := presentation.NewCLI(presentation.NewFlag(), Version)
+	cliPresent := presentation.NewCLI(os.Args[1:], Version)
 
 	err := cliPresent.Run()
 	if err != nil {

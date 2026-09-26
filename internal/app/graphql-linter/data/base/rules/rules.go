@@ -8,86 +8,30 @@ import (
 	"unicode"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
-	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/constants"
 	pkg_rules "github.com/schubergphilis/graphql-linter/internal/pkg/rules"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 )
 
 const (
+	rootQueryType        = "Query"
+	rootMutationType     = "Mutation"
+	rootSubscriptionType = "Subscription"
+
 	minEnumValuesForSortCheck = 2
 	minFieldsForSortCheck     = 2
 	splitNParts               = 2
 )
 
-//nolint:interfacebloat //TODO: generate one method per rule
-type Ruler interface {
-	EnumValuesSortedAlphabetically(
-		doc *ast.Document,
-		modelsLinterConfig *models.LinterConfig,
-		schemaString string,
-		schemaPath string,
-	) []models.DescriptionError
-	FieldsAreCamelCased(doc *ast.Document, schemaString string) []models.DescriptionError
-	InputObjectFieldsSortedAlphabetically(doc *ast.Document, schemaString string) []models.DescriptionError
-	InputObjectValuesCamelCased(doc *ast.Document, schemaString string) []models.DescriptionError
-	MissingArgumentDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError
-	MissingDeprecationReasons(doc *ast.Document, schemaString string) []models.DescriptionError
-	MissingEnumValueDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError
-	MissingFieldDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError
-	MissingInputObjectValueDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError
-	MissingQueryRootType(doc *ast.Document, schemaString string) []models.DescriptionError
-	MissingTypeDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError
-	RelayConnectionArgumentsSpec(doc *ast.Document, schemaString string) []models.DescriptionError
-	RelayConnectionTypesSpec(doc *ast.Document, schemaString string) []models.DescriptionError
-	RelayPageInfoSpec(doc *ast.Document, schemaString string) []models.DescriptionError
-	ReportUncapitalizedDescription(
-		kind,
-		parent,
-		name,
-		desc,
-		schemaString string,
-	) *models.DescriptionError
-	TypesAreCapitalized(doc *ast.Document, schemaString string) []models.DescriptionError
-	UnusedTypes(doc *ast.Document, schemaString string) []models.DescriptionError
-	UnsortedFields(
-		fieldDefs []int,
-		getFieldName func(int) string,
-		typeLabel,
-		typeName,
-		schemaString string,
-	) []models.DescriptionError
-	ValidateEnumTypes(
-		doc *ast.Document,
-		modelsLinterConfig *models.LinterConfig,
-		schemaContent string,
-		schemaPath string,
-	) ([]string, []int, []models.DescriptionError)
-	ValidateFieldTypes(
-		doc *ast.Document,
-		schemaContent string,
-		builtInScalars, definedTypes map[string]bool,
-	) ([]string, []int)
-	ValidateInputFieldTypes(
-		doc *ast.Document,
-		schemaContent string,
-		builtInScalars, definedTypes map[string]bool,
-	) ([]string, []int)
-}
-
 type Rule struct{}
-
-func NewRule() *Rule {
-	return &Rule{}
-}
 
 func (r Rule) TypesAreCapitalized(doc *ast.Document, schemaString string) []models.DescriptionError {
 	errors := make([]models.DescriptionError, 0)
 
 	for _, obj := range doc.ObjectTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(obj.Name)
-		if typeName == constants.RootQueryType ||
-			typeName == constants.RootMutationType ||
-			typeName == constants.RootSubscriptionType {
+		if typeName == rootQueryType ||
+			typeName == rootMutationType ||
+			typeName == rootSubscriptionType {
 			continue
 		}
 
@@ -625,7 +569,14 @@ func (r Rule) ReportUncapitalizedDescription(
 }
 
 func (r Rule) UnusedTypes(doc *ast.Document, schemaString string) []models.DescriptionError {
-	definedTypes := collectDefinedTypeNames(doc)
+	definedTypes := CollectDefinedTypes(doc)
+	for name := range definedTypes {
+		definedTypes[name] = false
+	}
+
+	delete(definedTypes, rootQueryType)
+	delete(definedTypes, rootMutationType)
+	delete(definedTypes, rootSubscriptionType)
 
 	unusedTypeErrors := make([]models.DescriptionError, 0, len(definedTypes))
 

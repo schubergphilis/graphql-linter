@@ -23,7 +23,6 @@ jobs:
             build-tags: e2e
           - testing-type: lint
             build-tags: integration
-          - testing-type: mocks-tidy
           - testing-type: security-golang-modules
           - testing-type: security-grype
           - testing-type: security-trivy
@@ -44,7 +43,7 @@ jobs:
           code-coverage-expected: 85.0
           code-coverage-timeout: ${{ env.test-timeout }}
           golang-unit-tests-exclusions: |-
-            \(cmd\/.*\|graphql\-testdata\-generator\|mocks\)$\?
+            \(cmd\/.*\)$\?
           golangci-timeout: 10
           test-timeout: ${{ env.test-timeout }}
           testing-type: ${{ matrix.args.testing-type }}

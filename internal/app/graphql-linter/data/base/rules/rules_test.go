@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"sort"
 	"strings"
 	"testing"
 
@@ -235,9 +234,7 @@ func TestGetAvailableTypes(t *testing.T) {
 			t.Parallel()
 
 			got := getAvailableTypes(test.builtInScalars, test.definedTypes)
-			sort.Strings(got)
-			sort.Strings(test.expected)
-			assert.Equal(t, test.expected, got)
+			assert.ElementsMatch(t, test.expected, got)
 		})
 	}
 }
@@ -560,7 +557,7 @@ func TestRemoveAllDigits_ExtraCases(t *testing.T) {
 func TestReportUncapitalizedDescription(t *testing.T) {
 	t.Parallel()
 
-	rule := NewRule()
+	rule := Rule{}
 
 	tests := []struct {
 		name      string
@@ -642,7 +639,7 @@ func TestReportUncapitalizedDescription(t *testing.T) {
 func TestFindMissingArgumentDescriptions(t *testing.T) {
 	t.Parallel()
 
-	rule := NewRule()
+	rule := Rule{}
 
 	tests := []struct {
 		name        string
@@ -715,7 +712,7 @@ func TestFindMissingArgumentDescriptions(t *testing.T) {
 func TestFindRelayConnectionTypesSpec(t *testing.T) {
 	t.Parallel()
 
-	rule := NewRule()
+	rule := Rule{}
 
 	tests := []struct {
 		name       string
@@ -794,7 +791,7 @@ func TestFindRelayConnectionTypesSpec(t *testing.T) {
 func TestFindMissingInputObjectValueDescriptions(t *testing.T) {
 	t.Parallel()
 
-	rule := NewRule()
+	rule := Rule{}
 
 	tests := []struct {
 		name         string
@@ -854,7 +851,7 @@ func TestFindMissingInputObjectValueDescriptions(t *testing.T) {
 func TestFindMissingEnumValueDescriptions(t *testing.T) {
 	t.Parallel()
 
-	rule := NewRule()
+	rule := Rule{}
 
 	tests := []struct {
 		name        string
@@ -919,7 +916,7 @@ func TestFindMissingEnumValueDescriptions(t *testing.T) {
 func TestFindInputObjectValuesCamelCased(t *testing.T) {
 	t.Parallel()
 
-	rule := NewRule()
+	rule := Rule{}
 
 	tests := []struct {
 		name        string
@@ -990,7 +987,7 @@ func TestFindInputObjectValuesCamelCased(t *testing.T) {
 func TestFindRelayPageInfoSpec(t *testing.T) {
 	t.Parallel()
 
-	rule := NewRule()
+	rule := Rule{}
 
 	tests := []struct {
 		name        string
@@ -1039,7 +1036,7 @@ func TestFindFieldDefinitionLine(t *testing.T) {
 func TestValidateEnumTypes(t *testing.T) {
 	t.Parallel()
 
-	r := NewRule()
+	r := Rule{}
 
 	doc, _ := astparser.ParseGraphqlDocumentString("enum Status { ACTIVE 1NVALID FOO1 }")
 
