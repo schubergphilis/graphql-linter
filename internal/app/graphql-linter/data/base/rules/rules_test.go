@@ -9,88 +9,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
-func TestFindLineNumberByText_ExtraCases(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name          string
-		schemaContent string
-		searchText    string
-		wantLine      int
-	}{
-		{"case sensitive", "Foo\nfoo\nFOO", "FOO", 3},
-		{
-			"three foo matches",
-			"foo\nfoo\nfoo", //nolint:dupword //multiple duplicates required to test whether it finds the first match
-			"foo",
-			1,
-		},
-		{"empty searchText", "foo\nbar", "", 1},
-		{"no match", "foo\nbar", "baz", 0},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := findLineNumberByText(test.schemaContent, test.searchText)
-			if got != test.wantLine {
-				t.Errorf("got %v, want %v", got, test.wantLine)
-			}
-		})
-	}
-}
-
-func TestFindLineNumberByText(t *testing.T) {
-	t.Parallel()
-
-	tests := []LineTestCase{
-		{
-			Name:          "text on first line",
-			SchemaContent: "enum Color {\nRED\nGREEN\n}",
-			SearchText:    "enum",
-			WantLine:      1,
-		},
-		{
-			Name:          "text on second line",
-			SchemaContent: "enum Color {\nRED\nGREEN\n}",
-			SearchText:    "RED",
-			WantLine:      2,
-		},
-		{
-			Name:          "text on third line",
-			SchemaContent: "enum Color {\nRED\nGREEN\n}",
-			SearchText:    "GREEN",
-			WantLine:      3,
-		},
-		{
-			Name:          "text not found",
-			SchemaContent: "enum Color {\nRED\nGREEN\n}",
-			SearchText:    "BLUE",
-			WantLine:      0,
-		},
-		{
-			Name:          "multiple matches, returns first",
-			SchemaContent: "A\nB\nA\nC",
-			SearchText:    "A",
-			WantLine:      1,
-		},
-		{
-			Name:          "empty schemaContent",
-			SchemaContent: "",
-			SearchText:    "anything",
-			WantLine:      0,
-		},
-		{
-			Name:          "empty searchText matches first line",
-			SchemaContent: "foo\nbar",
-			SearchText:    "",
-			WantLine:      1,
-		},
-	}
-
-	runLineTableTest(t, tests, findLineNumberByText)
-}
-
 func TestGetBaseTypeName(t *testing.T) {
 	t.Parallel()
 
@@ -554,88 +472,6 @@ func TestRemoveAllDigits_ExtraCases(t *testing.T) {
 	}
 }
 
-func TestReportUncapitalizedDescription(t *testing.T) {
-	t.Parallel()
-
-	rule := Rule{}
-
-	tests := []struct {
-		name      string
-		kind      string
-		parent    string
-		field     string
-		desc      string
-		schema    string
-		expectNil bool
-		expectMsg string
-	}{
-		{
-			"type capitalized", "type", "", "Query", "A capitalized description.", "type Query { id: ID }",
-			true,
-			"",
-		},
-		{
-			"type uncapitalized", "type", "", "Query", "uncapitalized description.", "type Query { id: ID }",
-			false,
-			"should be capitalized",
-		},
-		{
-			"field capitalized", "field", "Query", "id", "ID field.", "type Query { id: ID }",
-			true,
-			"",
-		},
-		{
-			"field uncapitalized", "field", "Query", "id", "id field.", "type Query { id: ID }",
-			false,
-			"should be capitalized",
-		},
-		{
-			"enum capitalized", "enum", "Status", "ACTIVE", "Active status.", "enum Status { ACTIVE }",
-			true,
-			"",
-		},
-		{
-			"enum uncapitalized", "enum", "Status", "ACTIVE", "active status.", "enum Status { ACTIVE }",
-			false,
-			"should be capitalized",
-		},
-		{
-			"argument capitalized", "argument", "id", "input", "Input argument.", "type Query { id(input: String): ID }",
-			true,
-			"",
-		},
-		{
-			"argument uncapitalized", "argument", "id", "input", "input argument.", "type Query { id(input: String): ID }",
-			false,
-			"should be capitalized",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			err := rule.ReportUncapitalizedDescription(
-				test.kind,
-				test.parent,
-				test.field,
-				test.desc,
-				test.schema,
-			)
-			if test.expectNil {
-				if err != nil {
-					t.Errorf("expected nil, got %v", err)
-				}
-			} else {
-				if err == nil {
-					t.Errorf("expected error, got nil")
-				} else if !strings.Contains(err.Message, test.expectMsg) {
-					t.Errorf("expected message to contain '%s', got '%s'", test.expectMsg, err.Message)
-				}
-			}
-		})
-	}
-}
-
 func TestFindMissingArgumentDescriptions(t *testing.T) {
 	t.Parallel()
 
@@ -1015,21 +851,6 @@ func TestFindRelayPageInfoSpec(t *testing.T) {
 		} else {
 			assert.Empty(t, errs, test.name)
 		}
-	}
-}
-
-func TestFindFieldDefinitionLine(t *testing.T) {
-	t.Parallel()
-
-	schema := "type Query { id: ID name: String }"
-
-	line := findFieldDefinitionLine(schema, "id", "test.graphql")
-	if line != 0 && line != 1 {
-		t.Errorf("expected line 0 or 1 for id, got %v", line)
-	}
-
-	if findFieldDefinitionLine(schema, "foo", "test.graphql") != 0 {
-		t.Errorf("expected 0 for missing field")
 	}
 }
 
