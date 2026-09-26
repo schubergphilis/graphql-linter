@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"sort"
 	"strings"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application/report"
@@ -232,6 +233,7 @@ func (e Execute) collectDescriptionErrors(
 	rule := rules.Rule{}
 
 	helpers := []func(*ast.Document, string) []models.DescriptionError{
+		rule.EnumValuesAllCaps,
 		rule.FieldsAreCamelCased,
 		rule.InputObjectFieldsSortedAlphabetically,
 		rule.InputObjectValuesCamelCased,
@@ -240,16 +242,13 @@ func (e Execute) collectDescriptionErrors(
 		rule.MissingEnumValueDescriptions,
 		rule.MissingFieldDescriptions,
 		rule.MissingInputObjectValueDescriptions,
-		rule.MissingQueryRootType,
 		rule.MissingTypeDescriptions,
 		rule.RelayConnectionArgumentsSpec,
 		rule.RelayConnectionTypesSpec,
-		rule.RelayPageInfoSpec,
 		rule.TypesAreCapitalized,
-		dataStore.UncapitalizedDescriptions,
+		rule.UncapitalizedDescriptions,
 		dataStore.UnsortedInterfaceFields,
 		dataStore.UnsortedTypeFields,
-		rule.UnusedTypes,
 	}
 	for _, helper := range helpers {
 		errList := helper(doc, schemaString)
@@ -304,19 +303,88 @@ func (e Execute) lintSchemaFiles(
 	schemaFiles []string,
 ) (int, int, []models.DescriptionError) {
 	totalErrors := 0
-	errorFilesCount := 0
+	failedFiles := make(map[string]bool)
 
 	var allErrors []models.DescriptionError
 
 	for _, schemaFile := range schemaFiles {
 		errCount, fileErrCount, fileErrors := e.lintSingleSchemaFile(modelsLinterConfig, schemaFile)
 		totalErrors += errCount
-		errorFilesCount += fileErrCount
+
+		if fileErrCount > 0 {
+			failedFiles[schemaFile] = true
+		}
 
 		allErrors = append(allErrors, fileErrors...)
 	}
 
-	return totalErrors, errorFilesCount, allErrors
+	schemaErrors := lintMergedSchema(modelsLinterConfig, schemaFiles)
+	for _, schemaErr := range schemaErrors {
+		failedFiles[schemaErr.FilePath] = true
+	}
+
+	totalErrors += len(schemaErrors)
+	allErrors = append(allErrors, schemaErrors...)
+
+	return totalErrors, len(failedFiles), allErrors
+}
+
+// lintMergedSchema runs the schema wide rules once on all files together, so
+// types defined or used in another file are taken into account.
+func lintMergedSchema(
+	modelsLinterConfig *models.LinterConfig,
+	schemaFiles []string,
+) []models.DescriptionError {
+	contents := make([]string, len(schemaFiles))
+	startLines := make([]int, len(schemaFiles)) // first merged line of each file
+
+	line := 1
+
+	for fileIdx, schemaFile := range schemaFiles {
+		schemaBytes, err := os.ReadFile(schemaFile)
+		if err == nil { // read failures are already reported per file
+			contents[fileIdx] = string(schemaBytes)
+		}
+
+		startLines[fileIdx] = line
+		line += strings.Count(contents[fileIdx], "\n") + 1
+	}
+
+	merged := strings.Join(contents, "\n")
+
+	doc, parseReport := astparser.ParseGraphqlDocumentString(merged)
+	if parseReport.HasErrors() {
+		slog.Debug("skipping schema wide rules: the merged schema does not parse")
+
+		return nil
+	}
+
+	rule := rules.Rule{}
+
+	var findings []models.DescriptionError
+	for _, schemaRule := range []func(*ast.Document, string) []models.DescriptionError{
+		rule.MissingQueryRootType,
+		rule.RelayPageInfoSpec,
+		rule.UnusedTypes,
+	} {
+		findings = append(findings, schemaRule(&doc, merged)...)
+	}
+
+	unsuppressed := make([]models.DescriptionError, 0, len(findings))
+
+	for _, finding := range findings {
+		fileIdx := sort.SearchInts(startLines, finding.LineNum+1) - 1
+		finding.FilePath = schemaFiles[fileIdx]
+		finding.LineNum = finding.LineNum - startLines[fileIdx] + 1
+
+		unsuppressed = append(unsuppressed, getUnsuppressedDescriptionErrors(
+			[]models.DescriptionError{finding},
+			modelsLinterConfig,
+			finding.FilePath,
+		)...)
+	}
+
+	return unsuppressed
 }
 
 func (e Execute) lintSingleSchemaFile(

@@ -3,7 +3,7 @@ package rules
 import (
 	"fmt"
 	"log/slog"
-	"sort"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -24,26 +24,37 @@ const (
 type Rule struct{}
 
 func (r Rule) TypesAreCapitalized(doc *ast.Document, schemaString string) []models.DescriptionError {
-	errors := make([]models.DescriptionError, 0)
+	var errors []models.DescriptionError
 
-	for _, obj := range doc.ObjectTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(obj.Name)
-		if typeName == rootQueryType ||
-			typeName == rootMutationType ||
-			typeName == rootSubscriptionType {
+	for _, def := range typeDefinitions(doc) {
+		if (def.kind != kindObject && def.kind != kindInterface) || isRootType(def.name) {
 			continue
 		}
 
-		if len(typeName) == 0 || !unicode.IsUpper(rune(typeName[0])) {
-			lineNum := findLineNumberByText(schemaString, "type "+typeName)
-			lineContent := GetLineContent(schemaString, lineNum)
-			message := "types-are-capitalized: The object type '" + typeName + "' should start with a capital letter."
-			errors = append(errors, models.DescriptionError{
-				Value:       typeName,
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			})
+		if !unicode.IsUpper(rune(def.name[0])) {
+			errors = append(errors, newFinding(schemaString, LineOf(doc, def.nameRef), def.name,
+				"types-are-capitalized: The "+strings.ToLower(def.kind)+" '"+def.name+
+					"' should start with a capital letter."))
+		}
+	}
+
+	return errors
+}
+
+func (r Rule) EnumValuesAllCaps(doc *ast.Document, schemaString string) []models.DescriptionError {
+	var errors []models.DescriptionError
+
+	for _, enum := range doc.EnumTypeDefinitions {
+		enumName := doc.Input.ByteSliceString(enum.Name)
+
+		for _, valueRef := range enum.EnumValuesDefinition.Refs {
+			valueDef := doc.EnumValueDefinitions[valueRef]
+
+			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
+			if valueName != strings.ToUpper(valueName) {
+				errors = append(errors, newFinding(schemaString, LineOf(doc, valueDef.EnumValue), valueName,
+					"enum-values-all-caps: The enum value `"+enumName+"."+valueName+"` should be uppercase."))
+			}
 		}
 	}
 
@@ -72,7 +83,7 @@ func (r Rule) EnumValuesSortedAlphabetically(
 			valueNames,
 			minEnumValuesForSortCheck,
 			schemaString,
-			"enum ",
+			LineOf(doc, enum.Name),
 			enumName,
 			"enum-values-sorted-alphabetically",
 		); err != nil {
@@ -94,28 +105,36 @@ func (r Rule) EnumValuesSortedAlphabetically(
 func (r Rule) MissingDeprecationReasons(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
-	for _, enum := range doc.EnumTypeDefinitions {
-		enumName := doc.Input.ByteSliceString(enum.Name)
-		for _, valueRef := range enum.EnumValuesDefinition.Refs {
-			valueDef := doc.EnumValueDefinitions[valueRef]
+	check := func(directiveRefs []int, kind, parent string, nameRef ast.ByteSliceReference) {
+		name := doc.Input.ByteSliceString(nameRef)
 
-			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
-			for _, dirRef := range valueDef.Directives.Refs {
-				dir := doc.Directives[dirRef]
+		for _, dirRef := range directiveRefs {
+			dir := doc.Directives[dirRef]
+			if doc.Input.ByteSliceString(dir.Name) == "deprecated" && len(dir.Arguments.Refs) == 0 {
+				errors = append(errors, newFinding(schemaString, LineOf(doc, nameRef), name,
+					"deprecations-have-a-reason: Deprecated "+kind+" '"+parent+"."+name+"' is missing a reason."))
+			}
+		}
+	}
 
-				dirName := doc.Input.ByteSliceString(dir.Name)
-				if dirName == "deprecated" && len(dir.Arguments.Refs) == 0 {
-					lineNum := findLineNumberByText(schemaString, valueName)
-					lineContent := GetLineContent(schemaString, lineNum)
-					message := "deprecations-have-a-reason: Deprecated enum value '" + enumName + "." +
-						valueName + "' is missing a reason."
-					errors = append(errors, models.DescriptionError{
-						Value:       valueName,
-						LineNum:     lineNum,
-						Message:     message,
-						LineContent: lineContent,
-					})
-				}
+	for _, def := range typeDefinitions(doc) {
+		for _, ref := range def.enumValues {
+			valueDef := doc.EnumValueDefinitions[ref]
+			check(valueDef.Directives.Refs, "enum value", def.name, valueDef.EnumValue)
+		}
+
+		for _, ref := range def.inputValues {
+			inputDef := doc.InputValueDefinitions[ref]
+			check(inputDef.Directives.Refs, "input value", def.name, inputDef.Name)
+		}
+
+		for _, ref := range def.fields {
+			fieldDef := doc.FieldDefinitions[ref]
+			check(fieldDef.Directives.Refs, "field", def.name, fieldDef.Name)
+
+			for _, argRef := range fieldDef.ArgumentsDefinition.Refs {
+				argDef := doc.InputValueDefinitions[argRef]
+				check(argDef.Directives.Refs, "argument", def.name+"."+doc.Input.ByteSliceString(fieldDef.Name), argDef.Name)
 			}
 		}
 	}
@@ -126,24 +145,17 @@ func (r Rule) MissingDeprecationReasons(doc *ast.Document, schemaString string) 
 func (r Rule) MissingArgumentDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
-	for _, obj := range doc.ObjectTypeDefinitions {
-		for _, fieldRef := range obj.FieldsDefinition.Refs {
+	for _, def := range typeDefinitions(doc) {
+		for _, fieldRef := range def.fields {
 			fieldDef := doc.FieldDefinitions[fieldRef]
 			for _, argRef := range fieldDef.ArgumentsDefinition.Refs {
 				argDef := doc.InputValueDefinitions[argRef]
 				if !argDef.Description.IsDefined {
 					argName := doc.Input.ByteSliceString(argDef.Name)
 					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-					lineNum := findLineNumberByText(schemaString, argName+":")
-					lineContent := GetLineContent(schemaString, lineNum)
-					message := "arguments-have-descriptions: The '" + argName + "' argument of '" + fieldName +
-						"' is missing a description."
-					errors = append(errors, models.DescriptionError{
-						Value:       argName,
-						LineNum:     lineNum,
-						Message:     message,
-						LineContent: lineContent,
-					})
+					errors = append(errors, newFinding(schemaString, LineOf(doc, argDef.Name), argName,
+						"arguments-have-descriptions: The '"+argName+"' argument of '"+fieldName+
+							"' is missing a description."))
 				}
 			}
 		}
@@ -158,38 +170,22 @@ func (r Rule) UnsortedFields(
 	typeLabel,
 	typeName,
 	schemaString string,
+	lineNum int,
 ) []models.DescriptionError {
 	fieldNames := make([]string, len(fieldDefs))
 	for i, fieldRef := range fieldDefs {
 		fieldNames[i] = getFieldName(fieldRef)
 	}
 
-	if len(fieldNames) < minFieldsForSortCheck {
+	if len(fieldNames) < minFieldsForSortCheck || slices.IsSorted(fieldNames) {
 		return nil
 	}
 
-	sorted := make([]string, len(fieldNames))
-	copy(sorted, fieldNames)
-	sort.Strings(sorted)
+	message := typeLabel + "-fields-sorted-alphabetically: The fields of " +
+		typeLabel + " type `" + typeName + "` should be sorted in alphabetical order.\nExpected sorting: " +
+		strings.Join(slices.Sorted(slices.Values(fieldNames)), ", ")
 
-	for i := range fieldNames {
-		if fieldNames[i] != sorted[i] {
-			lineNum := findLineNumberByText(schemaString, typeLabel+" "+typeName)
-			lineContent := GetLineContent(schemaString, lineNum)
-			message := typeLabel + "-fields-sorted-alphabetically: The fields of " +
-				typeLabel + " type `" + typeName + "` should be sorted in alphabetical order.\nExpected sorting: " +
-				strings.Join(sorted, ", ")
-
-			return []models.DescriptionError{{
-				Value:       typeName,
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			}}
-		}
-	}
-
-	return nil
+	return []models.DescriptionError{newFinding(schemaString, lineNum, typeName, message)}
 }
 
 func (r Rule) MissingInputObjectValueDescriptions(
@@ -204,19 +200,11 @@ func (r Rule) MissingInputObjectValueDescriptions(
 			fieldDef := doc.InputValueDefinitions[fieldRef]
 			if !fieldDef.Description.IsDefined {
 				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-				lineNum := findLineNumberByText(schemaString, fieldName+":")
-				lineContent := GetLineContent(schemaString, lineNum)
-				message := fmt.Sprintf(
+				errors = append(errors, newFinding(schemaString, LineOf(doc, fieldDef.Name), fieldName, fmt.Sprintf(
 					"input-object-values-have-descriptions: The input value `%s.%s` is missing a description.",
 					inputName,
 					fieldName,
-				)
-				errors = append(errors, models.DescriptionError{
-					Value:       fieldName,
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
+				)))
 			}
 		}
 	}
@@ -244,10 +232,11 @@ func (r Rule) InputObjectFieldsSortedAlphabetically(
 			fieldNames,
 			minFieldsForSortCheck,
 			schemaString,
-			"input ",
+			LineOf(doc, input.Name),
 			"fields of input type '"+inputName+"'",
 			"input-object-fields-sorted-alphabetically",
 		); err != nil {
+			err.Value = inputName
 			errors = append(errors, *err)
 		}
 	}
@@ -258,23 +247,14 @@ func (r Rule) InputObjectFieldsSortedAlphabetically(
 func (r Rule) FieldsAreCamelCased(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
-	for _, obj := range doc.ObjectTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(obj.Name)
-
-		for _, fieldRef := range obj.FieldsDefinition.Refs {
+	for _, def := range typeDefinitions(doc) {
+		for _, fieldRef := range def.fields {
 			fieldDef := doc.FieldDefinitions[fieldRef]
 
 			fieldName := doc.Input.ByteSliceString(fieldDef.Name)
 			if !isCamelCase(fieldName) {
-				lineNum := findFieldDefinitionLine(schemaString, fieldName, "")
-				lineContent := GetLineContent(schemaString, lineNum)
-				message := "fields-are-camel-cased: The field '" + typeName + "." + fieldName + "' is not camel cased."
-				errors = append(errors, models.DescriptionError{
-					Value:       fieldName,
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
+				errors = append(errors, newFinding(schemaString, LineOf(doc, fieldDef.Name), fieldName,
+					"fields-are-camel-cased: The field '"+def.name+"."+fieldName+"' is not camel cased."))
 			}
 		}
 	}
@@ -293,16 +273,9 @@ func (r Rule) InputObjectValuesCamelCased(doc *ast.Document, schemaString string
 
 			fieldName := doc.Input.ByteSliceString(fieldDef.Name)
 			if !isCamelCase(fieldName) {
-				lineNum := findLineNumberByText(schemaString, fieldName+":")
-				lineContent := GetLineContent(schemaString, lineNum)
-				message := "input-object-values-are-camel-cased: The input value `" +
-					inputName + "." + fieldName + "` is not camel cased."
-				errors = append(errors, models.DescriptionError{
-					Value:       fieldName,
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
+				errors = append(errors, newFinding(schemaString, LineOf(doc, fieldDef.Name), fieldName,
+					"input-object-values-are-camel-cased: The input value `"+inputName+"."+fieldName+
+						"` is not camel cased."))
 			}
 		}
 	}
@@ -310,6 +283,7 @@ func (r Rule) InputObjectValuesCamelCased(doc *ast.Document, schemaString string
 	return errors
 }
 
+// RelayPageInfoSpec is schema wide: run it on the merged schema of all files.
 func (r Rule) RelayPageInfoSpec(doc *ast.Document, schemaString string) []models.DescriptionError {
 	for _, obj := range doc.ObjectTypeDefinitions {
 		if doc.Input.ByteSliceString(obj.Name) == "PageInfo" {
@@ -317,16 +291,8 @@ func (r Rule) RelayPageInfoSpec(doc *ast.Document, schemaString string) []models
 		}
 	}
 
-	lineNum := 1
-	lineContent := GetLineContent(schemaString, lineNum)
-	message := "relay-page-info-spec: A `PageInfo` object type is required as per the Relay spec."
-
-	return []models.DescriptionError{{
-		Value:       "PageInfo",
-		LineNum:     lineNum,
-		Message:     message,
-		LineContent: lineContent,
-	}}
+	return []models.DescriptionError{newFinding(schemaString, 1, "PageInfo",
+		"relay-page-info-spec: A `PageInfo` object type is required as per the Relay spec.")}
 }
 
 func (r Rule) RelayConnectionArgumentsSpec(
@@ -360,17 +326,10 @@ func (r Rule) RelayConnectionArgumentsSpec(
 
 		if !hasForwardArgs && !hasBackwardArgs {
 			fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-			lineNum := findFieldDefinitionLine(schemaString, fieldName, "")
-			lineContent := GetLineContent(schemaString, lineNum)
-			message := "relay-connection-arguments-spec: A field that returns a Connection Type must include forward" +
-				"pagination arguments (`first` and `after`), backward pagination arguments (`last` and `before`), or both as" +
-				"per the Relay spec."
-			errors = append(errors, models.DescriptionError{
-				Value:       fieldName,
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			})
+			errors = append(errors, newFinding(schemaString, LineOf(doc, fieldDef.Name), fieldName,
+				"relay-connection-arguments-spec: A field that returns a Connection Type must include forward"+
+					"pagination arguments (`first` and `after`), backward pagination arguments (`last` and `before`), or both as"+
+					"per the Relay spec."))
 		}
 	}
 
@@ -402,56 +361,36 @@ func (r Rule) RelayConnectionTypesSpec(doc *ast.Document, schemaString string) [
 			}
 		}
 
-		lineNum := findLineNumberByText(schemaString, "type "+typeName)
-		lineContent := GetLineContent(schemaString, lineNum)
+		lineNum := LineOf(doc, obj.Name)
 
 		if !hasPageInfo {
-			message := fmt.Sprintf(
+			errors = append(errors, newFinding(schemaString, lineNum, typeName, fmt.Sprintf(
 				"relay-connection-types-spec: Connection `%s` is missing the following field: pageInfo.",
 				typeName,
-			)
-			errors = append(errors, models.DescriptionError{
-				Value:       typeName,
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			})
+			)))
 		}
 
 		if !hasEdges {
-			message := fmt.Sprintf(
+			errors = append(errors, newFinding(schemaString, lineNum, typeName, fmt.Sprintf(
 				"relay-connection-types-spec: Connection `%s` is missing the following field: edges.",
 				typeName,
-			)
-			errors = append(errors, models.DescriptionError{
-				Value:       typeName,
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			})
+			)))
 		}
 	}
 
 	return errors
 }
 
+// MissingQueryRootType is schema wide: run it on the merged schema of all files.
 func (r Rule) MissingQueryRootType(doc *ast.Document, schemaString string) []models.DescriptionError {
 	for _, obj := range doc.ObjectTypeDefinitions {
-		if doc.Input.ByteSliceString(obj.Name) == "Query" {
+		if doc.Input.ByteSliceString(obj.Name) == rootQueryType {
 			return nil
 		}
 	}
 
-	lineNum := 1
-	lineContent := GetLineContent(schemaString, lineNum)
-	message := "invalid-graphql-schema: Query root type must be provided."
-
-	return []models.DescriptionError{{
-		Value:       "Query",
-		LineNum:     lineNum,
-		Message:     message,
-		LineContent: lineContent,
-	}}
+	return []models.DescriptionError{newFinding(schemaString, 1, rootQueryType,
+		"invalid-graphql-schema: Query root type must be provided.")}
 }
 
 func (r Rule) MissingEnumValueDescriptions(
@@ -466,16 +405,8 @@ func (r Rule) MissingEnumValueDescriptions(
 			valueDef := doc.EnumValueDefinitions[valueRef]
 			if !valueDef.Description.IsDefined {
 				valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
-				lineNum := findLineNumberByText(schemaString, valueName)
-				lineContent := GetLineContent(schemaString, lineNum)
-				message := "enum-values-have-descriptions: Enum value '" + enumName + "." + valueName +
-					"' is missing a description."
-				errors = append(errors, models.DescriptionError{
-					Value:       valueName,
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
+				errors = append(errors, newFinding(schemaString, LineOf(doc, valueDef.EnumValue), valueName,
+					"enum-values-have-descriptions: Enum value '"+enumName+"."+valueName+"' is missing a description."))
 			}
 		}
 	}
@@ -486,18 +417,10 @@ func (r Rule) MissingEnumValueDescriptions(
 func (r Rule) MissingTypeDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
-	for _, obj := range doc.ObjectTypeDefinitions {
-		if !obj.Description.IsDefined {
-			name := doc.Input.ByteSliceString(obj.Name)
-			lineNum := findLineNumberByText(schemaString, "type "+name)
-			lineContent := GetLineContent(schemaString, lineNum)
-			message := "types-have-descriptions: Object type '" + name + "' is missing a description"
-			errors = append(errors, models.DescriptionError{
-				Value:       name,
-				LineNum:     lineNum,
-				Message:     message,
-				LineContent: lineContent,
-			})
+	for _, def := range typeDefinitions(doc) {
+		if !def.description.IsDefined {
+			errors = append(errors, newFinding(schemaString, LineOf(doc, def.nameRef), def.name,
+				"types-have-descriptions: "+def.kind+" '"+def.name+"' is missing a description"))
 		}
 	}
 
@@ -507,21 +430,13 @@ func (r Rule) MissingTypeDescriptions(doc *ast.Document, schemaString string) []
 func (r Rule) MissingFieldDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
 	var errors []models.DescriptionError
 
-	for _, obj := range doc.ObjectTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(obj.Name)
-		for _, fieldRef := range obj.FieldsDefinition.Refs {
+	for _, def := range typeDefinitions(doc) {
+		for _, fieldRef := range def.fields {
 			fieldDef := doc.FieldDefinitions[fieldRef]
 			if !fieldDef.Description.IsDefined {
 				fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-				lineNum := findFieldDefinitionLine(schemaString, fieldName, "")
-				lineContent := GetLineContent(schemaString, lineNum)
-				message := "fields-have-descriptions: Field '" + typeName + "." + fieldName + "' is missing a description."
-				errors = append(errors, models.DescriptionError{
-					Value:       fieldName,
-					LineNum:     lineNum,
-					Message:     message,
-					LineContent: lineContent,
-				})
+				errors = append(errors, newFinding(schemaString, LineOf(doc, fieldDef.Name), fieldName,
+					"fields-have-descriptions: Field '"+def.name+"."+fieldName+"' is missing a description."))
 			}
 		}
 	}
@@ -529,84 +444,72 @@ func (r Rule) MissingFieldDescriptions(doc *ast.Document, schemaString string) [
 	return errors
 }
 
-func (r Rule) ReportUncapitalizedDescription(
-	kind,
-	parent,
-	name,
-	desc,
-	schemaString string,
-) *models.DescriptionError {
-	if isCapitalized(desc) {
-		return nil
+func (r Rule) UncapitalizedDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
+	var errors []models.DescriptionError
+
+	check := func(description ast.Description, kind, parent string, nameRef ast.ByteSliceReference) {
+		if !description.IsDefined || isCapitalized(doc.Input.ByteSliceString(description.Content)) {
+			return
+		}
+
+		name := doc.Input.ByteSliceString(nameRef)
+
+		qualified := name
+		if parent != "" {
+			qualified = parent + "." + name
+		}
+
+		errors = append(errors, newFinding(schemaString, LineOf(doc, nameRef), name,
+			"descriptions-are-capitalized: The description for "+kind+" `"+qualified+"` should be capitalized."))
 	}
 
-	var (
-		lineNum     int
-		lineContent string
-		message     string
-	)
+	for _, def := range typeDefinitions(doc) {
+		check(def.description, "type", "", def.nameRef)
 
-	switch kind {
-	case "type":
-		lineNum = findLineNumberByText(schemaString, "type "+name)
-		lineContent = GetLineContent(schemaString, lineNum)
-		message = "descriptions-are-capitalized: The description for type `" + name + "` should be capitalized."
-	case "field":
-		lineNum = findFieldDefinitionLine(schemaString, name, "")
-		lineContent = GetLineContent(schemaString, lineNum)
-		message = "descriptions-are-capitalized: The description for field `" + parent + "." + name +
-			"` should be capitalized."
-	case "enum":
-		lineNum = findLineNumberByText(schemaString, name)
-		lineContent = GetLineContent(schemaString, lineNum)
-		message = "descriptions-are-capitalized: The description for enum value `" + parent + "." + name +
-			"` should be capitalized."
-	case "argument":
-		lineNum = findLineNumberByText(schemaString, name+":")
-		lineContent = GetLineContent(schemaString, lineNum)
-		message = "descriptions-are-capitalized: The description for argument `" + parent + "." + name +
-			"` should be capitalized."
+		for _, ref := range def.fields {
+			fieldDef := doc.FieldDefinitions[ref]
+			check(fieldDef.Description, "field", def.name, fieldDef.Name)
+
+			for _, argRef := range fieldDef.ArgumentsDefinition.Refs {
+				argDef := doc.InputValueDefinitions[argRef]
+				check(argDef.Description, "argument", doc.Input.ByteSliceString(fieldDef.Name), argDef.Name)
+			}
+		}
+
+		for _, ref := range def.inputValues {
+			inputDef := doc.InputValueDefinitions[ref]
+			check(inputDef.Description, "input value", def.name, inputDef.Name)
+		}
+
+		for _, ref := range def.enumValues {
+			valueDef := doc.EnumValueDefinitions[ref]
+			check(valueDef.Description, "enum value", def.name, valueDef.EnumValue)
+		}
 	}
 
-	return &models.DescriptionError{
-		Value:       name,
-		LineNum:     lineNum,
-		Message:     message,
-		LineContent: lineContent,
-	}
+	return errors
 }
 
+// UnusedTypes is schema wide: run it on the merged schema of all files.
 func (r Rule) UnusedTypes(doc *ast.Document, schemaString string) []models.DescriptionError {
-	definedTypes := CollectDefinedTypes(doc)
-	for name := range definedTypes {
-		definedTypes[name] = false
+	defs := typeDefinitions(doc)
+
+	usedTypes := make(map[string]bool, len(defs))
+	for _, def := range defs {
+		usedTypes[def.name] = false
 	}
 
-	delete(definedTypes, rootQueryType)
-	delete(definedTypes, rootMutationType)
-	delete(definedTypes, rootSubscriptionType)
+	markUsedTypes(doc, usedTypes)
 
-	unusedTypeErrors := make([]models.DescriptionError, 0, len(definedTypes))
+	var unusedTypeErrors []models.DescriptionError
 
-	markUsedTypes(doc, definedTypes)
-
-	for typeName, isUsed := range definedTypes {
-		if isUsed {
+	for _, def := range defs {
+		if usedTypes[def.name] || isRootType(def.name) {
 			continue
 		}
 
-		lineNum := findTypeLineNumber(typeName, schemaString)
-		lineContent := GetLineContent(schemaString, lineNum)
-		message := fmt.Sprintf(
-			"defined-types-are-used: Type '%s' is defined but not used",
-			typeName,
-		)
-		unusedTypeErrors = append(unusedTypeErrors, models.DescriptionError{
-			Value:       typeName,
-			LineNum:     lineNum,
-			Message:     message,
-			LineContent: lineContent,
-		})
+		unusedTypeErrors = append(unusedTypeErrors, newFinding(schemaString, LineOf(doc, def.nameRef), def.name,
+			fmt.Sprintf("defined-types-are-used: Type '%s' is defined but not used", def.name)))
 	}
 
 	return unusedTypeErrors
@@ -631,7 +534,9 @@ func (r Rule) ValidateEnumTypes(
 			valueDef := doc.EnumValueDefinitions[valueRef]
 			valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
 
-			if errValue, line := checkInvalidEnumValue(enumName, valueName, schemaContent); errValue != "" {
+			valueLine := LineOf(doc, valueDef.EnumValue)
+
+			if errValue, line := checkInvalidEnumValue(enumName, valueName, valueLine); errValue != "" {
 				errors = append(errors, errValue)
 				if line > 0 {
 					errorLines = append(errorLines, line)
@@ -641,7 +546,7 @@ func (r Rule) ValidateEnumTypes(
 			if errValue, line := checkSuspiciousEnumValue(
 				enumName,
 				valueName,
-				schemaContent,
+				valueLine,
 				schemaPath,
 				modelsLinterConfig,
 			); errValue != "" {
@@ -669,16 +574,14 @@ func (r Rule) ValidateEnumTypes(
 
 func (r Rule) ValidateFieldTypes(
 	doc *ast.Document,
-	schemaContent string,
 	builtInScalars, definedTypes map[string]bool,
 ) ([]string, []int) {
 	return validateTypeReferences(
 		doc,
-		schemaContent,
 		builtInScalars,
 		definedTypes,
 		indexSlice(len(doc.FieldDefinitions)),
-		func(i int) string { return doc.Input.ByteSliceString(doc.FieldDefinitions[i].Name) },
+		func(i int) ast.ByteSliceReference { return doc.FieldDefinitions[i].Name },
 		func(i int) ast.Type { return doc.Types[doc.FieldDefinitions[i].Type] },
 		"invalid-field-types: Field",
 	)
@@ -686,27 +589,24 @@ func (r Rule) ValidateFieldTypes(
 
 func (r Rule) ValidateInputFieldTypes(
 	doc *ast.Document,
-	schemaContent string,
 	builtInScalars, definedTypes map[string]bool,
 ) ([]string, []int) {
 	return validateTypeReferences(
 		doc,
-		schemaContent,
 		builtInScalars,
 		definedTypes,
 		indexSlice(len(doc.InputValueDefinitions)),
-		func(i int) string { return doc.Input.ByteSliceString(doc.InputValueDefinitions[i].Name) },
+		func(i int) ast.ByteSliceReference { return doc.InputValueDefinitions[i].Name },
 		func(i int) ast.Type { return doc.Types[doc.InputValueDefinitions[i].Type] },
 		"invalid-input-field-types: Input field",
 	)
 }
 
-func checkInvalidEnumValue(enumName, valueName, schemaContent string) (string, int) {
+func checkInvalidEnumValue(enumName, valueName string, lineNum int) (string, int) {
 	if isValidEnumValue(valueName) {
 		return "", 0
 	}
 
-	lineNum := findLineNumberByText(schemaContent, valueName)
 	slog.Info(fmt.Sprintf(
 		"invalid-enum-value: Enum '%s' has invalid value '%s' (line %d)",
 		enumName,
@@ -722,8 +622,8 @@ func checkInvalidEnumValue(enumName, valueName, schemaContent string) (string, i
 
 func checkSuspiciousEnumValue(
 	enumName,
-	valueName,
-	schemaContent,
+	valueName string,
+	lineNum int,
 	schemaPath string,
 	modelsLinterConfig *models.LinterConfig,
 ) (string, int) {
@@ -732,7 +632,6 @@ func checkSuspiciousEnumValue(
 		return "", 0
 	}
 
-	lineNum := findLineNumberByText(schemaContent, valueName)
 	if pkg_rules.IsSuppressed(
 		schemaPath,
 		lineNum,
@@ -762,10 +661,9 @@ func checkSuspiciousEnumValue(
 
 func validateTypeReferences(
 	doc *ast.Document,
-	schemaContent string,
 	builtInScalars, definedTypes map[string]bool,
 	typeRefs []int,
-	getName func(int) string,
+	getNameRef func(int) ast.ByteSliceReference,
 	getType func(int) ast.Type,
 	errorPrefix string,
 ) ([]string, []int) {
@@ -775,19 +673,13 @@ func validateTypeReferences(
 	)
 
 	for _, ref := range typeRefs {
-		fieldName := getName(ref)
+		nameRef := getNameRef(ref)
+		fieldName := doc.Input.ByteSliceString(nameRef)
 		fieldType := getType(ref)
 
 		baseType := getBaseTypeName(doc, fieldType)
 		if !builtInScalars[baseType] && !definedTypes[baseType] {
-			lineNum := findFieldDefinitionLine(schemaContent, fieldName, baseType)
-			if lineNum == 0 {
-				lineNum = findLineNumberByText(schemaContent, fieldName+": "+baseType)
-			}
-
-			if lineNum == 0 {
-				lineNum = findLineNumberByText(schemaContent, fieldName+":")
-			}
+			lineNum := LineOf(doc, nameRef)
 
 			slog.Error(fmt.Sprintf(
 				"%s '%s' references undefined type '%s' (line %d)",
