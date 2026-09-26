@@ -1,0 +1,4 @@
+"""An unfinished type."""
+type Broken {
+  """A field."""
+  field: String

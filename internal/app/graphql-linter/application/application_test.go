@@ -409,3 +409,26 @@ func TestLintMergedSchema_SplitFiles(t *testing.T) {
 	assert.Equal(t, 6, got[1].LineNum)
 	assert.Equal(t, "invalid-field-types: Field 'ghost' references undefined type 'Ghost'", got[1].Message)
 }
+
+func TestLintMergedSchema_DirectiveFindingsAreCountedAndSuppressible(t *testing.T) {
+	t.Parallel()
+
+	dir := createTestDirectory(t, map[string]string{
+		"s.graphql": "\"\"\"Q.\"\"\"\ntype Query @foo {\n  \"\"\"P.\"\"\"\n  page: PageInfo @foo\n}\n" +
+			"\"\"\"P.\"\"\"\ntype PageInfo {\n  \"\"\"E.\"\"\"\n  endCursor: String\n}\n",
+	})
+	files := []string{filepath.Join(dir, "s.graphql")}
+
+	got := lintMergedSchema(models.NewLinterConfig(), files)
+	require.Len(t, got, 2)
+	assert.Equal(t, []int{2, 4}, []int{got[0].LineNum, got[1].LineNum})
+
+	config := models.NewLinterConfig()
+	config.Suppressions = []models.Suppression{{Rule: "invalid-federation-directive", Value: "foo", Line: 4}}
+	got = lintMergedSchema(config, files)
+	require.Len(t, got, 1)
+	assert.Equal(t, 2, got[0].LineNum)
+
+	config.Settings.ValidateFederation = false
+	assert.Empty(t, lintMergedSchema(config, files))
+}

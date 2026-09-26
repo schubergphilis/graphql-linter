@@ -102,8 +102,8 @@ This project follows **Clean Architecture** with three distinct layers:
 2. **Application** coordinates the linting:
    - Uses **Data** layer to load config (`.graphql-linter.yml`)
    - Discovers GraphQL files (`.graphql`, `.graphqls`)
-   - For each file: reads, parses, filters comments, validates federation
-   - Executes rules from both `base/rules` and `federation/rules`
+   - For each file: reads, parses (syntax errors become `invalid-graphql-syntax` findings) and runs the per-file rules
+   - Merges all files that parse and runs the schema-wide and federation rules once
    - Applies suppressions from config
    - Collects errors
 3. **Application** uses `report` package to format and print results
@@ -163,9 +163,10 @@ Rules are organized in two locations:
 - `types-are-capitalized`
 - `types-have-descriptions`
 
-### Federation Rules (`internal/app/graphql-linter/data/federation/rules/`)
-- Apollo Federation directive validation
-- Composition validation
+### Federation Rules (`internal/app/graphql-linter/data/federation/`)
+- `invalid-federation-directive`: Federation v2.x, built-in, schema-defined and `@composeDirective` directives only
+- `invalid-federation-schema`: the merged target files validated as one subgraph
+- Both run on the merged schema of all target files, with `defined-types-are-used`, `invalid-graphql-schema` and `relay-page-info-spec`
 
 ## Important Notes
 

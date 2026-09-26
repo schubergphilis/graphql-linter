@@ -13,13 +13,6 @@ const (
 	LevenshteinThreshold = 3
 )
 
-func SuggestDirective(directiveName, validName string) {
-	if strings.Contains(directiveName, validName) ||
-		LevenshteinDistance(directiveName, validName) <= LevenshteinThreshold {
-		slog.Error(fmt.Sprintf("  Did you mean '@%s'?", validName))
-	}
-}
-
 func LevenshteinDistance(source, target string) int {
 	if len(source) == 0 {
 		return len(target)
