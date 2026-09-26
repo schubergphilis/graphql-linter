@@ -175,15 +175,7 @@ func findGraphQLFiles(rootPath string) ([]string, error) {
 			return err
 		}
 
-		if shouldSkip(info) {
-			if info.IsDir() {
-				return filepath.SkipDir
-			}
-
-			return nil
-		}
-
-		if isIgnoredDir(info) {
+		if path != rootPath && isIgnoredDir(info) {
 			return filepath.SkipDir
 		}
 
@@ -200,21 +192,14 @@ func findGraphQLFiles(rootPath string) ([]string, error) {
 	return files, nil
 }
 
-func shouldSkip(info os.FileInfo) bool {
-	return strings.HasPrefix(info.Name(), ".")
-}
-
 func isIgnoredDir(info os.FileInfo) bool {
 	if !info.IsDir() {
 		return false
 	}
 
-	switch strings.ToLower(info.Name()) {
-	case "node_modules", "vendor", ".git":
-		return true
-	default:
-		return false
-	}
+	name := strings.ToLower(info.Name())
+
+	return strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor"
 }
 
 func isGraphQLFile(info os.FileInfo) bool {
