@@ -3,340 +3,97 @@
 [![GitHub release](https://img.shields.io/github/v/release/schubergphilis/graphql-linter)](https://github.com/schubergphilis/graphql-linter/releases)
 [![License](https://img.shields.io/github/license/schubergphilis/graphql-linter)](LICENSE)
 
-<img src="./assets/logos/graphql-linter.png" width="250"></a>
+<img src="./assets/logos/graphql-linter.png" width="250" alt="GraphQL Linter logo">
 
-A fast, opinionated linter for GraphQL SDL (Schema Definition Language) with
-first-class **Apollo Federation** support.
+The [`graphql-schema-linter`](https://github.com/cjoudrey/graphql-schema-linter)
+rules plus Apollo Federation validation, in a single Go binary. It lints
+`.graphql` and `.graphqls` files for syntax, schema design best practices and
+federation directive usage. No Node.js toolchain is needed, so it fits in CI
+pipelines and pre-commit hooks.
 
-`graphql-linter` validates your `.graphql` and `.graphqls` files for syntax
-errors, schema design best practices, and correct usage of Apollo Federation
-directives — all from a single, dependency-free binary.
+## Install
 
-## Table of contents
-
-- [Why GraphQL Linter?](#why-graphql-linter)
-- [Features](#features)
-- [Installation](#installation)
-- [Quick start](#quick-start)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Rules](#rules)
-- [Suppressing findings](#suppressing-findings)
-- [Pre-commit hook](#pre-commit-hook)
-- [Development](#development)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Why GraphQL Linter?
-
-The widely used [`graphql-schema-linter`](https://github.com/cjoudrey/graphql-schema-linter)
-does not support Apollo Federation, and the
-[request to add it](https://github.com/cjoudrey/graphql-schema-linter/issues/210)
-has been open since 2020.
-
-`graphql-linter` fills that gap. It honours the `graphql-schema-linter` rule set
-that teams already rely on and adds validation for Apollo Federation directives
-and composition on top. Because it ships as a single static Go binary, there is
-no Node.js toolchain to install and it drops cleanly into CI pipelines and
-pre-commit hooks.
-
-## Features
-
-- **Drop-in rule parity** — implements the rules from `graphql-schema-linter`.
-- **Apollo Federation aware** — recognizes and validates federation directives
-  (`@key`, `@external`, `@requires`, `@provides`, `@shareable`, `@override`,
-  `@inaccessible`, `@tag`, and more) and flags invalid directives or typos.
-- **Schema hygiene checks** — enforces descriptions, naming conventions,
-  alphabetical sorting, deprecation reasons, and Relay connection specs.
-- **Clear diagnostics** — reports the rule, file, line number, and context for
-  every finding.
-- **Flexible suppressions** — silence specific findings per file, line, and rule
-  through a config file.
-- **Single binary** — no runtime dependencies; runs anywhere Go binaries run.
-
-## Installation
-
-### Pre-built binary
+Pre-built binary (`linux/amd64`, `linux/arm64`, `darwin/arm64`):
 
 ```zsh
-ARCH=$(uname -m | awk '{if ($1=="x86_64") print "amd64"; else if ($1=="arm64" || $1=="aarch64") print "arm64"; else { print "Unsupported architecture: " $1 > "/dev/stderr"; exit 1 }}')
+ARCH=$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
 OS=$(uname | tr '[:upper:]' '[:lower:]')
-VERSION=v0.1.0
-curl --fail -L "https://github.com/schubergphilis/graphql-linter/releases/download/${VERSION}/graphql-linter-${VERSION}-${OS}-${ARCH}" \
-  -o graphql-linter && \
-  chmod +x graphql-linter && \
-  ./graphql-linter --version | grep "${VERSION}"
+VERSION=v0.2.4
+curl --fail -L -o graphql-linter \
+  "https://github.com/schubergphilis/graphql-linter/releases/download/${VERSION}/graphql-linter-${VERSION}-${OS}-${ARCH}"
+chmod +x graphql-linter
+./graphql-linter -version | grep "${VERSION}"
 ```
 
-Pre-built binaries are published for `linux/amd64`, `linux/arm64`, and
-`darwin/arm64`. See the [releases page](https://github.com/schubergphilis/graphql-linter/releases)
-for all available builds.
-
-### Go
+Or with Go:
 
 ```zsh
-go install github.com/schubergphilis/graphql-linter/cmd/graphql-linter@v0.1.0 && \
-  graphql-linter --version
-```
-
-### From source
-
-```zsh
-git clone https://github.com/schubergphilis/graphql-linter.git
-cd graphql-linter
-go build -o graphql-linter ./cmd/graphql-linter
+go install github.com/schubergphilis/graphql-linter/cmd/graphql-linter@v0.2.4
 ```
 
 ## Quick start
-
-Lint every GraphQL file in a directory:
 
 ```zsh
 graphql-linter -targetPath ./schema
 ```
 
-Lint a single file:
-
-```zsh
-graphql-linter -targetPath ./schema/user.graphqls
-```
-
-The linter walks the target path recursively, skipping `node_modules`,
-`vendor`, `.git`, and any dot-directory. It exits non-zero when unsuppressed
-findings are detected, making it CI-ready out of the box.
-
-## Usage
-
 ```text
-graphql-linter [flags]
+schema/user.graphql:7: types-have-descriptions: Object type 'User' is missing a description
+  type User @key(fields: "id") {
+schema/user.graphql:10: invalid-federation-directive: Invalid federation directive '@shareble' on field 'User.name'. Did you mean '@shareable'?
+  name: String @shareble
+level=ERROR msg="totalErrors: 2"
 ```
 
-### Flags
-
-| Flag          | Description                                                                              |
-| ------------- | ---------------------------------------------------------------------------------------- |
-| `-targetPath` | Directory or file containing the GraphQL schemas to check. Defaults to the current directory. |
-| `-configPath` | Path to the configuration file. Defaults to `.graphql-linter.yml` or `.graphql-linter.yaml` in the current directory. |
-| `-verbose`    | Enable verbose output.                                                                   |
-| `-version`    | Print version information and exit.                                                      |
-
-### Examples
-
-```zsh
-# Lint with a custom configuration file
-graphql-linter -configPath ./config/.graphql-linter.yml -targetPath ./schema
-
-# Verbose run
-graphql-linter -targetPath ./schema -verbose
-
-# Show help
-graphql-linter --help
-```
-
-When running from a checkout of this repository you can invoke the linter
-directly with `go run`:
-
-```zsh
-go run ./cmd/graphql-linter -targetPath test/testdata/graphql/base/invalid
-```
+All files under `-targetPath` (default: the current directory) are linted as
+one schema. The exit code is non-zero when there are findings.
 
 ## Configuration
 
-When `-configPath` is not set, the linter looks for `.graphql-linter.yml`, then
-`.graphql-linter.yaml`, in the current directory. Use `-configPath` to point at a different file. If no
-configuration is found, the built-in defaults below are used.
+Put a `.graphql-linter.yml` (or `.graphql-linter.yaml`) in the directory you
+run the linter from:
 
 ```yaml
 ---
-# Global behaviour
 settings:
-  # Validate Apollo Federation directives.
   validateFederation: true
-  # Require descriptions on schema elements.
   checkDescriptions: true
-
-# Findings to silence (see "Suppressing findings" below)
 suppressions:
-  - file: schema/user.graphqls
-    line: 42
+  - file: schema/user.graphql
     rule: types-have-descriptions
     value: User
-    reason: Documented in the federation gateway instead.
+    reason: Documented in the gateway instead.
 ```
 
-A fully commented reference configuration is available in
-[.graphql-linter.yml.example](.graphql-linter.yml.example).
+All flags, settings and suppressions: [docs/configuration.md](docs/configuration.md).
 
-### Settings
+## Use in CI
 
-| Setting              | Default | Description                                                                |
-| -------------------- | ------- | -------------------------------------------------------------------------- |
-| `validateFederation` | `true`  | Build the federation schema and validate Apollo Federation directives.     |
-| `checkDescriptions`  | `true`  | Run the `*-have-descriptions` rules. Set to `false` to skip them.          |
-
-## Rules
-
-### Schema rules
-
-These mirror the `graphql-schema-linter` rule set:
-
-- `arguments-have-descriptions`
-- `defined-types-are-used`
-- `deprecations-have-a-reason`
-- `descriptions-are-capitalized`
-- `enum-values-all-caps`
-- `enum-values-have-descriptions`
-- `enum-values-sorted-alphabetically`
-- `fields-are-camel-cased`
-- `fields-have-descriptions`
-- `input-object-fields-sorted-alphabetically`
-- `input-object-values-are-camel-cased`
-- `input-object-values-have-descriptions`
-- `interface-fields-sorted-alphabetically`
-- `relay-connection-types-spec`
-- `relay-connection-arguments-spec`
-- `relay-page-info-spec`
-- `type-fields-sorted-alphabetically`
-- `types-are-capitalized`
-- `types-have-descriptions`
-
-Additional rules:
-
-- `invalid-graphql-schema`: a `Query` root type must be provided.
-- `suspicious-enum-value`: enum values with digits, e.g. `STRING2`.
-
-Description, capitalization and deprecation rules cover every definition kind:
-object, interface, input object, enum, union and scalar types, and their
-fields, arguments, input values and enum values.
-
-`defined-types-are-used`, `invalid-graphql-schema` and `relay-page-info-spec`
-are schema wide: they run once on all target files together, so a schema that
-is split over several files is checked as a whole. Line numbers come from the
-parsed schema, so `line` suppressions stay stable.
-
-### Federation rules
-
-When `validateFederation` is enabled (the default), all target files are checked
-together as one subgraph:
-
-- `invalid-federation-directive`: every directive on types, fields, arguments,
-  input values, enum values, unions and scalars must be a Federation v2.x
-  directive (`@key`, `@external`, `@requires`, `@provides`, `@extends`,
-  `@shareable`, `@inaccessible`, `@override`, `@composeDirective`,
-  `@interfaceObject`, `@tag`, `@link`, `@authenticated`, `@requiresScopes`,
-  `@policy`, `@context`, `@fromContext`, `@cost`, `@listSize`), a built-in
-  directive (`@deprecated`, `@specifiedBy`, `@oneOf`), defined in the schema, or
-  named in `@composeDirective`. Namespaced imports such as `@federation__key`
-  are accepted. Typos get a suggestion, e.g. `Did you mean '@key'?`.
-- `invalid-federation-schema`: the merged subgraph schema must be valid: unique
-  type, field and enum value names, known types, non-empty types and correct
-  interface implementations. Extending an entity owned by another subgraph and
-  repeating `@key` or `@tag` are allowed.
-
-This is subgraph validation, not supergraph composition: lint each subgraph
-with its own `-targetPath`. A file with a syntax error is reported as
-`invalid-graphql-syntax` and the other files are still linted.
-
-## Suppressing findings
-
-Individual findings can be suppressed in the configuration file. Every field is
-optional and acts as a filter: an omitted field matches anything, so narrow the
-suppression by combining fields. Always include a `reason` for auditability,
-even though it is not enforced.
+GitHub Actions, with the `graphql-lint` testing-type of mcvs-general-action
+(proposed in [schubergphilis/mcvs-general-action#63](https://github.com/schubergphilis/mcvs-general-action/issues/63)):
 
 ```yaml
-suppressions:
-  - file: test/testdata/graphql/base/invalid/07-enum-values-sorted-alphabetically.graphql
-    line: 12
-    rule: defined-types-are-used
-    value: PageInfo
-    reason: PageInfo is intentionally unused in this test schema.
+- uses: schubergphilis/mcvs-general-action@<sha> # vX.Y.Z
+  with:
+    testing-type: graphql-lint
 ```
 
-| Field    | Matching behaviour                                                            |
-| -------- | ----------------------------------------------------------------------------- |
-| `file`   | Matches when the schema path ends with this value; omit to match any file.    |
-| `line`   | Matches this line number; omit (or `0`) to match any line.                    |
-| `rule`   | Matches this rule identifier; omit to match any rule.                         |
-| `value`  | Matches the name of the offending type, field, argument or enum value (e.g. `User`, `firstName`, `PO4_VOLUME`); omit to match any value. |
-| `reason` | Free-form justification for the suppression (recommended, not enforced).      |
-
-## Pre-commit hook
-
-`graphql-linter` ships a [pre-commit](https://pre-commit.com) hook so schemas
-are linted automatically before every commit.
-
-Add the following to the `.pre-commit-config.yaml` in your repository:
+Pre-commit, in `.pre-commit-config.yaml` (details in [docs/ci.md](docs/ci.md)):
 
 ```yaml
 repos:
   - repo: https://github.com/schubergphilis/graphql-linter
-    # Replace with the latest released tag; run `pre-commit autoupdate` to bump.
-    rev: v0.1.4
+    rev: v0.2.4
     hooks:
       - id: graphql-linter
 ```
 
-Then install and run it:
+## Documentation
 
-```zsh
-pre-commit install
-pre-commit run graphql-linter --all-files
-```
-
-The hook is triggered whenever a `.graphql` or `.graphqls` file is staged. It
-lints the whole project (so cross-file Apollo Federation composition is
-validated) and fails the commit when linting errors are found.
-
-Configuration and suppressions are picked up from the `.graphql-linter.yml`
-file in the repository root, as described above.
-
-## Development
-
-This project follows a Clean Architecture layout (presentation → application →
-data) and uses [Task](https://taskfile.dev) for common workflows.
-
-```zsh
-# Run the full test suite
-task remote:test
-
-# Run integration and component tests
-task remote:test-integration
-task remote:test-component
-
-# Lint and format
-task remote:lint
-task remote:format
-task remote:fix-linting-issues
-```
-
-### Project layout
-
-```text
-cmd/
-  graphql-linter/             CLI entry point
-internal/
-  app/graphql-linter/
-    presentation/             CLI parsing and I/O
-    application/              Linting orchestration and reporting
-    data/                     Config, schema parsing, rule execution
-      base/rules/             Schema rules
-      federation/rules/       Apollo Federation rules
-  pkg/                        Shared helpers
-test/                         Component tests and GraphQL fixtures
-```
-
-## Contributing
-
-Contributions are welcome! To propose a change:
-
-1. Fork the repository and create a feature branch.
-2. Add or update tests for your change.
-3. Ensure `task remote:test` and `task remote:lint` pass.
-4. Open a pull request describing the motivation and behaviour change.
-
-Please keep pull requests focused and include test coverage for new rules or
-fixes.
+- [Configuration](docs/configuration.md): flags, settings and suppressing findings
+- [Rules](docs/rules.md): schema rules and Apollo Federation rules
+- [CI](docs/ci.md): GitHub Actions and the pre-commit hook
+- [Development](docs/development.md): building from source, tests, project layout and contributing
 
 ## License
 
