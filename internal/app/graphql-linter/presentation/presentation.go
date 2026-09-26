@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/application"
 	"github.com/schubergphilis/graphql-linter/internal/pkg/logging"
@@ -71,7 +72,10 @@ func (c CLI) Run() error {
 	}
 
 	if c.versionFlag {
-		slog.Info(applicationExecute.Version())
+		_, err = fmt.Fprintln(os.Stdout, applicationExecute.Version())
+		if err != nil {
+			return fmt.Errorf("unable to print version: %w", err)
+		}
 
 		return nil
 	}

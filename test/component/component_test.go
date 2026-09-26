@@ -44,13 +44,13 @@ func TestVersion(t *testing.T) {
 	binaryPath := filepath.Join(projectRoot, "graphql-linter")
 	cmd := exec.CommandContext(ctx, binaryPath, "--version")
 
-	output, err := cmd.CombinedOutput()
+	output, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("failed to run graphql-linter --version: %v", err)
 	}
 
-	if !strings.Contains(string(output), "v4.5.6") {
-		t.Errorf("expected version output to contain v4.5.6, got: %s", output)
+	if string(output) != "v4.5.6\n" {
+		t.Errorf("expected v4.5.6 on stdout, got: %q", output)
 	}
 }
 
