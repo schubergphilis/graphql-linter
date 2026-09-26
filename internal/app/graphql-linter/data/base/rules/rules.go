@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"unicode"
@@ -9,7 +10,6 @@ import (
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/constants"
 	pkg_rules "github.com/schubergphilis/graphql-linter/internal/pkg/rules"
-	log "github.com/sirupsen/logrus"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 )
 
@@ -746,14 +746,14 @@ func checkInvalidEnumValue(enumName, valueName, schemaContent string) (string, i
 	}
 
 	lineNum := findLineNumberByText(schemaContent, valueName)
-	log.Infof(
-		"invalid-enum-value: Enum '%s' has invalid value '%s' (line %d)\n",
+	slog.Info(fmt.Sprintf(
+		"invalid-enum-value: Enum '%s' has invalid value '%s' (line %d)",
 		enumName,
 		valueName,
 		lineNum,
-	)
-	log.Infof(
-		"  Enum values should be valid GraphQL identifiers (letters, digits, underscores, no leading digits)\n",
+	))
+	slog.Info(
+		"  Enum values should be valid GraphQL identifiers (letters, digits, underscores, no leading digits)",
 	)
 
 	return valueName, lineNum
@@ -782,18 +782,18 @@ func checkSuspiciousEnumValue(
 		return "", 0
 	}
 
-	log.Errorf(
-		"suspicious-enum-value: Enum '%s' has suspicious value '%s' (line %d)\n",
+	slog.Error(fmt.Sprintf(
+		"suspicious-enum-value: Enum '%s' has suspicious value '%s' (line %d)",
 		enumName,
 		valueName,
 		lineNum,
-	)
+	))
 
 	if suggestion := suggestCorrectEnumValue(valueName); suggestion != "" {
-		log.Errorf("  Did you mean '%s'?\n", suggestion)
+		slog.Error(fmt.Sprintf("  Did you mean '%s'?", suggestion))
 	} else {
 		suggestedValue := removeSuffixDigits(valueName)
-		log.Errorf("  Did you mean '%s'? Enum values typically don't contain numbers.\n", suggestedValue)
+		slog.Error(fmt.Sprintf("  Did you mean '%s'? Enum values typically don't contain numbers.", suggestedValue))
 	}
 
 	return valueName, lineNum
@@ -828,14 +828,14 @@ func validateTypeReferences(
 				lineNum = findLineNumberByText(schemaContent, fieldName+":")
 			}
 
-			log.Errorf(
-				"%s '%s' references undefined type '%s' (line %d)\n",
+			slog.Error(fmt.Sprintf(
+				"%s '%s' references undefined type '%s' (line %d)",
 				errorPrefix,
 				fieldName,
 				baseType,
 				lineNum,
-			)
-			log.Errorf("  Available types: %v\n", getAvailableTypes(builtInScalars, definedTypes))
+			))
+			slog.Error(fmt.Sprintf("  Available types: %v", getAvailableTypes(builtInScalars, definedTypes)))
 
 			if lineNum > 0 {
 				errorLines = append(errorLines, lineNum)

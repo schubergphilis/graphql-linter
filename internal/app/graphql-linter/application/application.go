@@ -1,7 +1,9 @@
 package application
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -15,11 +17,14 @@ import (
 	federation_rules "github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation/rules"
 	pkg_rules "github.com/schubergphilis/graphql-linter/internal/pkg/rules"
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
-	log "github.com/sirupsen/logrus"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
+
+// ErrLintingFailed signals that at least one schema file contains lint errors.
+// It travels up to main, which turns it into a non zero exit code.
+var ErrLintingFailed = errors.New("linting failed")
 
 const (
 	linesAfterContext  = 3
@@ -86,7 +91,7 @@ func (e Execute) Run() error {
 		return fmt.Errorf("unable to load config: %w", err)
 	}
 
-	log.Debugf("linter config: %v", linterConfig)
+	slog.Debug(fmt.Sprintf("linter config: %v", linterConfig))
 	dataStore.LinterConfig = linterConfig
 
 	schemaFiles, err := e.FindAndLogGraphQLSchemaFiles()
@@ -111,12 +116,14 @@ func (e Execute) Run() error {
 		schemaFiles,
 	)
 
-	report.Print(
+	if report.Print(
 		schemaFiles,
 		totalErrors,
 		len(schemaFiles)-errorFilesCount,
 		dataDescriptionError,
-	)
+	) {
+		return ErrLintingFailed
+	}
 
 	return nil
 }
@@ -152,12 +159,10 @@ func (e Execute) FindAndLogGraphQLSchemaFiles() ([]string, error) {
 		return nil, fmt.Errorf("no GraphQL schema files found in directory: %s", e.TargetPath)
 	}
 
-	if e.Verbose {
-		log.Infof("found %d GraphQL schema files:", len(schemaFiles))
+	slog.Debug(fmt.Sprintf("found %d GraphQL schema files:", len(schemaFiles)))
 
-		for _, file := range schemaFiles {
-			log.Infof("  - %s", file)
-		}
+	for _, file := range schemaFiles {
+		slog.Debug("  - " + file)
 	}
 
 	return schemaFiles, nil
@@ -231,7 +236,7 @@ func (e Execute) lintDescriptions(
 ) ([]models.DescriptionError, bool) {
 	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, rules.Rule{}, e.Verbose)
 	if err != nil {
-		log.Errorf("unable to load new store: %v", err)
+		slog.Error("unable to load new store", "error", err)
 
 		return nil, false
 	}
@@ -361,13 +366,11 @@ func (e Execute) lintSingleSchemaFile(
 	int,
 	[]models.DescriptionError,
 ) {
-	if e.Verbose {
-		log.Infof("=== Linting %s ===", schemaFile)
-	}
+	slog.Debug(fmt.Sprintf("=== Linting %s ===", schemaFile))
 
 	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, rules.Rule{}, e.Verbose)
 	if err != nil {
-		log.Errorf("unable to load new store: %v", err)
+		slog.Error("unable to load new store", "error", err)
 	}
 
 	schemaString, ok := dataStore.ReadAndValidateSchemaFile(schemaFile)
@@ -402,8 +405,10 @@ func LogSchemaParseErrors(
 		return
 	}
 
-	log.Errorf("Failed to parse schema - found %d errors:\n",
-		len(parseReport.InternalErrors)+len(parseReport.ExternalErrors))
+	slog.Error(fmt.Sprintf(
+		"Failed to parse schema - found %d errors:",
+		len(parseReport.InternalErrors)+len(parseReport.ExternalErrors),
+	))
 
 	report.InternalErrors(parseReport)
 	report.ExternalErrors(schemaString, parseReport, linesBeforeContext, linesAfterContext)

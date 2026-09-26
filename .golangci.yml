@@ -42,9 +42,9 @@ linters:
             - github.com/schubergphilis/graphql-linter/internal/app/graphql-testdata-generator/data
             - github.com/schubergphilis/graphql-linter/internal/app/graphql-testdata-generator/presentation
             - github.com/schubergphilis/graphql-linter/internal/pkg/constants
+            - github.com/schubergphilis/graphql-linter/internal/pkg/logging
             - github.com/schubergphilis/graphql-linter/internal/pkg/rules
             - github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot
-            - github.com/sirupsen/logrus
             - github.com/stretchr/testify/assert
             - github.com/stretchr/testify/mock
             - github.com/stretchr/testify/require
@@ -53,8 +53,11 @@ linters:
             - github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport
             - gopkg.in/yaml.v3
           deny:
-            - pkg: log
-              desc: Use 'log "github.com/sirupsen/logrus"' instead
+            # 'log$' is an exact match: it denies 'log' but allows 'log/slog'.
+            - pkg: log$
+              desc: Use 'log/slog' instead
+            - pkg: github.com/sirupsen/logrus
+              desc: Use 'log/slog' instead
             - pkg: github.com/pkg/errors
               desc: Should be replaced by standard lib errors package
             - pkg: github.com/anchore/go-homedir

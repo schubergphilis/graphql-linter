@@ -1,22 +1,24 @@
 package rules
 
 import (
+	"fmt"
+	"log/slog"
+
 	pkgRules "github.com/schubergphilis/graphql-linter/internal/pkg/rules"
-	log "github.com/sirupsen/logrus"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 )
 
 func reportDirectiveError(directiveName, parentName, parentKind string) {
-	log.Errorf(
+	slog.Error(fmt.Sprintf(
 		"invalid-federation-directive: Invalid federation directive '@%s' on %s '%s'",
 		directiveName,
 		parentKind,
 		parentName,
-	)
+	))
 
 	switch parentKind {
 	case "type":
-		log.Errorf(
+		slog.Error(
 			`  Federation only allows these directives: @key, @external, @requires, @provides, @extends,
           @shareable, @inaccessible, @override, @composeDirective, @interfaceObject, @tag, @deprecated, @specifiedBy,
           @oneOf`,
@@ -24,7 +26,7 @@ func reportDirectiveError(directiveName, parentName, parentKind string) {
 		pkgRules.SuggestDirective(directiveName, "key")
 		pkgRules.SuggestDirective(directiveName, "external")
 	case "field":
-		log.Errorf(
+		slog.Error(
 			`  Federation only allows these directives on fields: @external, @requires, @provides, @shareable,
           @inaccessible, @override, @tag, @deprecated`,
 		)
@@ -71,7 +73,7 @@ func ValidateDirectiveNames(doc *ast.Document) bool {
 		"oneOf":            true, // Standard GraphQL directive
 	}
 
-	log.Debug("Validating federation directive names...")
+	slog.Debug("Validating federation directive names...")
 
 	hasErrors := false
 
@@ -102,12 +104,12 @@ func ValidateDirectiveNames(doc *ast.Document) bool {
 	}
 
 	if hasErrors {
-		log.Error("Federation directive validation FAILED - schema contains invalid directives")
+		slog.Error("Federation directive validation FAILED - schema contains invalid directives")
 
 		return false
 	}
 
-	log.Debug("federation directive validation PASSED")
+	slog.Debug("federation directive validation PASSED")
 
 	return true
 }

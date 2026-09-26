@@ -5,6 +5,7 @@ package component
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +14,6 @@ import (
 	"time"
 
 	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
-	log "github.com/sirupsen/logrus"
 )
 
 type SuppressionEntry struct {
@@ -24,13 +24,13 @@ type SuppressionEntry struct {
 	Reason string
 }
 
-func setup() {
+func setup() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
-		log.WithError(err).Fatal("failed to find project root")
+		return fmt.Errorf("failed to find project root: %w", err)
 	}
 
 	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
@@ -53,27 +53,34 @@ func setup() {
 
 	err = cmd.Run()
 	if err != nil {
-		log.WithError(err).WithFields(log.Fields{
-			"command": cmd.String(),
-			"stderr":  stderrBuf.String(),
-			"stdout":  "os.Stdout",
-		}).Fatal("failed to build graphql-linter")
+		return fmt.Errorf(
+			"failed to build graphql-linter (command %q, stderr %q): %w",
+			cmd.String(),
+			stderrBuf.String(),
+			err,
+		)
 	}
+
+	return nil
 }
 
 func teardown() {
 	projectRoot, err := projectroot.FindProjectRoot()
 	if err != nil {
-		log.WithError(err).Fatal("failed to find project root during teardown")
+		slog.Error("failed to find project root during teardown", "error", err)
+		os.Exit(1)
 	}
 
 	binaryPath := filepath.Join(projectRoot, "graphql-linter")
 
 	err = os.Remove(binaryPath)
 	if err != nil && !os.IsNotExist(err) {
-		log.WithError(err).
-			WithField("binaryPath", binaryPath).
-			Fatal("failed to remove built binary during teardown")
+		slog.Error(
+			"failed to remove built binary during teardown",
+			"error", err,
+			"binaryPath", binaryPath,
+		)
+		os.Exit(1)
 	}
 }
 
@@ -132,7 +139,8 @@ func parseSections(outputStr string) map[string][]string {
 			sections["summary"] = append(sections["summary"], line)
 		}
 
-		if strings.Contains(line, "level=error") || strings.Contains(line, "level=fatal") {
+		// Diagnostics are printed plain, events go through slog.
+		if strings.Contains(line, "level=ERROR") || strings.Contains(line, ".graphql:") {
 			sections["errors"] = append(sections["errors"], line)
 		}
 	}

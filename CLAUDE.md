@@ -127,7 +127,7 @@ This project follows **Clean Architecture** with three distinct layers:
 
 ### Key Dependencies
 - `wundergraph/graphql-go-tools/v2`: GraphQL AST parsing and federation support
-- `sirupsen/logrus`: Structured logging
+- `log/slog`: Structured logging (stdlib; handler installed in `presentation.Run()`)
 - `gopkg.in/yaml.v3`: Config file parsing
 
 ### Testing Strategy
@@ -193,6 +193,6 @@ Rules are organized in two locations:
 - GraphQL files must have `.graphql` or `.graphqls` extensions
 - Comments using `//` are filtered before parsing but preserved for line number reporting
 - Suppressions can be applied per-file or per-line via config
-- Code coverage target: 78.7%
+- Code coverage target: 80.2%
 - CI uses `mcvs-golang-action@v3.11.2` with multiple test types
 - Mocks are auto-generated; don't edit manually
