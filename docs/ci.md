@@ -61,7 +61,7 @@ Add the following to the `.pre-commit-config.yaml` in your repository:
 repos:
   - repo: https://github.com/schubergphilis/graphql-linter
     # Replace with the latest released tag; run `pre-commit autoupdate` to bump.
-    rev: v0.2.4
+    rev: v0.2.5
     hooks:
       - id: graphql-linter
 ```
@@ -77,9 +77,10 @@ The hook uses `language: golang`, so pre-commit builds the linter itself. It
 works in repositories that do not contain Go code.
 
 The hook is triggered whenever a `.graphql` or `.graphqls` file is staged. It
-does not lint only the staged files: it lints the whole project as one schema,
-so cross-file checks such as `defined-types-are-used` and the federation
-subgraph validation see all files. The commit fails when issues are found.
+does not lint only the staged files: it lints the whole project, so cross-file
+checks such as `defined-types-are-used` see all files of a directory, and each
+directory is validated as one subgraph.
+The commit fails when issues are found.
 
 Configuration and suppressions are read from `.graphql-linter.yml` or
 `.graphql-linter.yaml` in the directory the hook runs from, which is the

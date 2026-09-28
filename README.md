@@ -18,7 +18,7 @@ Pre-built binary (`linux/amd64`, `linux/arm64`, `darwin/arm64`):
 ```zsh
 ARCH=$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
 OS=$(uname | tr '[:upper:]' '[:lower:]')
-VERSION=v0.2.4
+VERSION=v0.2.5
 curl --fail -L -o graphql-linter \
   "https://github.com/schubergphilis/graphql-linter/releases/download/${VERSION}/graphql-linter-${VERSION}-${OS}-${ARCH}"
 chmod +x graphql-linter
@@ -28,7 +28,7 @@ chmod +x graphql-linter
 Or with Go:
 
 ```zsh
-go install github.com/schubergphilis/graphql-linter/cmd/graphql-linter@v0.2.4
+go install github.com/schubergphilis/graphql-linter/cmd/graphql-linter@v0.2.5
 ```
 
 ## Quick start
@@ -45,8 +45,9 @@ schema/user.graphql:10: invalid-federation-directive: Invalid federation directi
 level=ERROR msg="totalErrors: 2"
 ```
 
-All files under `-targetPath` (default: the current directory) are linted as
-one schema. The exit code is non-zero when there are findings.
+The files under `-targetPath` (default: the current directory) are linted
+together per directory, and each directory is validated as one subgraph. The
+exit code is non-zero when there are findings.
 
 ## Configuration
 
@@ -69,21 +70,12 @@ All flags, settings and suppressions: [docs/configuration.md](docs/configuration
 
 ## Use in CI
 
-GitHub Actions, with the `graphql-lint` testing-type of mcvs-general-action
-(proposed in [schubergphilis/mcvs-general-action#63](https://github.com/schubergphilis/mcvs-general-action/issues/63)):
-
-```yaml
-- uses: schubergphilis/mcvs-general-action@<sha> # vX.Y.Z
-  with:
-    testing-type: graphql-lint
-```
-
 Pre-commit, in `.pre-commit-config.yaml` (details in [docs/ci.md](docs/ci.md)):
 
 ```yaml
 repos:
   - repo: https://github.com/schubergphilis/graphql-linter
-    rev: v0.2.4
+    rev: v0.2.5
     hooks:
       - id: graphql-linter
 ```
