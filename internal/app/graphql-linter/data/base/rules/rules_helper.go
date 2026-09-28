@@ -244,5 +244,31 @@ func CollectDefinedTypes(doc *ast.Document) map[string]bool {
 		definedTypes[def.name] = true
 	}
 
+	// A subgraph may only extend a type another subgraph defines (Federation v1).
+	extended := func(name ast.ByteSliceReference) { definedTypes[doc.Input.ByteSliceString(name)] = true }
+	for _, ext := range doc.ObjectTypeExtensions {
+		extended(ext.Name)
+	}
+
+	for _, ext := range doc.InterfaceTypeExtensions {
+		extended(ext.Name)
+	}
+
+	for _, ext := range doc.InputObjectTypeExtensions {
+		extended(ext.Name)
+	}
+
+	for _, ext := range doc.EnumTypeExtensions {
+		extended(ext.Name)
+	}
+
+	for _, ext := range doc.UnionTypeExtensions {
+		extended(ext.Name)
+	}
+
+	for _, ext := range doc.ScalarTypeExtensions {
+		extended(ext.Name)
+	}
+
 	return definedTypes
 }

@@ -103,6 +103,13 @@ func TestUndefinedTypes(t *testing.T) {
 
 	doc, _ = astparser.ParseGraphqlDocumentString(allKindsSchema)
 	assert.Empty(t, Rule{}.UndefinedTypes(&doc, allKindsSchema))
+
+	extensions := "type Query {\n  a: A\n  b: B\n  c: C\n  d: D\n  e: E\n  f(g: G): String\n}\n" +
+		"extend type A { id: ID }\nextend interface B { id: ID }\nextend union C = A\n" +
+		"extend enum D { X }\nextend scalar E\nextend input G { id: ID }\n"
+	doc, report = astparser.ParseGraphqlDocumentString(extensions)
+	assert.False(t, report.HasErrors(), report.Error())
+	assert.Empty(t, Rule{}.UndefinedTypes(&doc, extensions))
 }
 
 func TestLineOf(t *testing.T) {
