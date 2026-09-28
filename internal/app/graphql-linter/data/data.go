@@ -21,11 +21,6 @@ type Store struct {
 	TargetPath   string
 }
 
-type errorResult struct {
-	errors     []string
-	errorLines []int
-}
-
 func NewStore(configPath, targetPath string) Store {
 	return Store{
 		ConfigPath: configPath,
@@ -79,31 +74,15 @@ func (s Store) ValidateDataTypes(
 	schemaContent string,
 	schemaPath string,
 ) (bool, []int, []models.DescriptionError) {
-	builtInScalars := map[string]bool{
-		"String":  true,
-		"Int":     true,
-		"Float":   true,
-		"Boolean": true,
-		"ID":      true,
-	}
-	definedTypesSet := rules.CollectDefinedTypes(doc)
-
-	definedTypes := make(map[string]bool)
-	for k := range definedTypesSet {
-		definedTypes[k] = true
-	}
-
 	hasErrors, errorLines, enumDescErrors := s.collectDataTypeErrors(
 		doc,
 		modelsLinterConfig,
 		schemaContent,
 		schemaPath,
-		builtInScalars,
-		definedTypes,
 	)
 
 	if hasErrors {
-		slog.Error("Data type validation FAILED - schema contains invalid type references")
+		slog.Error("Data type validation FAILED - schema contains invalid enum values")
 
 		return false, errorLines, enumDescErrors
 	}
@@ -202,49 +181,15 @@ func (s Store) collectDataTypeErrors(
 	modelsLinterConfig *models.LinterConfig,
 	schemaContent string,
 	schemaPath string,
-	builtInScalars map[string]bool,
-	definedTypes map[string]bool,
 ) (bool, []int, []models.DescriptionError) {
-	hasErrors := false
-
-	var (
-		errorLines     []int
-		enumDescErrors []models.DescriptionError
-	)
-
-	fieldTypeResultErrs, fieldTypeResultLines := rules.Rule{}.ValidateFieldTypes(
-		doc,
-		builtInScalars,
-		definedTypes,
-	)
-	inputFieldTypeResultErrs, inputFieldTypeResultLines := rules.Rule{}.ValidateInputFieldTypes(
-		doc,
-		builtInScalars,
-		definedTypes,
-	)
-	enumTypeResultErrs, enumTypeResultLines, descErrs := rules.Rule{}.ValidateEnumTypes(
+	enumTypeResultErrs, errorLines, enumDescErrors := rules.Rule{}.ValidateEnumTypes(
 		doc,
 		modelsLinterConfig,
 		schemaContent,
 		schemaPath,
 	)
-	enumDescErrors = descErrs
 
-	errorResults := []errorResult{
-		{fieldTypeResultErrs, fieldTypeResultLines},
-		{inputFieldTypeResultErrs, inputFieldTypeResultLines},
-		{enumTypeResultErrs, enumTypeResultLines},
-	}
-
-	for _, res := range errorResults {
-		if len(res.errors) > 0 {
-			hasErrors = true
-
-			errorLines = append(errorLines, res.errorLines...)
-		}
-	}
-
-	return hasErrors, errorLines, enumDescErrors
+	return len(enumTypeResultErrs) > 0, errorLines, enumDescErrors
 }
 
 // defaultConfigFiles are looked up in the working directory, in this order.

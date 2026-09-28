@@ -366,6 +366,7 @@ func lintMergedSchema(
 		rule.MissingQueryRootType,
 		rule.RelayPageInfoSpec,
 		rule.UnusedTypes,
+		rule.UndefinedTypes,
 	} {
 		findings = append(findings, schemaRule(&doc, merged)...)
 	}

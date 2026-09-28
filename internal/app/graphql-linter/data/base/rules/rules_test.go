@@ -106,69 +106,6 @@ func TestGetBaseTypeName_ExtraCases(t *testing.T) {
 	}
 }
 
-func TestGetAvailableTypes(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name           string
-		builtInScalars map[string]bool
-		definedTypes   map[string]bool
-		expected       []string
-	}{
-		{
-			name:           "both empty",
-			builtInScalars: map[string]bool{},
-			definedTypes:   map[string]bool{},
-			expected:       []string{},
-		},
-		{
-			name:           "only built-in scalars",
-			builtInScalars: map[string]bool{"String": true, "Int": true},
-			definedTypes:   map[string]bool{},
-			expected:       []string{"Int", "String"},
-		},
-		{
-			name:           "only defined types",
-			builtInScalars: map[string]bool{},
-			definedTypes:   map[string]bool{"User": true, "Post": true},
-			expected:       []string{"Post", "User"},
-		},
-		{
-			name:           "both, no overlap",
-			builtInScalars: map[string]bool{"String": true},
-			definedTypes:   map[string]bool{"User": true},
-			expected:       []string{"String", "User"},
-		},
-		{
-			name:           "both, with overlap",
-			builtInScalars: map[string]bool{"String": true, "User": true},
-			definedTypes:   map[string]bool{"User": true, "Post": true},
-			expected:       []string{"Post", "String", "User", "User"},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := getAvailableTypes(test.builtInScalars, test.definedTypes)
-			assert.ElementsMatch(t, test.expected, got)
-		})
-	}
-}
-
-func TestGetAvailableTypes_ExtraCases(t *testing.T) {
-	t.Parallel()
-
-	builtIn := map[string]bool{"A": true, "B": true}
-	defined := map[string]bool{"B": true, "C": true}
-
-	got := getAvailableTypes(builtIn, defined)
-	if len(got) != 4 {
-		t.Errorf("expected 4 types, got %v", got)
-	}
-}
-
 func TestIsAlphaUnderOrDigit(t *testing.T) {
 	t.Parallel()
 

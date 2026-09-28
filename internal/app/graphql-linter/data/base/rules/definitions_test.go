@@ -89,6 +89,22 @@ func TestRulesCoverAllKinds(t *testing.T) {
 	}, findings(rule.UnusedTypes(&doc, allKindsSchema)))
 }
 
+func TestUndefinedTypes(t *testing.T) {
+	t.Parallel()
+
+	schema := "type Query {\n  id: ID\n  foo(input: FooInput): Bar\n}\ninput FooInput {\n  bar: [Baz!]\n}\n"
+	doc, report := astparser.ParseGraphqlDocumentString(schema)
+	assert.False(t, report.HasErrors(), report.Error())
+
+	assert.Equal(t, []finding{
+		{3, "foo", "invalid-field-types: Field 'foo' references undefined type 'Bar'"},
+		{6, "bar", "invalid-input-field-types: Input field 'bar' references undefined type 'Baz'"},
+	}, findings(Rule{}.UndefinedTypes(&doc, schema)))
+
+	doc, _ = astparser.ParseGraphqlDocumentString(allKindsSchema)
+	assert.Empty(t, Rule{}.UndefinedTypes(&doc, allKindsSchema))
+}
+
 func TestLineOf(t *testing.T) {
 	t.Parallel()
 

@@ -515,6 +515,32 @@ func (r Rule) UnusedTypes(doc *ast.Document, schemaString string) []models.Descr
 	return unusedTypeErrors
 }
 
+// UndefinedTypes is schema wide: run it on the merged schema of all files.
+func (r Rule) UndefinedTypes(doc *ast.Document, schemaString string) []models.DescriptionError {
+	definedTypes := CollectDefinedTypes(doc)
+
+	return append(
+		validateTypeReferences(
+			doc,
+			schemaString,
+			definedTypes,
+			indexSlice(len(doc.FieldDefinitions)),
+			func(i int) ast.ByteSliceReference { return doc.FieldDefinitions[i].Name },
+			func(i int) ast.Type { return doc.Types[doc.FieldDefinitions[i].Type] },
+			"invalid-field-types: Field",
+		),
+		validateTypeReferences(
+			doc,
+			schemaString,
+			definedTypes,
+			indexSlice(len(doc.InputValueDefinitions)),
+			func(i int) ast.ByteSliceReference { return doc.InputValueDefinitions[i].Name },
+			func(i int) ast.Type { return doc.Types[doc.InputValueDefinitions[i].Type] },
+			"invalid-input-field-types: Input field",
+		)...,
+	)
+}
+
 func (r Rule) ValidateEnumTypes(
 	doc *ast.Document,
 	modelsLinterConfig *models.LinterConfig,
@@ -570,36 +596,6 @@ func (r Rule) ValidateEnumTypes(
 	}
 
 	return errors, errorLines, descErrors
-}
-
-func (r Rule) ValidateFieldTypes(
-	doc *ast.Document,
-	builtInScalars, definedTypes map[string]bool,
-) ([]string, []int) {
-	return validateTypeReferences(
-		doc,
-		builtInScalars,
-		definedTypes,
-		indexSlice(len(doc.FieldDefinitions)),
-		func(i int) ast.ByteSliceReference { return doc.FieldDefinitions[i].Name },
-		func(i int) ast.Type { return doc.Types[doc.FieldDefinitions[i].Type] },
-		"invalid-field-types: Field",
-	)
-}
-
-func (r Rule) ValidateInputFieldTypes(
-	doc *ast.Document,
-	builtInScalars, definedTypes map[string]bool,
-) ([]string, []int) {
-	return validateTypeReferences(
-		doc,
-		builtInScalars,
-		definedTypes,
-		indexSlice(len(doc.InputValueDefinitions)),
-		func(i int) ast.ByteSliceReference { return doc.InputValueDefinitions[i].Name },
-		func(i int) ast.Type { return doc.Types[doc.InputValueDefinitions[i].Type] },
-		"invalid-input-field-types: Input field",
-	)
 }
 
 func checkInvalidEnumValue(enumName, valueName string, lineNum int) (string, int) {
@@ -661,42 +657,25 @@ func checkSuspiciousEnumValue(
 
 func validateTypeReferences(
 	doc *ast.Document,
-	builtInScalars, definedTypes map[string]bool,
+	schemaString string,
+	definedTypes map[string]bool,
 	typeRefs []int,
 	getNameRef func(int) ast.ByteSliceReference,
 	getType func(int) ast.Type,
 	errorPrefix string,
-) ([]string, []int) {
-	var (
-		errors     []string
-		errorLines []int
-	)
+) []models.DescriptionError {
+	var errors []models.DescriptionError
 
 	for _, ref := range typeRefs {
 		nameRef := getNameRef(ref)
 		fieldName := doc.Input.ByteSliceString(nameRef)
-		fieldType := getType(ref)
 
-		baseType := getBaseTypeName(doc, fieldType)
+		baseType := getBaseTypeName(doc, getType(ref))
 		if !builtInScalars[baseType] && !definedTypes[baseType] {
-			lineNum := LineOf(doc, nameRef)
-
-			slog.Error(fmt.Sprintf(
-				"%s '%s' references undefined type '%s' (line %d)",
-				errorPrefix,
-				fieldName,
-				baseType,
-				lineNum,
-			))
-			slog.Error(fmt.Sprintf("  Available types: %v", getAvailableTypes(builtInScalars, definedTypes)))
-
-			if lineNum > 0 {
-				errorLines = append(errorLines, lineNum)
-			}
-
-			errors = append(errors, fieldName)
+			errors = append(errors, newFinding(schemaString, LineOf(doc, nameRef), fieldName,
+				fmt.Sprintf("%s '%s' references undefined type '%s'", errorPrefix, fieldName, baseType)))
 		}
 	}
 
-	return errors, errorLines
+	return errors
 }

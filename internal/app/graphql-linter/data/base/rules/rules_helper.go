@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"maps"
 	"slices"
 	"strings"
 	"unicode"
@@ -236,9 +235,8 @@ func indexSlice(n int) []int {
 	return indices
 }
 
-func getAvailableTypes(builtInScalars, definedTypes map[string]bool) []string {
-	return append(slices.Collect(maps.Keys(builtInScalars)), slices.Collect(maps.Keys(definedTypes))...)
-}
+// builtInScalars are the scalar types every GraphQL schema has without defining them.
+var builtInScalars = map[string]bool{"String": true, "Int": true, "Float": true, "Boolean": true, "ID": true}
 
 func CollectDefinedTypes(doc *ast.Document) map[string]bool {
 	definedTypes := make(map[string]bool)

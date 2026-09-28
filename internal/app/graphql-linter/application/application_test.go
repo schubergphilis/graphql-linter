@@ -185,22 +185,10 @@ func TestValidateDataTypes(t *testing.T) {
 			wantErrLines:  0,
 		},
 		{
-			name:          "undefined type",
-			schemaContent: "type Query { foo: Bar }",
-			wantValid:     false,
-			wantErrLines:  1,
-		},
-		{
 			name:          "valid enum",
 			schemaContent: "enum Status { ACTIVE INACTIVE } type Query { status: Status }",
 			wantValid:     true,
 			wantErrLines:  0,
-		},
-		{
-			name:          "input with undefined type",
-			schemaContent: "input FooInput { bar: Baz } type Query { foo(input: FooInput): String }",
-			wantValid:     false,
-			wantErrLines:  1,
 		},
 	}
 
@@ -400,7 +388,8 @@ func TestLintMergedSchema_SplitFiles(t *testing.T) {
 		"a.graphql": "\"\"\"Q.\"\"\"\ntype Query {\n  \"\"\"U.\"\"\"\n  user: User\n}\n",
 		"b.graphql": "\"\"\"U.\"\"\"\ntype User {\n  \"\"\"P.\"\"\"\n  page: PageInfo\n}\n\n" +
 			"\"\"\"Unused.\"\"\"\nscalar Unused\n",
-		"c.graphql": "\"\"\"P.\"\"\"\ntype PageInfo {\n  \"\"\"E.\"\"\"\n  endCursor: String\n}\n",
+		"c.graphql": "\"\"\"P.\"\"\"\ntype PageInfo {\n  \"\"\"E.\"\"\"\n  endCursor: String\n" +
+			"  \"\"\"G.\"\"\"\n  ghost: Ghost\n}\n",
 	})
 	files := []string{
 		filepath.Join(dir, "a.graphql"),
@@ -409,11 +398,14 @@ func TestLintMergedSchema_SplitFiles(t *testing.T) {
 	}
 
 	// Query, User and PageInfo are defined and used across files: only Unused
-	// is reported, on its own line in b.graphql.
+	// and the undefined Ghost are reported, on their own lines.
 	got := lintMergedSchema(models.NewLinterConfig(), files)
-	require.Len(t, got, 1)
+	require.Len(t, got, 2)
 	assert.Equal(t, files[1], got[0].FilePath)
 	assert.Equal(t, 8, got[0].LineNum)
 	assert.Equal(t, "scalar Unused", got[0].LineContent)
 	assert.Contains(t, got[0].Message, "defined-types-are-used: Type 'Unused'")
+	assert.Equal(t, files[2], got[1].FilePath)
+	assert.Equal(t, 6, got[1].LineNum)
+	assert.Equal(t, "invalid-field-types: Field 'ghost' references undefined type 'Ghost'", got[1].Message)
 }
