@@ -295,13 +295,30 @@ func (e Execute) lintSchemaFiles(
 		allErrors = append(allErrors, fileErrors...)
 	}
 
-	schemaErrors := lintMergedSchema(modelsLinterConfig, schemaFiles)
-	for _, schemaErr := range schemaErrors {
-		failedFiles[schemaErr.FilePath] = true
+	// Each directory is one subgraph, so subgraphs kept side by side do not
+	// collide on shared type names such as Query.
+	var dirs []string
+
+	filesByDir := make(map[string][]string)
+
+	for _, schemaFile := range schemaFiles {
+		dir := filepath.Dir(schemaFile)
+		if _, ok := filesByDir[dir]; !ok {
+			dirs = append(dirs, dir)
+		}
+
+		filesByDir[dir] = append(filesByDir[dir], schemaFile)
 	}
 
-	totalErrors += len(schemaErrors)
-	allErrors = append(allErrors, schemaErrors...)
+	for _, dir := range dirs {
+		schemaErrors := lintMergedSchema(modelsLinterConfig, filesByDir[dir])
+		for _, schemaErr := range schemaErrors {
+			failedFiles[schemaErr.FilePath] = true
+		}
+
+		totalErrors += len(schemaErrors)
+		allErrors = append(allErrors, schemaErrors...)
+	}
 
 	return totalErrors, len(failedFiles), allErrors
 }
@@ -337,8 +354,9 @@ func mergeSchemaFiles(schemaFiles []string) ([]string, string, []int) {
 	return files, strings.Join(contents, "\n"), startLines
 }
 
-// lintMergedSchema runs the schema wide rules once on all files together, so
-// types defined or used in another file are taken into account.
+// lintMergedSchema runs the schema wide rules once on the files of one
+// subgraph together, so types defined or used in another file are taken into
+// account.
 func lintMergedSchema(
 	modelsLinterConfig *models.LinterConfig,
 	schemaFiles []string,

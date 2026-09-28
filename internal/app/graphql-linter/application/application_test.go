@@ -410,6 +410,30 @@ func TestLintMergedSchema_SplitFiles(t *testing.T) {
 	assert.Equal(t, "invalid-field-types: Field 'ghost' references undefined type 'Ghost'", got[1].Message)
 }
 
+func TestLintSchemaFiles_SubgraphPerDirectory(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	schema := "\"\"\"Q.\"\"\"\ntype Query {\n  \"\"\"I.\"\"\"\n  id: ID\n}\n"
+
+	files := make([]string, 0, 2)
+
+	for _, subgraph := range []string{"orders", "users"} {
+		require.NoError(t, os.Mkdir(filepath.Join(dir, subgraph), 0o700))
+
+		file := filepath.Join(dir, subgraph, "schema.graphql")
+		require.NoError(t, os.WriteFile(file, []byte(schema), 0o600))
+
+		files = append(files, file)
+	}
+
+	// Both subgraphs define Query: validated per directory, they do not collide.
+	_, _, got := Execute{}.lintSchemaFiles(models.NewLinterConfig(), files)
+	for _, finding := range got {
+		assert.NotContains(t, finding.Message, "invalid-federation-schema")
+	}
+}
+
 func TestLintMergedSchema_DirectiveFindingsAreCountedAndSuppressible(t *testing.T) {
 	t.Parallel()
 

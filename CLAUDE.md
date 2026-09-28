@@ -165,8 +165,8 @@ Rules are organized in two locations:
 
 ### Federation Rules (`internal/app/graphql-linter/data/federation/`)
 - `invalid-federation-directive`: Federation v2.x, built-in, schema-defined and `@composeDirective` directives only
-- `invalid-federation-schema`: the merged target files validated as one subgraph
-- Both run on the merged schema of all target files, with `defined-types-are-used`, `invalid-graphql-schema` and `relay-page-info-spec`
+- `invalid-federation-schema`: the target files of each directory validated as one subgraph
+- Both run on the merged schema of each directory, with `defined-types-are-used`, `invalid-graphql-schema` and `relay-page-info-spec`
 
 ## Important Notes
 

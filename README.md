@@ -210,14 +210,16 @@ object, interface, input object, enum, union and scalar types, and their
 fields, arguments, input values and enum values.
 
 `defined-types-are-used`, `invalid-graphql-schema` and `relay-page-info-spec`
-are schema wide: they run once on all target files together, so a schema that
-is split over several files is checked as a whole. Line numbers come from the
+are schema wide: they run once on the target files of each directory together,
+so a schema that is split over several files is checked as a whole. Each
+directory is one subgraph, so subgraphs kept side by side (`users/`, `orders/`)
+do not collide. Line numbers come from the
 parsed schema, so `line` suppressions stay stable.
 
 ### Federation rules
 
-When `validateFederation` is enabled (the default), all target files are checked
-together as one subgraph:
+When `validateFederation` is enabled (the default), the target files of each
+directory are checked together as one subgraph:
 
 - `invalid-federation-directive`: every directive on types, fields, arguments,
   input values, enum values, unions and scalars must be a Federation v2.x
