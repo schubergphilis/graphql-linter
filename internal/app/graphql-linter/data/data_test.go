@@ -8,6 +8,7 @@ import (
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
@@ -34,13 +35,11 @@ func TestValidateFederationSchema(t *testing.T) {
 	))
 
 	got := federation.ValidateFederationSchema("type Query { a: String }\n\ntype Query {\n  b: Unknown\n}")
-	assert.Equal(t, []string{
+	require.Len(t, got, 1, "Unknown is left to invalid-field-types")
+	assert.Equal(t,
 		"3 invalid-federation-schema: there can be only one type named 'Query'",
-		"4 invalid-federation-schema: Unknown type \"Unknown\".",
-	}, []string{
 		fmt.Sprintf("%d %s", got[0].LineNum, got[0].Message),
-		fmt.Sprintf("%d %s", got[1].LineNum, got[1].Message),
-	})
+	)
 }
 
 func TestNewStore(t *testing.T) {

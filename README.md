@@ -231,7 +231,7 @@ directory are checked together as one subgraph:
   named in `@composeDirective`. Namespaced imports such as `@federation__key`
   are accepted. Typos get a suggestion, e.g. `Did you mean '@key'?`.
 - `invalid-federation-schema`: the merged subgraph schema must be valid: unique
-  type, field and enum value names, known types, non-empty types and correct
+  type, field and enum value names, non-empty types and correct
   interface implementations. Extending an entity owned by another subgraph and
   repeating `@key` or `@tag` are allowed.
 

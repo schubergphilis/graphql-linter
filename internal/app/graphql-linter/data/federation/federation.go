@@ -12,9 +12,10 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
-// ValidateFederationSchema validates the merged schema of all target files as
-// one subgraph: unique and known type names, populated type bodies, unique
-// fields and enum values, and interface implementations.
+// ValidateFederationSchema validates the merged schema of one directory as one
+// subgraph: unique type names, populated type bodies, unique fields and enum
+// values, and interface implementations. Undefined types are left to the
+// invalid-field-types rule, so they are not reported twice.
 //
 // Two default definition rules are left out because they reject valid
 // subgraphs: RequireDefinedTypesForExtensions (a subgraph extends entities
@@ -38,7 +39,6 @@ func ValidateFederationSchema(schemaString string) []models.DescriptionError {
 		astvalidation.UniqueFieldDefinitionNames(),
 		astvalidation.UniqueEnumValueNames(),
 		astvalidation.UniqueUnionMemberTypes(),
-		astvalidation.KnownTypeNames(),
 		astvalidation.ImplementTransitiveInterfaces(),
 		astvalidation.ImplementingTypesAreSupersets(),
 	)
