@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func createTestFile(t *testing.T, rootDir, relPath string) string {
+func createTestFile(t *testing.T, rootDir, relPath string) {
 	t.Helper()
 
 	rootDirPath := filepath.Join(rootDir, relPath)
@@ -28,8 +28,6 @@ func createTestFile(t *testing.T, rootDir, relPath string) string {
 
 	err = f.Close()
 	require.NoError(t, err, "unable to close file")
-
-	return rootDirPath
 }
 
 func TestFindGraphQLFiles(t *testing.T) {
@@ -40,6 +38,7 @@ func TestFindGraphQLFiles(t *testing.T) {
 	files := []string{
 		"a.graphql",
 		"b.graphqls",
+		".schema.graphql",
 		"notgraphql.txt",
 		".hidden/test.graphql",
 		"normaldir/test2.graphql",
@@ -60,6 +59,7 @@ func TestFindGraphQLFiles(t *testing.T) {
 			expectFiles: []string{
 				filepath.Join(tmpDir, "a.graphql"),
 				filepath.Join(tmpDir, "b.graphqls"),
+				filepath.Join(tmpDir, ".schema.graphql"),
 				filepath.Join(tmpDir, "normaldir/test2.graphql"),
 			},
 		},
@@ -74,5 +74,20 @@ func TestFindGraphQLFiles(t *testing.T) {
 
 			assert.ElementsMatch(t, test.expectFiles, got)
 		})
+	}
+}
+
+//nolint:paralleltest //t.Chdir cannot run in parallel
+func TestFindGraphQLFiles_RelativeRoot(t *testing.T) {
+	tmpDir := t.TempDir()
+	createTestFile(t, tmpDir, "sub/a.graphql")
+	createTestFile(t, tmpDir, "sub/.hidden/b.graphql")
+	t.Chdir(filepath.Join(tmpDir, "sub"))
+
+	for _, root := range []string{".", "./", "../sub"} {
+		got, err := findGraphQLFiles(root)
+		require.NoError(t, err)
+
+		assert.Equal(t, []string{filepath.Join(root, "a.graphql")}, got, "root %q", root)
 	}
 }

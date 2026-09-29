@@ -189,7 +189,7 @@ Rules are organized in two locations:
 
 ## Important Notes
 
-- The linter automatically skips directories: `node_modules`, `vendor`, `.git`, and any path starting with `.`
+- The linter automatically skips `node_modules`, `vendor` and hidden directories (starting with `.`) below the target path
 - GraphQL files must have `.graphql` or `.graphqls` extensions
 - Comments using `//` are filtered before parsing but preserved for line number reporting
 - Suppressions can be applied per-file or per-line via config
