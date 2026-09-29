@@ -64,13 +64,6 @@ func (e Execute) Run() error {
 		return fmt.Errorf("schema file discovery failed: %w", err)
 	}
 
-	if linterConfig.Settings.ValidateFederation {
-		err = validateFederation(schemaFiles)
-		if err != nil {
-			return err
-		}
-	}
-
 	totalErrors, errorFilesCount, dataDescriptionError := e.lintSchemaFiles(
 		linterConfig,
 		schemaFiles,
@@ -83,22 +76,6 @@ func (e Execute) Run() error {
 		dataDescriptionError,
 	) {
 		return ErrLintingFailed
-	}
-
-	return nil
-}
-
-func validateFederation(schemaFiles []string) error {
-	for _, schemaFile := range schemaFiles {
-		schemaBytes, err := os.ReadFile(schemaFile)
-		if err != nil {
-			return fmt.Errorf("failed to read schema file: %w", err)
-		}
-
-		filteredSchema := data.FilterSchemaComments(string(schemaBytes))
-		if !federation.ValidateFederationSchema(filteredSchema) {
-			return fmt.Errorf("federation validation failed for: %s", schemaFile)
-		}
 	}
 
 	return nil
@@ -318,39 +295,76 @@ func (e Execute) lintSchemaFiles(
 		allErrors = append(allErrors, fileErrors...)
 	}
 
-	schemaErrors := lintMergedSchema(modelsLinterConfig, schemaFiles)
-	for _, schemaErr := range schemaErrors {
-		failedFiles[schemaErr.FilePath] = true
+	// Each directory is one subgraph, so subgraphs kept side by side do not
+	// collide on shared type names such as Query.
+	var dirs []string
+
+	filesByDir := make(map[string][]string)
+
+	for _, schemaFile := range schemaFiles {
+		dir := filepath.Dir(schemaFile)
+		if _, ok := filesByDir[dir]; !ok {
+			dirs = append(dirs, dir)
+		}
+
+		filesByDir[dir] = append(filesByDir[dir], schemaFile)
 	}
 
-	totalErrors += len(schemaErrors)
-	allErrors = append(allErrors, schemaErrors...)
+	for _, dir := range dirs {
+		schemaErrors := lintMergedSchema(modelsLinterConfig, filesByDir[dir])
+		for _, schemaErr := range schemaErrors {
+			failedFiles[schemaErr.FilePath] = true
+		}
+
+		totalErrors += len(schemaErrors)
+		allErrors = append(allErrors, schemaErrors...)
+	}
 
 	return totalErrors, len(failedFiles), allErrors
 }
 
-// lintMergedSchema runs the schema wide rules once on all files together, so
-// types defined or used in another file are taken into account.
+// mergeSchemaFiles joins the files that can be read and parsed; the others are
+// reported per file. startLines holds the first merged line of each file.
+func mergeSchemaFiles(schemaFiles []string) ([]string, string, []int) {
+	var (
+		files      []string
+		contents   []string
+		startLines []int
+	)
+
+	line := 1
+
+	for _, schemaFile := range schemaFiles {
+		schemaBytes, err := os.ReadFile(schemaFile)
+		if err != nil {
+			continue
+		}
+
+		_, parseReport := astparser.ParseGraphqlDocumentBytes(schemaBytes)
+		if parseReport.HasErrors() {
+			continue
+		}
+
+		files = append(files, schemaFile)
+		contents = append(contents, string(schemaBytes))
+		startLines = append(startLines, line)
+		line += strings.Count(string(schemaBytes), "\n") + 1
+	}
+
+	return files, strings.Join(contents, "\n"), startLines
+}
+
+// lintMergedSchema runs the schema wide rules once on the files of one
+// subgraph together, so types defined or used in another file are taken into
+// account.
 func lintMergedSchema(
 	modelsLinterConfig *models.LinterConfig,
 	schemaFiles []string,
 ) []models.DescriptionError {
-	contents := make([]string, len(schemaFiles))
-	startLines := make([]int, len(schemaFiles)) // first merged line of each file
-
-	line := 1
-
-	for fileIdx, schemaFile := range schemaFiles {
-		schemaBytes, err := os.ReadFile(schemaFile)
-		if err == nil { // read failures are already reported per file
-			contents[fileIdx] = string(schemaBytes)
-		}
-
-		startLines[fileIdx] = line
-		line += strings.Count(contents[fileIdx], "\n") + 1
+	files, merged, startLines := mergeSchemaFiles(schemaFiles)
+	if len(files) == 0 {
+		return nil
 	}
-
-	merged := strings.Join(contents, "\n")
 
 	doc, parseReport := astparser.ParseGraphqlDocumentString(merged)
 	if parseReport.HasErrors() {
@@ -361,13 +375,23 @@ func lintMergedSchema(
 
 	rule := rules.Rule{}
 
-	var findings []models.DescriptionError
-	for _, schemaRule := range []func(*ast.Document, string) []models.DescriptionError{
+	schemaRules := []func(*ast.Document, string) []models.DescriptionError{
 		rule.MissingQueryRootType,
 		rule.RelayPageInfoSpec,
 		rule.UnusedTypes,
 		rule.UndefinedTypes,
-	} {
+	}
+	if modelsLinterConfig.Settings.ValidateFederation {
+		schemaRules = append(schemaRules,
+			federation_rules.ValidateDirectiveNames,
+			func(_ *ast.Document, schema string) []models.DescriptionError {
+				return federation.ValidateFederationSchema(schema)
+			},
+		)
+	}
+
+	var findings []models.DescriptionError
+	for _, schemaRule := range schemaRules {
 		findings = append(findings, schemaRule(&doc, merged)...)
 	}
 
@@ -375,7 +399,7 @@ func lintMergedSchema(
 
 	for _, finding := range findings {
 		fileIdx := sort.SearchInts(startLines, finding.LineNum+1) - 1
-		finding.FilePath = schemaFiles[fileIdx]
+		finding.FilePath = files[fileIdx]
 		finding.LineNum = finding.LineNum - startLines[fileIdx] + 1
 
 		unsuppressed = append(unsuppressed, getUnsuppressedDescriptionErrors(
@@ -416,6 +440,16 @@ func (e Execute) lintSingleSchemaFile(
 	_, doc, parseReport := dataStore.ParseAndFilterSchema(schemaString)
 	LogSchemaParseErrors(schemaString, &parseReport)
 
+	if parseReport.HasErrors() {
+		syntaxErrors := getUnsuppressedDescriptionErrors(
+			syntaxFindings(schemaString, schemaFile, &parseReport),
+			modelsLinterConfig,
+			schemaFile,
+		)
+
+		return len(syntaxErrors), min(len(syntaxErrors), 1), syntaxErrors
+	}
+
 	totalErrors, errorFilesCount, allErrors := e.collectLintErrors(
 		&doc,
 		modelsLinterConfig,
@@ -442,6 +476,31 @@ func LogSchemaParseErrors(
 
 	report.InternalErrors(parseReport)
 	report.ExternalErrors(schemaString, parseReport, linesBeforeContext, linesAfterContext)
+}
+
+// syntaxFindings turns parse errors into findings, so a broken file is
+// reported like any other finding and the other files are still linted.
+func syntaxFindings(
+	schemaString, schemaFile string,
+	parseReport *operationreport.Report,
+) []models.DescriptionError {
+	findings := make([]models.DescriptionError, 0, len(parseReport.ExternalErrors))
+
+	for _, externalErr := range parseReport.ExternalErrors {
+		lineNum := 1
+		if len(externalErr.Locations) > 0 {
+			lineNum = max(int(externalErr.Locations[0].Line), 1) // EOF errors report line 0
+		}
+
+		findings = append(findings, models.DescriptionError{
+			FilePath:    schemaFile,
+			LineNum:     lineNum,
+			Message:     "invalid-graphql-syntax: " + externalErr.Message,
+			LineContent: rules.GetLineContent(schemaString, lineNum),
+		})
+	}
+
+	return findings
 }
 
 func parseGraphQLDocument(schemaContent string) *ast.Document {
@@ -475,15 +534,12 @@ func (e Execute) collectLintErrors(
 		schemaFile,
 	)
 	allErrors := append([]models.DescriptionError{}, dataTypeErrors...)
-	unsuppressedDirectiveOrFederationError := modelsLinterConfig.Settings.ValidateFederation &&
-		!federation_rules.ValidateDirectiveNames(doc)
-
 	totalErrors, errorFilesCount := report.SummarizeLintResults(
 		len(unsuppressedDescriptionErrors),
 		hasUnsuppressedDeprecationReasonError,
 		unsuppressedDataTypeErrors,
-		unsuppressedDirectiveOrFederationError,
 	)
+
 	if totalErrors > 0 {
 		for i := range unsuppressedDescriptionErrors {
 			unsuppressedDescriptionErrors[i].FilePath = schemaFile

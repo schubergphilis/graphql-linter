@@ -210,21 +210,34 @@ object, interface, input object, enum, union and scalar types, and their
 fields, arguments, input values and enum values.
 
 `defined-types-are-used`, `invalid-graphql-schema` and `relay-page-info-spec`
-are schema wide: they run once on all target files together, so a schema that
-is split over several files is checked as a whole. Line numbers come from the
+are schema wide: they run once on the target files of each directory together,
+so a schema that is split over several files is checked as a whole. Each
+directory is one subgraph, so subgraphs kept side by side (`users/`, `orders/`)
+do not collide. Line numbers come from the
 parsed schema, so `line` suppressions stay stable.
 
 ### Federation rules
 
-When `validateFederation` is enabled, the linter also verifies Apollo Federation
-usage, including:
+When `validateFederation` is enabled (the default), the target files of each
+directory are checked together as one subgraph:
 
-- Only valid federation directives are used on types and fields
-  (`@key`, `@external`, `@requires`, `@provides`, `@extends`, `@shareable`,
-  `@inaccessible`, `@override`, `@composeDirective`, `@interfaceObject`, `@tag`,
-  `@deprecated`, `@specifiedBy`, `@oneOf`).
-- Directive typos are detected and closest-match suggestions are offered.
-- Composition-level validation of federated types.
+- `invalid-federation-directive`: every directive on types, fields, arguments,
+  input values, enum values, unions and scalars must be a Federation v2.x
+  directive (`@key`, `@external`, `@requires`, `@provides`, `@extends`,
+  `@shareable`, `@inaccessible`, `@override`, `@composeDirective`,
+  `@interfaceObject`, `@tag`, `@link`, `@authenticated`, `@requiresScopes`,
+  `@policy`, `@context`, `@fromContext`, `@cost`, `@listSize`), a built-in
+  directive (`@deprecated`, `@specifiedBy`, `@oneOf`), defined in the schema, or
+  named in `@composeDirective`. Namespaced imports such as `@federation__key`
+  are accepted. Typos get a suggestion, e.g. `Did you mean '@key'?`.
+- `invalid-federation-schema`: the merged subgraph schema must be valid: unique
+  type, field and enum value names, non-empty types and correct
+  interface implementations. Extending an entity owned by another subgraph and
+  repeating `@key` or `@tag` are allowed.
+
+This is subgraph validation, not supergraph composition: lint each subgraph
+with its own `-targetPath`. A file with a syntax error is reported as
+`invalid-graphql-syntax` and the other files are still linted.
 
 ## Suppressing findings
 

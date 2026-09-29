@@ -36,19 +36,13 @@ func SummarizeLintResults(
 	unsuppressedDescErrs int,
 	hasUnsuppressedDeprecationReasonError bool,
 	unsuppressedDataTypeErrors int,
-	unsuppressedDirectiveOrFederationError bool,
 ) (int, int) {
 	totalErrors := 0
 	errorFilesCount := 0
 
 	if unsuppressedDescErrs > 0 || hasUnsuppressedDeprecationReasonError ||
-		unsuppressedDataTypeErrors > 0 ||
-		unsuppressedDirectiveOrFederationError {
+		unsuppressedDataTypeErrors > 0 {
 		totalErrors += unsuppressedDescErrs + unsuppressedDataTypeErrors
-		if unsuppressedDirectiveOrFederationError {
-			totalErrors++
-		}
-
 		errorFilesCount++
 	}
 

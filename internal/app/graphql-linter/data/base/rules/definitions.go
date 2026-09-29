@@ -82,3 +82,62 @@ func newFinding(schemaString string, lineNum int, value, message string) models.
 func isRootType(name string) bool {
 	return name == rootQueryType || name == rootMutationType || name == rootSubscriptionType
 }
+
+// DefinitionLines returns, in document order, the lines on which typeName is
+// defined, or with memberName set, its fields, input values or enum values.
+func DefinitionLines(doc *ast.Document, typeName, memberName string) []int {
+	var lines []int
+
+	for _, def := range typeDefinitions(doc) {
+		if def.name != typeName {
+			continue
+		}
+
+		if memberName == "" {
+			lines = append(lines, LineOf(doc, def.nameRef))
+
+			continue
+		}
+
+		var memberRefs []ast.ByteSliceReference
+		for _, ref := range def.fields {
+			memberRefs = append(memberRefs, doc.FieldDefinitions[ref].Name)
+		}
+
+		for _, ref := range def.inputValues {
+			memberRefs = append(memberRefs, doc.InputValueDefinitions[ref].Name)
+		}
+
+		for _, ref := range def.enumValues {
+			memberRefs = append(memberRefs, doc.EnumValueDefinitions[ref].EnumValue)
+		}
+
+		for _, nameRef := range memberRefs {
+			if doc.Input.ByteSliceString(nameRef) == memberName {
+				lines = append(lines, LineOf(doc, nameRef))
+			}
+		}
+	}
+
+	return lines
+}
+
+// ReferenceLines returns the lines of the fields and input values whose type
+// is typeName, in document order.
+func ReferenceLines(doc *ast.Document, typeName string) []int {
+	var lines []int
+
+	for _, fieldDef := range doc.FieldDefinitions {
+		if getBaseTypeName(doc, doc.Types[fieldDef.Type]) == typeName {
+			lines = append(lines, LineOf(doc, fieldDef.Name))
+		}
+	}
+
+	for _, inputValue := range doc.InputValueDefinitions {
+		if getBaseTypeName(doc, doc.Types[inputValue.Type]) == typeName {
+			lines = append(lines, LineOf(doc, inputValue.Name))
+		}
+	}
+
+	return lines
+}

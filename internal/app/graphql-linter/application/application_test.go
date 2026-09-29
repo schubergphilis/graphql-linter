@@ -409,3 +409,50 @@ func TestLintMergedSchema_SplitFiles(t *testing.T) {
 	assert.Equal(t, 6, got[1].LineNum)
 	assert.Equal(t, "invalid-field-types: Field 'ghost' references undefined type 'Ghost'", got[1].Message)
 }
+
+func TestLintSchemaFiles_SubgraphPerDirectory(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	schema := "\"\"\"Q.\"\"\"\ntype Query {\n  \"\"\"I.\"\"\"\n  id: ID\n}\n"
+
+	files := make([]string, 0, 2)
+
+	for _, subgraph := range []string{"orders", "users"} {
+		require.NoError(t, os.Mkdir(filepath.Join(dir, subgraph), 0o700))
+
+		file := filepath.Join(dir, subgraph, "schema.graphql")
+		require.NoError(t, os.WriteFile(file, []byte(schema), 0o600))
+
+		files = append(files, file)
+	}
+
+	// Both subgraphs define Query: validated per directory, they do not collide.
+	_, _, got := Execute{}.lintSchemaFiles(models.NewLinterConfig(), files)
+	for _, finding := range got {
+		assert.NotContains(t, finding.Message, "invalid-federation-schema")
+	}
+}
+
+func TestLintMergedSchema_DirectiveFindingsAreCountedAndSuppressible(t *testing.T) {
+	t.Parallel()
+
+	dir := createTestDirectory(t, map[string]string{
+		"s.graphql": "\"\"\"Q.\"\"\"\ntype Query @foo {\n  \"\"\"P.\"\"\"\n  page: PageInfo @foo\n}\n" +
+			"\"\"\"P.\"\"\"\ntype PageInfo {\n  \"\"\"E.\"\"\"\n  endCursor: String\n}\n",
+	})
+	files := []string{filepath.Join(dir, "s.graphql")}
+
+	got := lintMergedSchema(models.NewLinterConfig(), files)
+	require.Len(t, got, 2)
+	assert.Equal(t, []int{2, 4}, []int{got[0].LineNum, got[1].LineNum})
+
+	config := models.NewLinterConfig()
+	config.Suppressions = []models.Suppression{{Rule: "invalid-federation-directive", Value: "foo", Line: 4}}
+	got = lintMergedSchema(config, files)
+	require.Len(t, got, 1)
+	assert.Equal(t, 2, got[0].LineNum)
+
+	config.Settings.ValidateFederation = false
+	assert.Empty(t, lintMergedSchema(config, files))
+}

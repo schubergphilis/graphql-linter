@@ -1,12 +1,14 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
@@ -25,10 +27,19 @@ func TestFilterSchemaComments(t *testing.T) {
 func TestValidateFederationSchema(t *testing.T) {
 	t.Parallel()
 
-	got := federation.ValidateFederationSchema("type Query { id: ID }")
-	if !got {
-		t.Errorf("expected federation schema to be valid")
-	}
+	assert.Empty(t, federation.ValidateFederationSchema("type Query { id: ID }"))
+
+	// A subgraph may extend an entity owned by another subgraph and repeat @key.
+	assert.Empty(t, federation.ValidateFederationSchema(
+		`type Query { me: User } extend type User @key(fields: "id") @key(fields: "email") { id: ID! email: String }`,
+	))
+
+	got := federation.ValidateFederationSchema("type Query { a: String }\n\ntype Query {\n  b: Unknown\n}")
+	require.Len(t, got, 1, "Unknown is left to invalid-field-types")
+	assert.Equal(t,
+		"3 invalid-federation-schema: there can be only one type named 'Query'",
+		fmt.Sprintf("%d %s", got[0].LineNum, got[0].Message),
+	)
 }
 
 func TestNewStore(t *testing.T) {
