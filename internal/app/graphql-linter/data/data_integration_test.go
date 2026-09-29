@@ -3,6 +3,7 @@
 package data
 
 import (
+	"cmp"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,13 +17,19 @@ func TestIntegrationLoadConfig(t *testing.T) {
 	tests := []struct {
 		name         string
 		configYAML   string
-		wantStrict   bool
+		wantDefaults bool
 		wantSuppress int
 	}{
 		{
 			name:         "no config file",
 			configYAML:   "",
-			wantStrict:   true,
+			wantDefaults: true,
+			wantSuppress: 0,
+		},
+		{
+			name:         "settings disabled",
+			configYAML:   "settings:\n  validateFederation: false\n  checkDescriptions: false\n",
+			wantDefaults: false,
 			wantSuppress: 0,
 		},
 	}
@@ -50,8 +57,9 @@ func TestIntegrationLoadConfig(t *testing.T) {
 				t.Fatalf("LoadConfig error: %v", err)
 			}
 
-			if config.Settings.StrictMode != test.wantStrict {
-				t.Errorf("StrictMode got %v, want %v", config.Settings.StrictMode, test.wantStrict)
+			if config.Settings.ValidateFederation != test.wantDefaults ||
+				config.Settings.CheckDescriptions != test.wantDefaults {
+				t.Errorf("Settings got %+v, want defaults %v", config.Settings, test.wantDefaults)
 			}
 
 			if len(config.Suppressions) != test.wantSuppress {
@@ -73,6 +81,7 @@ func TestLoadConfig(t *testing.T) {
 		name           string
 		configPath     string
 		configContent  string
+		defaultFile    string
 		chdir          string
 		prepareFile    bool
 		removeFile     bool
@@ -98,6 +107,15 @@ func TestLoadConfig(t *testing.T) {
 			expectSuppress: 1,
 			configContent: "suppressions:\n  - rule: test-rule\n    file: test.graphql\n    line: 1\n" +
 				"    value: test value\n    reason: test reason\n",
+		},
+		{
+			name:           "no configPath, .graphql-linter.yaml exists",
+			chdir:          projectRoot,
+			defaultFile:    ".graphql-linter.yaml",
+			prepareFile:    true,
+			removeFile:     true,
+			expectSuppress: 1,
+			configContent:  "suppressions:\n  - rule: test-rule\n",
 		},
 		{
 			name:           "configPath provided, file exists",
@@ -142,7 +160,7 @@ func TestLoadConfig(t *testing.T) {
 			if testCase.prepareFile {
 				file := configPath
 				if file == "" {
-					file = ".graphql-linter.yml"
+					file = cmp.Or(testCase.defaultFile, ".graphql-linter.yml")
 				}
 
 				err := os.WriteFile(file, []byte(testCase.configContent), 0o600)
