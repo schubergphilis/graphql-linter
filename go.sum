@@ -33,8 +33,8 @@ github.com/wundergraph/astjson v1.1.0 h1:xORDosrZ87zQFJwNGe/HIHXqzpdHOFmqWgykCLV
 github.com/wundergraph/astjson v1.1.0/go.mod h1:h12D/dxxnedtLzsKyBLK7/Oe4TAoGpRVC9nDpDrZSWw=
 github.com/wundergraph/go-arena v1.3.0 h1:n0ng5a1vbd8YGq1u3rMr0vPU5f6AZ1BXIiUhL1UIok8=
 github.com/wundergraph/go-arena v1.3.0/go.mod h1:ROOysEHWJjLQ8FSfNxZCziagb7Qw2nXY3/vgKRh7eWw=
-github.com/wundergraph/graphql-go-tools/v2 v2.21.1 h1:cfUcjXVYXVUrTERcZC5QpM92ianE9o9v7thXYmaiPP8=
-github.com/wundergraph/graphql-go-tools/v2 v2.21.1/go.mod h1:w/eZQt3znffRePA0raMhTjhKSgbt0Fywf26/p/B1uOQ=
+github.com/wundergraph/graphql-go-tools/v2 v2.25.0 h1:0f53uGRtNg5k26fdMAGSQNLsfveIuI6F8NBH/arbxkY=
+github.com/wundergraph/graphql-go-tools/v2 v2.25.0/go.mod h1:2+FpG5/GRCFYw+fU8jmid4bF+362KtCio5Fo7fzNvhU=
 go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
 go.yaml.in/yaml/v3 v3.0.5/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
