@@ -19,33 +19,10 @@ const (
 	descriptionErrorCapacity = 8
 )
 
-type Storer interface {
-	FindAndLogGraphQLSchemaFiles() ([]string, error)
-	LintSchemaFiles(schemaFiles []string) (int, int, []models.DescriptionError)
-	LoadConfig() (*models.LinterConfig, error)
-	UnsortedTypeFields(doc *ast.Document, schemaString string) []models.DescriptionError
-}
-
 type Store struct {
 	ConfigPath   string
 	LinterConfig *models.LinterConfig
-	Ruler        rules.Ruler
 	TargetPath   string
-	Verbose      bool
-}
-
-type Suppression struct {
-	File   string `yaml:"file"`
-	Line   int    `yaml:"line"`
-	Rule   string `yaml:"rule"`
-	Value  string `yaml:"value"`
-	Reason string `yaml:"reason"`
-}
-
-type Settings struct {
-	StrictMode         bool `yaml:"strictMode"`
-	ValidateFederation bool `yaml:"validateFederation"`
-	CheckDescriptions  bool `yaml:"checkDescriptions"`
 }
 
 type errorResult struct {
@@ -53,19 +30,11 @@ type errorResult struct {
 	errorLines []int
 }
 
-func NewStore(
-	configPath, targetPath string,
-	ruler rules.Ruler,
-	verbose bool,
-) (Store, error) {
-	store := Store{
+func NewStore(configPath, targetPath string) Store {
+	return Store{
 		ConfigPath: configPath,
-		Ruler:      ruler,
 		TargetPath: targetPath,
-		Verbose:    verbose,
 	}
-
-	return store, nil
 }
 
 func (s Store) LoadConfig() (*models.LinterConfig, error) {
@@ -97,17 +66,6 @@ func (s Store) LoadConfig() (*models.LinterConfig, error) {
 	slog.Debug(fmt.Sprintf("loaded config with %d suppressions", len(config.Suppressions)))
 
 	return config, nil
-}
-
-func readSchemaFile(schemaPath string) (string, bool) {
-	schemaBytes, err := os.ReadFile(schemaPath)
-	if err != nil {
-		slog.Error("failed to read schema file", "error", err)
-
-		return "", false
-	}
-
-	return string(schemaBytes), true
 }
 
 func FilterSchemaComments(schemaString string) string {
@@ -181,7 +139,7 @@ func (s Store) UnsortedTypeFields(doc *ast.Document, schemaString string) []mode
 	for _, obj := range doc.ObjectTypeDefinitions {
 		typeName := doc.Input.ByteSliceString(obj.Name)
 
-		err := s.Ruler.UnsortedFields(
+		err := rules.Rule{}.UnsortedFields(
 			obj.FieldsDefinition.Refs,
 			func(fieldRef int) string { return doc.Input.ByteSliceString(doc.FieldDefinitions[fieldRef].Name) },
 			"type",
@@ -202,7 +160,7 @@ func (s Store) UnsortedInterfaceFields(doc *ast.Document, schemaString string) [
 	for _, iface := range doc.InterfaceTypeDefinitions {
 		ifaceName := doc.Input.ByteSliceString(iface.Name)
 
-		err := s.Ruler.UnsortedFields(
+		err := rules.Rule{}.UnsortedFields(
 			iface.FieldsDefinition.Refs,
 			func(fieldRef int) string { return doc.Input.ByteSliceString(doc.FieldDefinitions[fieldRef].Name) },
 			"interface",
@@ -257,12 +215,6 @@ func (s Store) ParseAndFilterSchema(
 	return filteredSchema, doc, parseReport
 }
 
-func (s Store) ReadAndValidateSchemaFile(schemaFile string) (string, bool) {
-	schemaString, ok := readSchemaFile(schemaFile)
-
-	return schemaString, ok
-}
-
 func (s Store) collectDataTypeErrors(
 	doc *ast.Document,
 	modelsLinterConfig *models.LinterConfig,
@@ -278,19 +230,19 @@ func (s Store) collectDataTypeErrors(
 		enumDescErrors []models.DescriptionError
 	)
 
-	fieldTypeResultErrs, fieldTypeResultLines := s.Ruler.ValidateFieldTypes(
+	fieldTypeResultErrs, fieldTypeResultLines := rules.Rule{}.ValidateFieldTypes(
 		doc,
 		schemaContent,
 		builtInScalars,
 		definedTypes,
 	)
-	inputFieldTypeResultErrs, inputFieldTypeResultLines := s.Ruler.ValidateInputFieldTypes(
+	inputFieldTypeResultErrs, inputFieldTypeResultLines := rules.Rule{}.ValidateInputFieldTypes(
 		doc,
 		schemaContent,
 		builtInScalars,
 		definedTypes,
 	)
-	enumTypeResultErrs, enumTypeResultLines, descErrs := s.Ruler.ValidateEnumTypes(
+	enumTypeResultErrs, enumTypeResultLines, descErrs := rules.Rule{}.ValidateEnumTypes(
 		doc,
 		modelsLinterConfig,
 		schemaContent,
@@ -325,7 +277,7 @@ func (s Store) uncapitalizedTypeDescriptions(
 		if obj.Description.IsDefined {
 			desc := doc.Input.ByteSliceString(obj.Description.Content)
 
-			err := s.Ruler.ReportUncapitalizedDescription(
+			err := rules.Rule{}.ReportUncapitalizedDescription(
 				"type",
 				"",
 				doc.Input.ByteSliceString(obj.Name), desc, schemaString)
@@ -350,7 +302,7 @@ func (s Store) uncapitalizedFieldDescriptions(
 			if fieldDef.Description.IsDefined {
 				desc := doc.Input.ByteSliceString(fieldDef.Description.Content)
 
-				err := s.Ruler.ReportUncapitalizedDescription(
+				err := rules.Rule{}.ReportUncapitalizedDescription(
 					"field",
 					doc.Input.ByteSliceString(obj.Name),
 					doc.Input.ByteSliceString(fieldDef.Name),
@@ -381,7 +333,7 @@ func (s Store) uncapitalizedEnumValueDescriptions(
 
 				valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
 
-				err := s.Ruler.ReportUncapitalizedDescription(
+				err := rules.Rule{}.ReportUncapitalizedDescription(
 					"enum",
 					enumName,
 					valueName,
@@ -415,7 +367,7 @@ func (s Store) uncapitalizedArgumentDescriptions(
 
 					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
 
-					err := s.Ruler.ReportUncapitalizedDescription(
+					err := rules.Rule{}.ReportUncapitalizedDescription(
 						"argument",
 						fieldName,
 						argName,

@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,7 +35,7 @@ func TestVersion(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	projectRoot, err := projectroot.FindProjectRoot()
+	projectRoot, err := filepath.Abs("../..")
 	if err != nil {
 		t.Fatalf("failed to find project root: %v", err)
 	}
@@ -59,7 +58,7 @@ func TestOutput(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	projectRoot, err := projectroot.FindProjectRoot()
+	projectRoot, err := filepath.Abs("../..")
 	if err != nil {
 		t.Fatalf("failed to find project root: %v", err)
 	}
@@ -146,7 +145,7 @@ func TestSuppressAllScenarios(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	projectRoot, err := projectroot.FindProjectRoot()
+	projectRoot, err := filepath.Abs("../..")
 	if err != nil {
 		t.Fatalf("failed to find project root: %v", err)
 	}
@@ -199,7 +198,7 @@ func TestSuppressTwoScenarios(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	projectRoot, err := projectroot.FindProjectRoot()
+	projectRoot, err := filepath.Abs("../..")
 	if err != nil {
 		t.Fatalf("failed to find project root: %v", err)
 	}

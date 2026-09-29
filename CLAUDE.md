@@ -66,20 +66,6 @@ task remote:format
 task remote:golangci-lint-run-without-cache
 ```
 
-### Mocks
-
-```bash
-# Generate mocks (uses .mockery.yaml config)
-task remote:mock-generate
-```
-
-### Test Data Generation
-
-```bash
-# Generate test data files
-go run cmd/graphql-testdata-generator/main.go
-```
-
 ## Architecture
 
 This project follows **Clean Architecture** with three distinct layers:
@@ -87,7 +73,6 @@ This project follows **Clean Architecture** with three distinct layers:
 ### 1. Presentation Layer
 - **Location**: `cmd/graphql-linter/main.go`, `internal/app/graphql-linter/presentation/`
 - **Responsibility**: CLI flag parsing, user input handling
-- **Key interfaces**: `Presenter`, `Flagger`
 
 ### 2. Application Layer
 - **Location**: `internal/app/graphql-linter/application/`
@@ -95,7 +80,6 @@ This project follows **Clean Architecture** with three distinct layers:
 - **Key components**:
   - `Execute`: Main executor that orchestrates the linting process
   - `report/`: Handles error reporting and output formatting
-- **Key interfaces**: `Executor`, `Debugger`
 
 ### 3. Data Layer
 - **Location**: `internal/app/graphql-linter/data/`
@@ -106,12 +90,11 @@ This project follows **Clean Architecture** with three distinct layers:
   - `base/models/`: Data models for config, errors, suppressions
   - `federation/`: Apollo Federation-specific validation
   - `federation/rules/`: Federation directive validation
-- **Key interfaces**: `Storer`, `Ruler`
 
 ### Shared Packages
 - **Location**: `internal/pkg/`
 - **Contents**:
-  - `constants/`: Shared constants
+  - `logging/`: slog handler setup
   - `rules/`: Common rule helpers used across base and federation rules
 
 ### Flow
@@ -134,7 +117,7 @@ This project follows **Clean Architecture** with three distinct layers:
 - **Unit tests** (`*_test.go`): Test individual functions and methods
 - **Integration tests** (`*_integration_test.go`): Test interactions between layers
 - **Component tests** (`test/component/`): End-to-end tests with real GraphQL files
-- **Mocks** (`internal/app/graphql-linter/*/mocks/`): Generated using mockery for interfaces
+- **Test fixtures** (`test/testdata/graphql/`): Hand-written `.graphql` files; edit them directly
 
 ## Configuration
 
@@ -195,4 +178,3 @@ Rules are organized in two locations:
 - Suppressions can be applied per-file or per-line via config
 - Code coverage target: 80.2%
 - CI uses `mcvs-golang-action@v3.11.2` with multiple test types
-- Mocks are auto-generated; don't edit manually

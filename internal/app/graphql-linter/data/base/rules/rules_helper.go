@@ -1,12 +1,12 @@
 package rules
 
 import (
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 	"unicode"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
-	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/constants"
 	pkgRules "github.com/schubergphilis/graphql-linter/internal/pkg/rules"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 )
@@ -48,11 +48,8 @@ func checkSortedOrder(
 		return nil
 	}
 
-	sorted := make([]string, len(names))
-	copy(sorted, names)
-	sort.Strings(sorted)
-
-	if !equalStringSlices(names, sorted) {
+	if !slices.IsSorted(names) {
+		sorted := slices.Sorted(slices.Values(names))
 		lineNum := findLineNumberByText(schemaString, searchPrefix+itemName)
 		lineContent := GetLineContent(schemaString, lineNum)
 		message := rulePrefix + ": The " + itemName +
@@ -69,20 +66,6 @@ func checkSortedOrder(
 	}
 
 	return nil
-}
-
-func equalStringSlices(sliceA, sliceB []string) bool {
-	if len(sliceA) != len(sliceB) {
-		return false
-	}
-
-	for i := range sliceA {
-		if sliceA[i] != sliceB[i] {
-			return false
-		}
-	}
-
-	return true
 }
 
 func isCamelCase(str string) bool {
@@ -194,46 +177,6 @@ func getBaseTypeName(doc *ast.Document, typeRef ast.Type) string {
 	default:
 		return ""
 	}
-}
-
-func collectDefinedTypeNames(doc *ast.Document) map[string]bool {
-	definedTypes := make(map[string]bool)
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		name := doc.Input.ByteSliceString(obj.Name)
-		if name != constants.RootQueryType &&
-			name != constants.RootMutationType &&
-			name != constants.RootSubscriptionType {
-			definedTypes[name] = false
-		}
-	}
-
-	for _, input := range doc.InputObjectTypeDefinitions {
-		name := doc.Input.ByteSliceString(input.Name)
-		definedTypes[name] = false
-	}
-
-	for _, enum := range doc.EnumTypeDefinitions {
-		name := doc.Input.ByteSliceString(enum.Name)
-		definedTypes[name] = false
-	}
-
-	for _, iface := range doc.InterfaceTypeDefinitions {
-		name := doc.Input.ByteSliceString(iface.Name)
-		definedTypes[name] = false
-	}
-
-	for _, union := range doc.UnionTypeDefinitions {
-		name := doc.Input.ByteSliceString(union.Name)
-		definedTypes[name] = false
-	}
-
-	for _, scalar := range doc.ScalarTypeDefinitions {
-		name := doc.Input.ByteSliceString(scalar.Name)
-		definedTypes[name] = false
-	}
-
-	return definedTypes
 }
 
 func markUsedTypes(doc *ast.Document, definedTypes map[string]bool) {
@@ -349,17 +292,7 @@ func indexSlice(n int) []int {
 }
 
 func getAvailableTypes(builtInScalars, definedTypes map[string]bool) []string {
-	types := make([]string, 0, len(builtInScalars)+len(definedTypes))
-
-	for t := range builtInScalars {
-		types = append(types, t)
-	}
-
-	for t := range definedTypes {
-		types = append(types, t)
-	}
-
-	return types
+	return append(slices.Collect(maps.Keys(builtInScalars)), slices.Collect(maps.Keys(definedTypes))...)
 }
 
 func CollectDefinedTypes(doc *ast.Document) map[string]bool {

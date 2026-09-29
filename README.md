@@ -286,12 +286,6 @@ task remote:test-component
 task remote:lint
 task remote:format
 task remote:fix-linting-issues
-
-# Regenerate mocks (mockery)
-task remote:mock-generate
-
-# Regenerate test data fixtures
-go run ./cmd/graphql-testdata-generator
 ```
 
 ### Project layout
@@ -299,7 +293,6 @@ go run ./cmd/graphql-testdata-generator
 ```text
 cmd/
   graphql-linter/             CLI entry point
-  graphql-testdata-generator/ Test fixture generator
 internal/
   app/graphql-linter/
     presentation/             CLI parsing and I/O
@@ -307,7 +300,7 @@ internal/
     data/                     Config, schema parsing, rule execution
       base/rules/             Schema rules
       federation/rules/       Apollo Federation rules
-  pkg/                        Shared helpers and constants
+  pkg/                        Shared helpers
 test/                         Component tests and GraphQL fixtures
 ```
 

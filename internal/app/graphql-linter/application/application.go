@@ -30,60 +30,25 @@ const (
 	linesBeforeContext = 2
 )
 
-type Executor interface {
-	Run() error
-	Version()
-	PrintReport(
-		schemaFiles []string,
-		totalErrors int,
-		passedFiles int,
-		allErrors []models.DescriptionError,
-	)
-}
-
-type Debugger interface {
-	ReadBuildInfo() (info *debug.BuildInfo, ok bool)
-}
-
-type Debug struct{}
-
-func NewDebug() Debug {
-	return Debug{}
-}
+// readBuildInfo is a variable so tests can replace it.
+var readBuildInfo = debug.ReadBuildInfo
 
 type Execute struct {
 	ConfigPath    string
-	Debugger      Debugger
 	TargetPath    string
-	Verbose       bool
 	VersionString string
 }
 
-func NewExecute(
-	debugger Debugger,
-	configPath, targetPath, versionString string,
-	verbose bool,
-) (Execute, error) {
-	execute := Execute{
+func NewExecute(configPath, targetPath, versionString string) Execute {
+	return Execute{
 		ConfigPath:    configPath,
-		Debugger:      debugger,
 		TargetPath:    targetPath,
-		Verbose:       verbose,
 		VersionString: versionString,
 	}
-
-	return execute, nil
-}
-
-func (Debug) ReadBuildInfo() (*debug.BuildInfo, bool) {
-	return debug.ReadBuildInfo()
 }
 
 func (e Execute) Run() error {
-	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, rules.Rule{}, e.Verbose)
-	if err != nil {
-		return fmt.Errorf("unable to load new store: %w", err)
-	}
+	dataStore := data.NewStore(e.ConfigPath, e.TargetPath)
 
 	linterConfig, err := dataStore.LoadConfig()
 	if err != nil {
@@ -99,12 +64,12 @@ func (e Execute) Run() error {
 	}
 
 	for _, schemaFile := range schemaFiles {
-		schemaString, ok := dataStore.ReadAndValidateSchemaFile(schemaFile)
-		if !ok {
-			return fmt.Errorf("failed to read schema file: %s", schemaFile)
+		schemaBytes, err := os.ReadFile(schemaFile)
+		if err != nil {
+			return fmt.Errorf("failed to read schema file: %w", err)
 		}
 
-		filteredSchema := data.FilterSchemaComments(schemaString)
+		filteredSchema := data.FilterSchemaComments(string(schemaBytes))
 		if !federation.ValidateFederationSchema(filteredSchema) {
 			return fmt.Errorf("federation validation failed for: %s", schemaFile)
 		}
@@ -132,7 +97,7 @@ func (e Execute) Version() string {
 		return e.VersionString
 	}
 
-	if info, ok := e.Debugger.ReadBuildInfo(); ok {
+	if info, ok := readBuildInfo(); ok {
 		return info.Main.Version
 	}
 
@@ -218,13 +183,8 @@ func (e Execute) lintDescriptions(
 	schemaString string,
 	schemaPath string,
 ) ([]models.DescriptionError, bool) {
-	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, rules.Rule{}, e.Verbose)
-	if err != nil {
-		slog.Error("unable to load new store", "error", err)
-
-		return nil, false
-	}
-
+	rule := rules.Rule{}
+	dataStore := data.NewStore(e.ConfigPath, e.TargetPath)
 	descriptionErrors := make([]models.DescriptionError, 0, pkg_rules.DefaultErrorCapacity)
 	hasUnsuppressedDeprecationReasonError := false
 
@@ -238,7 +198,7 @@ func (e Execute) lintDescriptions(
 		hasUnsuppressedDeprecationReasonError,
 	)
 
-	enumSortErrors := dataStore.Ruler.EnumValuesSortedAlphabetically(
+	enumSortErrors := rule.EnumValuesSortedAlphabetically(
 		doc,
 		modelsLinterConfig,
 		schemaString,
@@ -258,25 +218,27 @@ func (e Execute) collectDescriptionErrors(
 	descriptionErrors []models.DescriptionError,
 	hasUnsuppressedDeprecationReasonError bool,
 ) ([]models.DescriptionError, bool) {
+	rule := rules.Rule{}
+
 	helpers := []func(*ast.Document, string) []models.DescriptionError{
-		dataStore.Ruler.FieldsAreCamelCased,
-		dataStore.Ruler.InputObjectFieldsSortedAlphabetically,
-		dataStore.Ruler.InputObjectValuesCamelCased,
-		dataStore.Ruler.MissingArgumentDescriptions,
-		dataStore.Ruler.MissingDeprecationReasons,
-		dataStore.Ruler.MissingEnumValueDescriptions,
-		dataStore.Ruler.MissingFieldDescriptions,
-		dataStore.Ruler.MissingInputObjectValueDescriptions,
-		dataStore.Ruler.MissingQueryRootType,
-		dataStore.Ruler.MissingTypeDescriptions,
-		dataStore.Ruler.RelayConnectionArgumentsSpec,
-		dataStore.Ruler.RelayConnectionTypesSpec,
-		dataStore.Ruler.RelayPageInfoSpec,
-		dataStore.Ruler.TypesAreCapitalized,
+		rule.FieldsAreCamelCased,
+		rule.InputObjectFieldsSortedAlphabetically,
+		rule.InputObjectValuesCamelCased,
+		rule.MissingArgumentDescriptions,
+		rule.MissingDeprecationReasons,
+		rule.MissingEnumValueDescriptions,
+		rule.MissingFieldDescriptions,
+		rule.MissingInputObjectValueDescriptions,
+		rule.MissingQueryRootType,
+		rule.MissingTypeDescriptions,
+		rule.RelayConnectionArgumentsSpec,
+		rule.RelayConnectionTypesSpec,
+		rule.RelayPageInfoSpec,
+		rule.TypesAreCapitalized,
 		dataStore.UncapitalizedDescriptions,
 		dataStore.UnsortedInterfaceFields,
 		dataStore.UnsortedTypeFields,
-		dataStore.Ruler.UnusedTypes,
+		rule.UnusedTypes,
 	}
 	for _, helper := range helpers {
 		errList := helper(doc, schemaString)
@@ -352,13 +314,12 @@ func (e Execute) lintSingleSchemaFile(
 ) {
 	slog.Debug(fmt.Sprintf("=== Linting %s ===", schemaFile))
 
-	dataStore, err := data.NewStore(e.ConfigPath, e.TargetPath, rules.Rule{}, e.Verbose)
-	if err != nil {
-		slog.Error("unable to load new store", "error", err)
-	}
+	dataStore := data.NewStore(e.ConfigPath, e.TargetPath)
 
-	schemaString, ok := dataStore.ReadAndValidateSchemaFile(schemaFile)
-	if !ok {
+	schemaBytes, err := os.ReadFile(schemaFile)
+	if err != nil {
+		slog.Error("failed to read schema file", "error", err)
+
 		return 1, 1, []models.DescriptionError{{
 			FilePath:    schemaFile,
 			LineNum:     0,
@@ -367,6 +328,7 @@ func (e Execute) lintSingleSchemaFile(
 		}}
 	}
 
+	schemaString := string(schemaBytes)
 	_, doc, parseReport := dataStore.ParseAndFilterSchema(schemaString)
 	LogSchemaParseErrors(schemaString, &parseReport)
 

@@ -1,30 +1,14 @@
 package data
 
 import (
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
-	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/rules"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
-
-func TestReadSchemaFile(t *testing.T) {
-	t.Parallel()
-
-	content := "type Query { id: ID }"
-
-	tempFile := createTempSchemaFile(t, content)
-	defer os.Remove(tempFile)
-
-	got, ok := readSchemaFile(tempFile)
-	if !ok || got != content {
-		t.Errorf("got %v, want %v", got, content)
-	}
-}
 
 func TestFilterSchemaComments(t *testing.T) {
 	t.Parallel()
@@ -50,12 +34,8 @@ func TestValidateFederationSchema(t *testing.T) {
 func TestNewStore(t *testing.T) {
 	t.Parallel()
 
-	store, err := NewStore("", "/tmp", rules.Rule{}, true)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	if store.TargetPath != "/tmp" || !store.Verbose {
+	store := NewStore("", "/tmp")
+	if store.TargetPath != "/tmp" {
 		t.Errorf("unexpected store values: %+v", store)
 	}
 }
@@ -63,10 +43,7 @@ func TestNewStore(t *testing.T) {
 func TestFindUnsortedInterfaceFields(t *testing.T) {
 	t.Parallel()
 
-	store, err := NewStore("", "/tmp", rules.Rule{}, true)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
+	store := NewStore("", "/tmp")
 
 	tests := []struct {
 		name          string
@@ -138,7 +115,7 @@ func TestCollectUnsuppressedDataTypeErrors(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			store := Store{LinterConfig: test.config, Ruler: rules.Rule{}}
+			store := Store{LinterConfig: test.config}
 			doc, _ := astparser.ParseGraphqlDocumentString(test.schema)
 
 			count, errs := store.CollectUnsuppressedDataTypeErrors(

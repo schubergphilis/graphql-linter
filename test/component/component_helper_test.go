@@ -12,8 +12,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 )
 
 type SuppressionEntry struct {
@@ -28,7 +26,7 @@ func setup() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	projectRoot, err := projectroot.FindProjectRoot()
+	projectRoot, err := filepath.Abs("../..")
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
@@ -65,7 +63,7 @@ func setup() error {
 }
 
 func teardown() {
-	projectRoot, err := projectroot.FindProjectRoot()
+	projectRoot, err := filepath.Abs("../..")
 	if err != nil {
 		slog.Error("failed to find project root during teardown", "error", err)
 		os.Exit(1)
