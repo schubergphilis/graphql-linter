@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/rules"
 	pkg_rules "github.com/schubergphilis/graphql-linter/internal/pkg/rules"
-	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -436,14 +434,9 @@ func (s Store) uncapitalizedArgumentDescriptions(
 }
 
 func loadDefaultConfig(config *models.LinterConfig) (*models.LinterConfig, error) {
-	slog.Debug("No config path provided, using default project root search")
+	slog.Debug("No config path provided, looking for .graphql-linter.yml in the current directory")
 
-	projectRoot, err := projectroot.FindProjectRoot()
-	if err != nil {
-		return nil, fmt.Errorf("failed to determine project root: %w", err)
-	}
-
-	defaultConfigPath := filepath.Join(projectRoot, ".graphql-linter.yml")
+	defaultConfigPath := ".graphql-linter.yml"
 
 	_, statErr := os.Stat(defaultConfigPath)
 	if statErr == nil {

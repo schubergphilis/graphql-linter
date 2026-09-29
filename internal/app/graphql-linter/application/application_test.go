@@ -1,6 +1,7 @@
 package application
 
 import (
+	"errors"
 	"os"
 	"reflect"
 	"runtime/debug"
@@ -292,4 +293,22 @@ func TestLogSchemaParseErrors_Errors(t *testing.T) {
 	_, report := astparser.ParseGraphqlDocumentString("type Query { id: ID } ...")
 	report.InternalErrors = append(report.InternalErrors, assert.AnError)
 	LogSchemaParseErrors("type Query { id: ID } ...", &report)
+}
+
+//nolint:paralleltest //t.Chdir cannot run in parallel
+func TestRun_OutsideGoModule(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	err := os.WriteFile("s.graphql", []byte("type Query { a: String }\n"), 0o600)
+	if err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	for _, targetPath := range []string{"", dir} {
+		err := Execute{TargetPath: targetPath}.Run()
+		if err != nil && !errors.Is(err, ErrLintingFailed) {
+			t.Errorf("targetPath %q: expected lint result, got %v", targetPath, err)
+		}
+	}
 }

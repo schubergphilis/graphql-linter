@@ -16,7 +16,6 @@ import (
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation"
 	federation_rules "github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/federation/rules"
 	pkg_rules "github.com/schubergphilis/graphql-linter/internal/pkg/rules"
-	"github.com/schubergphilis/mcvs-golang-project-root/pkg/projectroot"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -141,13 +140,13 @@ func (e Execute) Version() string {
 }
 
 func (e Execute) FindAndLogGraphQLSchemaFiles() ([]string, error) {
-	projectRoot, err := projectroot.FindProjectRoot()
-	if err != nil {
-		return nil, fmt.Errorf("failed to determine project root: %w", err)
-	}
-
 	if e.TargetPath == "" {
-		e.TargetPath = projectRoot
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("failed to determine working directory: %w", err)
+		}
+
+		e.TargetPath = cwd
 	}
 
 	schemaFiles, err := findGraphQLFiles(e.TargetPath)

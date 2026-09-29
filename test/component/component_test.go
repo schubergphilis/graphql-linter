@@ -67,6 +67,7 @@ func TestOutput(t *testing.T) {
 	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
 	targetPath := filepath.Join(projectRoot, "test", "testdata", "graphql", "base", "invalid")
 	cmd := exec.CommandContext(ctx, "go", "run", mainPath, "-targetPath", targetPath)
+	cmd.Dir = projectRoot
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 
@@ -167,6 +168,7 @@ func TestSuppressAllScenarios(t *testing.T) {
 
 	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
 	cmd := exec.CommandContext(ctx, "go", "run", mainPath, "-targetPath", targetPath)
+	cmd.Dir = projectRoot
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 
@@ -234,6 +236,7 @@ func TestSuppressTwoScenarios(t *testing.T) {
 
 	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
 	cmd := exec.CommandContext(ctx, "go", "run", mainPath, "-targetPath", targetPath)
+	cmd.Dir = projectRoot
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 
