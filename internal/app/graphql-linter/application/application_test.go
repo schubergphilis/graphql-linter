@@ -123,31 +123,31 @@ func TestLintDescriptions(t *testing.T) {
 		wantHasDeprecationReasonError bool
 	}{
 		{
-			name:                          "missing Query root type",
-			errorSubstring:                "invalid-graphql-schema",
+			name:                          "schema wide rules are not run per file",
+			errorSubstring:                "Object type 'User' is missing a description",
 			schemaContent:                 "type User { id: ID }",
-			wantNumberOfDescriptionErrors: 5,
+			wantNumberOfDescriptionErrors: 2,
 			wantHasDeprecationReasonError: false,
 		},
 		{
 			name:                          "all valid, no description reason errors",
 			errorSubstring:                "Object type 'Query' is missing a description",
 			schemaContent:                 "type Query { id: ID }",
-			wantNumberOfDescriptionErrors: 3,
+			wantNumberOfDescriptionErrors: 2,
 			wantHasDeprecationReasonError: false,
 		},
 		{
 			name:                          "missing deprecation reason",
 			errorSubstring:                "deprecations-have-a-reason",
-			schemaContent:                 `enum Status {\n  ACTIVE\n  INACTIVE @deprecated\n}`,
-			wantNumberOfDescriptionErrors: 10,
+			schemaContent:                 "enum Status {\n  ACTIVE\n  INACTIVE @deprecated\n}",
+			wantNumberOfDescriptionErrors: 4,
 			wantHasDeprecationReasonError: true,
 		},
 		{
 			name:                          "missing type description",
 			errorSubstring:                "Object type 'Foo' is missing a description",
 			schemaContent:                 "type Query { id: ID }\ntype Foo { bar: String }",
-			wantNumberOfDescriptionErrors: 6,
+			wantNumberOfDescriptionErrors: 4,
 			wantHasDeprecationReasonError: false,
 		},
 	}
@@ -185,22 +185,10 @@ func TestValidateDataTypes(t *testing.T) {
 			wantErrLines:  0,
 		},
 		{
-			name:          "undefined type",
-			schemaContent: "type Query { foo: Bar }",
-			wantValid:     false,
-			wantErrLines:  1,
-		},
-		{
 			name:          "valid enum",
 			schemaContent: "enum Status { ACTIVE INACTIVE } type Query { status: Status }",
 			wantValid:     true,
 			wantErrLines:  0,
-		},
-		{
-			name:          "input with undefined type",
-			schemaContent: "input FooInput { bar: Baz } type Query { foo(input: FooInput): String }",
-			wantValid:     false,
-			wantErrLines:  1,
 		},
 	}
 
@@ -273,7 +261,7 @@ func TestLintSchemaFiles_Errors(t *testing.T) {
 
 	execute := Execute{}
 
-	total, errorFiles, _ := execute.lintSchemaFiles(nil, []string{"/does/not/exist.graphql"})
+	total, errorFiles, _ := execute.lintSchemaFiles(models.NewLinterConfig(), []string{"/does/not/exist.graphql"})
 	if total == 0 || errorFiles == 0 {
 		t.Errorf("expected errors for missing file")
 	}
@@ -391,4 +379,33 @@ func TestSuppressionValueMatchesEveryRule(t *testing.T) {
 	}
 
 	assert.GreaterOrEqual(t, len(seenRules), 15, "rules covered: %v", seenRules)
+}
+
+func TestLintMergedSchema_SplitFiles(t *testing.T) {
+	t.Parallel()
+
+	dir := createTestDirectory(t, map[string]string{
+		"a.graphql": "\"\"\"Q.\"\"\"\ntype Query {\n  \"\"\"U.\"\"\"\n  user: User\n}\n",
+		"b.graphql": "\"\"\"U.\"\"\"\ntype User {\n  \"\"\"P.\"\"\"\n  page: PageInfo\n}\n\n" +
+			"\"\"\"Unused.\"\"\"\nscalar Unused\n",
+		"c.graphql": "\"\"\"P.\"\"\"\ntype PageInfo {\n  \"\"\"E.\"\"\"\n  endCursor: String\n" +
+			"  \"\"\"G.\"\"\"\n  ghost: Ghost\n}\n",
+	})
+	files := []string{
+		filepath.Join(dir, "a.graphql"),
+		filepath.Join(dir, "b.graphql"),
+		filepath.Join(dir, "c.graphql"),
+	}
+
+	// Query, User and PageInfo are defined and used across files: only Unused
+	// and the undefined Ghost are reported, on their own lines.
+	got := lintMergedSchema(models.NewLinterConfig(), files)
+	require.Len(t, got, 2)
+	assert.Equal(t, files[1], got[0].FilePath)
+	assert.Equal(t, 8, got[0].LineNum)
+	assert.Equal(t, "scalar Unused", got[0].LineContent)
+	assert.Contains(t, got[0].Message, "defined-types-are-used: Type 'Unused'")
+	assert.Equal(t, files[2], got[1].FilePath)
+	assert.Equal(t, 6, got[1].LineNum)
+	assert.Equal(t, "invalid-field-types: Field 'ghost' references undefined type 'Ghost'", got[1].Message)
 }

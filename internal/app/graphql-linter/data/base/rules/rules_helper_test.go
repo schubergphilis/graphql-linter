@@ -20,13 +20,6 @@ type BoolTestCase struct {
 	Expected bool
 }
 
-type LineTestCase struct {
-	Name          string
-	SchemaContent string
-	SearchText    string
-	WantLine      int
-}
-
 func TestGetLineContent(t *testing.T) {
 	t.Parallel()
 
@@ -67,21 +60,6 @@ func setupDocumentWithInput(input string, types []ast.Type) *ast.Document {
 	doc.Types = types
 
 	return doc
-}
-
-func runLineTableTest(t *testing.T, tests []LineTestCase, testFunc func(string, string) int) {
-	t.Helper()
-
-	for _, test := range tests {
-		t.Run(test.Name, func(t *testing.T) {
-			t.Parallel()
-
-			got := testFunc(test.SchemaContent, test.SearchText)
-			if got != test.WantLine {
-				t.Errorf("got %v, want %v", got, test.WantLine)
-			}
-		})
-	}
 }
 
 func runBoolTableTest(t *testing.T, tests []BoolTestCase, testFunc func(string) bool) {

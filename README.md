@@ -200,6 +200,20 @@ These mirror the `graphql-schema-linter` rule set:
 - `types-are-capitalized`
 - `types-have-descriptions`
 
+Additional rules:
+
+- `invalid-graphql-schema`: a `Query` root type must be provided.
+- `suspicious-enum-value`: enum values with digits, e.g. `STRING2`.
+
+Description, capitalization and deprecation rules cover every definition kind:
+object, interface, input object, enum, union and scalar types, and their
+fields, arguments, input values and enum values.
+
+`defined-types-are-used`, `invalid-graphql-schema` and `relay-page-info-spec`
+are schema wide: they run once on all target files together, so a schema that
+is split over several files is checked as a whole. Line numbers come from the
+parsed schema, so `line` suppressions stay stable.
+
 ### Federation rules
 
 When `validateFederation` is enabled, the linter also verifies Apollo Federation

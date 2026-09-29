@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -80,9 +81,10 @@ func TestOutput(t *testing.T) {
 		required := []string{
 			"Error type summary:",
 			"arguments-have-descriptions: 3",
-			"defined-types-are-used: 10",
+			"defined-types-are-used: 2",
 			"deprecations-have-a-reason: 1",
 			"descriptions-are-capitalized: 2",
+			"enum-values-all-caps: 2",
 			"enum-values-have-descriptions: 5",
 			"enum-values-sorted-alphabetically: 3",
 			"fields-are-camel-cased: 1",
@@ -91,13 +93,12 @@ func TestOutput(t *testing.T) {
 			"input-object-values-are-camel-cased: 1",
 			"input-object-values-have-descriptions: 1",
 			"interface-fields-sorted-alphabetically: 1",
-			"invalid-graphql-schema: 1",
 			"relay-connection-arguments-spec: 2",
 			"relay-connection-types-spec: 1",
-			"relay-page-info-spec: 12",
 			"suspicious-enum-value: 1",
 			"type-fields-sorted-alphabetically: 9",
-			"types-have-descriptions: 5",
+			"types-are-capitalized: 2",
+			"types-have-descriptions: 6",
 		}
 		checkRequiredSubstrings(t, "error type summary", sections["errorTypeSummary"], required)
 	})
@@ -105,13 +106,13 @@ func TestOutput(t *testing.T) {
 	t.Run("Summary block", func(t *testing.T) {
 		required := []string{
 			"linting summary",
-			"passedFiles=0",
-			"percentPassed=0.00%",
+			"passedFiles=1",
+			"percentPassed=5.00%",
 			"totalFiles=20",
 			"files with at least one error",
-			"filesWithAtLeastOneError=20",
-			"percentage=100.00%",
-			"totalErrors: 69",
+			"filesWithAtLeastOneError=19",
+			"percentage=95.00%",
+			"totalErrors: 51",
 			"exit status 1",
 		}
 		allLines := sections["all"]
@@ -209,8 +210,8 @@ func TestSuppressTwoScenarios(t *testing.T) {
 	suppressions := []SuppressionEntry{
 		{
 			File:   "test/testdata/graphql/base/invalid/01-arguments-have-descriptions.graphql",
-			Line:   1,
-			Rule:   "relay-page-info-spec",
+			Line:   4,
+			Rule:   "arguments-have-descriptions",
 			Value:  "",
 			Reason: "suppress for test",
 		},
@@ -258,7 +259,7 @@ func TestSuppressTwoScenarios(t *testing.T) {
 			"linting summary",
 			"totalFiles=20",
 			"files with at least one error",
-			"totalErrors: 67",
+			"totalErrors: 49",
 			"exit status 1",
 		}
 		allLines := sections["all"]
@@ -271,4 +272,27 @@ func TestSuppressTwoScenarios(t *testing.T) {
 
 		checkRequiredSubstrings(t, "summary", summaryBlock, required)
 	})
+}
+
+// The schema wide rules run on the merged schema of all target files, so the
+// fixtures for them only fail when linted on their own.
+//
+//nolint:paralleltest //must not run in parallel as it conflicts with TestSuppressAllScenarios.
+func TestSchemaWideRulesOnSingleFile(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	projectRoot, err := filepath.Abs("../..")
+	require.NoError(t, err)
+
+	targetPath := filepath.Join(projectRoot, "test", "testdata", "graphql", "base", "invalid",
+		"19-invalid-graphql-schema.graphql")
+	mainPath := filepath.Join(projectRoot, "cmd", "graphql-linter", "main.go")
+	cmd := exec.CommandContext(ctx, "go", "run", mainPath, "-targetPath", targetPath)
+	cmd.Dir = projectRoot
+
+	output, _ := cmd.CombinedOutput()
+	for _, want := range []string{"invalid-graphql-schema: 1", "relay-page-info-spec: 1"} {
+		assert.Contains(t, string(output), want)
+	}
 }

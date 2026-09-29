@@ -15,19 +15,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const (
-	descriptionErrorCapacity = 8
-)
-
 type Store struct {
 	ConfigPath   string
 	LinterConfig *models.LinterConfig
 	TargetPath   string
-}
-
-type errorResult struct {
-	errors     []string
-	errorLines []int
 }
 
 func NewStore(configPath, targetPath string) Store {
@@ -83,31 +74,15 @@ func (s Store) ValidateDataTypes(
 	schemaContent string,
 	schemaPath string,
 ) (bool, []int, []models.DescriptionError) {
-	builtInScalars := map[string]bool{
-		"String":  true,
-		"Int":     true,
-		"Float":   true,
-		"Boolean": true,
-		"ID":      true,
-	}
-	definedTypesSet := rules.CollectDefinedTypes(doc)
-
-	definedTypes := make(map[string]bool)
-	for k := range definedTypesSet {
-		definedTypes[k] = true
-	}
-
 	hasErrors, errorLines, enumDescErrors := s.collectDataTypeErrors(
 		doc,
 		modelsLinterConfig,
 		schemaContent,
 		schemaPath,
-		builtInScalars,
-		definedTypes,
 	)
 
 	if hasErrors {
-		slog.Error("Data type validation FAILED - schema contains invalid type references")
+		slog.Error("Data type validation FAILED - schema contains invalid enum values")
 
 		return false, errorLines, enumDescErrors
 	}
@@ -115,16 +90,6 @@ func (s Store) ValidateDataTypes(
 	slog.Debug("Data type validation PASSED")
 
 	return true, errorLines, enumDescErrors
-}
-
-func (s Store) UncapitalizedDescriptions(doc *ast.Document, schemaString string) []models.DescriptionError {
-	errors := make([]models.DescriptionError, 0, pkg_rules.DefaultErrorCapacity)
-	errors = append(errors, s.uncapitalizedTypeDescriptions(doc, schemaString)...)
-	errors = append(errors, s.uncapitalizedFieldDescriptions(doc, schemaString)...)
-	errors = append(errors, s.uncapitalizedEnumValueDescriptions(doc, schemaString)...)
-	errors = append(errors, s.uncapitalizedArgumentDescriptions(doc, schemaString)...)
-
-	return errors
 }
 
 func (s Store) UnsortedTypeFields(doc *ast.Document, schemaString string) []models.DescriptionError {
@@ -139,6 +104,7 @@ func (s Store) UnsortedTypeFields(doc *ast.Document, schemaString string) []mode
 			"type",
 			typeName,
 			schemaString,
+			rules.LineOf(doc, obj.Name),
 		)
 		if err != nil {
 			errors = append(errors, err...)
@@ -160,6 +126,7 @@ func (s Store) UnsortedInterfaceFields(doc *ast.Document, schemaString string) [
 			"interface",
 			ifaceName,
 			schemaString,
+			rules.LineOf(doc, iface.Name),
 		)
 		if err != nil {
 			errors = append(errors, err...)
@@ -214,169 +181,15 @@ func (s Store) collectDataTypeErrors(
 	modelsLinterConfig *models.LinterConfig,
 	schemaContent string,
 	schemaPath string,
-	builtInScalars map[string]bool,
-	definedTypes map[string]bool,
 ) (bool, []int, []models.DescriptionError) {
-	hasErrors := false
-
-	var (
-		errorLines     []int
-		enumDescErrors []models.DescriptionError
-	)
-
-	fieldTypeResultErrs, fieldTypeResultLines := rules.Rule{}.ValidateFieldTypes(
-		doc,
-		schemaContent,
-		builtInScalars,
-		definedTypes,
-	)
-	inputFieldTypeResultErrs, inputFieldTypeResultLines := rules.Rule{}.ValidateInputFieldTypes(
-		doc,
-		schemaContent,
-		builtInScalars,
-		definedTypes,
-	)
-	enumTypeResultErrs, enumTypeResultLines, descErrs := rules.Rule{}.ValidateEnumTypes(
+	enumTypeResultErrs, errorLines, enumDescErrors := rules.Rule{}.ValidateEnumTypes(
 		doc,
 		modelsLinterConfig,
 		schemaContent,
 		schemaPath,
 	)
-	enumDescErrors = descErrs
 
-	errorResults := []errorResult{
-		{fieldTypeResultErrs, fieldTypeResultLines},
-		{inputFieldTypeResultErrs, inputFieldTypeResultLines},
-		{enumTypeResultErrs, enumTypeResultLines},
-	}
-
-	for _, res := range errorResults {
-		if len(res.errors) > 0 {
-			hasErrors = true
-
-			errorLines = append(errorLines, res.errorLines...)
-		}
-	}
-
-	return hasErrors, errorLines, enumDescErrors
-}
-
-func (s Store) uncapitalizedTypeDescriptions(
-	doc *ast.Document,
-	schemaString string,
-) []models.DescriptionError {
-	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		if obj.Description.IsDefined {
-			desc := doc.Input.ByteSliceString(obj.Description.Content)
-
-			err := rules.Rule{}.ReportUncapitalizedDescription(
-				"type",
-				"",
-				doc.Input.ByteSliceString(obj.Name), desc, schemaString)
-			if err != nil {
-				errors = append(errors, *err)
-			}
-		}
-	}
-
-	return errors
-}
-
-func (s Store) uncapitalizedFieldDescriptions(
-	doc *ast.Document,
-	schemaString string,
-) []models.DescriptionError {
-	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		for _, fieldRef := range obj.FieldsDefinition.Refs {
-			fieldDef := doc.FieldDefinitions[fieldRef]
-			if fieldDef.Description.IsDefined {
-				desc := doc.Input.ByteSliceString(fieldDef.Description.Content)
-
-				err := rules.Rule{}.ReportUncapitalizedDescription(
-					"field",
-					doc.Input.ByteSliceString(obj.Name),
-					doc.Input.ByteSliceString(fieldDef.Name),
-					desc, schemaString)
-				if err != nil {
-					errors = append(errors, *err)
-				}
-			}
-		}
-	}
-
-	return errors
-}
-
-func (s Store) uncapitalizedEnumValueDescriptions(
-	doc *ast.Document,
-	schemaString string,
-) []models.DescriptionError {
-	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
-
-	for _, enum := range doc.EnumTypeDefinitions {
-		enumName := doc.Input.ByteSliceString(enum.Name)
-
-		for _, valueRef := range enum.EnumValuesDefinition.Refs {
-			valueDef := doc.EnumValueDefinitions[valueRef]
-			if valueDef.Description.IsDefined {
-				desc := doc.Input.ByteSliceString(valueDef.Description.Content)
-
-				valueName := doc.Input.ByteSliceString(valueDef.EnumValue)
-
-				err := rules.Rule{}.ReportUncapitalizedDescription(
-					"enum",
-					enumName,
-					valueName,
-					desc,
-					schemaString,
-				)
-				if err != nil {
-					errors = append(errors, *err)
-				}
-			}
-		}
-	}
-
-	return errors
-}
-
-func (s Store) uncapitalizedArgumentDescriptions(
-	doc *ast.Document,
-	schemaString string,
-) []models.DescriptionError {
-	errors := make([]models.DescriptionError, 0, descriptionErrorCapacity)
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		for _, fieldRef := range obj.FieldsDefinition.Refs {
-			fieldDef := doc.FieldDefinitions[fieldRef]
-			for _, argRef := range fieldDef.ArgumentsDefinition.Refs {
-				argDef := doc.InputValueDefinitions[argRef]
-				if argDef.Description.IsDefined {
-					desc := doc.Input.ByteSliceString(argDef.Description.Content)
-					argName := doc.Input.ByteSliceString(argDef.Name)
-
-					fieldName := doc.Input.ByteSliceString(fieldDef.Name)
-
-					err := rules.Rule{}.ReportUncapitalizedDescription(
-						"argument",
-						fieldName,
-						argName,
-						desc,
-						schemaString,
-					)
-					if err != nil {
-						errors = append(errors, *err)
-					}
-				}
-			}
-		}
-	}
-
-	return errors
+	return len(enumTypeResultErrs) > 0, errorLines, enumDescErrors
 }
 
 // defaultConfigFiles are looked up in the working directory, in this order.

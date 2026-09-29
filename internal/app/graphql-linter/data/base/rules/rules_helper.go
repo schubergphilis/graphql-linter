@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"maps"
 	"slices"
 	"strings"
 	"unicode"
@@ -10,18 +9,6 @@ import (
 	pkgRules "github.com/schubergphilis/graphql-linter/internal/pkg/rules"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 )
-
-func findLineNumberByText(schemaContent string, searchText string) int {
-	lines := strings.Split(schemaContent, "\n")
-
-	for i, line := range lines {
-		if strings.Contains(line, searchText) {
-			return i + 1
-		}
-	}
-
-	return 0
-}
 
 func GetLineContent(schemaContent string, lineNum int) string {
 	if lineNum <= 0 {
@@ -39,8 +26,8 @@ func GetLineContent(schemaContent string, lineNum int) string {
 func checkSortedOrder(
 	names []string,
 	minLength int,
-	schemaString,
-	searchPrefix,
+	schemaString string,
+	lineNum int,
 	itemName,
 	rulePrefix string,
 ) *models.DescriptionError {
@@ -50,20 +37,10 @@ func checkSortedOrder(
 
 	if !slices.IsSorted(names) {
 		sorted := slices.Sorted(slices.Values(names))
-		lineNum := findLineNumberByText(schemaString, searchPrefix+itemName)
-		lineContent := GetLineContent(schemaString, lineNum)
-		message := rulePrefix + ": The " + itemName +
-			" should be sorted in alphabetical order. Expected sorting: " + strings.Join(
-			sorted,
-			", ",
-		)
+		finding := newFinding(schemaString, lineNum, itemName, rulePrefix+": The "+itemName+
+			" should be sorted in alphabetical order. Expected sorting: "+strings.Join(sorted, ", "))
 
-		return &models.DescriptionError{
-			Value:       itemName,
-			LineNum:     lineNum,
-			Message:     message,
-			LineContent: lineContent,
-		}
+		return &finding
 	}
 
 	return nil
@@ -146,25 +123,6 @@ func removeAllDigits(value string) string {
 	return result.String()
 }
 
-func findFieldDefinitionLine(schemaContent string, fieldName string, typeName string) int {
-	lines := strings.Split(schemaContent, "\n")
-	for index, line := range lines {
-		trimmedLine := strings.TrimSpace(line)
-
-		if strings.Contains(trimmedLine, fieldName+":") {
-			if strings.Contains(trimmedLine, typeName+"!") ||
-				strings.Contains(trimmedLine, typeName+"]") ||
-				strings.Contains(trimmedLine, "["+typeName) ||
-				strings.HasSuffix(trimmedLine, typeName) ||
-				strings.Contains(trimmedLine, typeName+" ") {
-				return index + 1
-			}
-		}
-	}
-
-	return 0
-}
-
 func getBaseTypeName(doc *ast.Document, typeRef ast.Type) string {
 	switch typeRef.TypeKind {
 	case ast.TypeKindNamed:
@@ -181,28 +139,32 @@ func getBaseTypeName(doc *ast.Document, typeRef ast.Type) string {
 }
 
 func markUsedTypes(doc *ast.Document, definedTypes map[string]bool) {
+	typeRefs := make([]int, 0, len(doc.FieldDefinitions)+len(doc.InputValueDefinitions))
+
 	for _, fieldDef := range doc.FieldDefinitions {
-		baseType := getBaseTypeName(doc, doc.Types[fieldDef.Type])
-		if _, exists := definedTypes[baseType]; exists {
-			definedTypes[baseType] = true
-		}
+		typeRefs = append(typeRefs, fieldDef.Type)
 	}
 
 	for _, inputValue := range doc.InputValueDefinitions {
-		baseType := getBaseTypeName(doc, doc.Types[inputValue.Type])
-		if _, exists := definedTypes[baseType]; exists {
-			definedTypes[baseType] = true
-		}
+		typeRefs = append(typeRefs, inputValue.Type)
 	}
 
 	for _, union := range doc.UnionTypeDefinitions {
-		for _, memberRef := range union.UnionMemberTypes.Refs {
-			memberType := doc.Types[memberRef]
+		typeRefs = append(typeRefs, union.UnionMemberTypes.Refs...)
+	}
 
-			baseType := getBaseTypeName(doc, memberType)
-			if _, exists := definedTypes[baseType]; exists {
-				definedTypes[baseType] = true
-			}
+	for _, obj := range doc.ObjectTypeDefinitions {
+		typeRefs = append(typeRefs, obj.ImplementsInterfaces.Refs...)
+	}
+
+	for _, iface := range doc.InterfaceTypeDefinitions {
+		typeRefs = append(typeRefs, iface.ImplementsInterfaces.Refs...)
+	}
+
+	for _, typeRef := range typeRefs {
+		baseType := getBaseTypeName(doc, doc.Types[typeRef])
+		if _, exists := definedTypes[baseType]; exists {
+			definedTypes[baseType] = true
 		}
 	}
 }
@@ -228,25 +190,6 @@ func isValidEnumValue(value string) bool {
 
 func isAlphaUnderOrDigit(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
-}
-
-func findTypeLineNumber(typeName, schemaString string) int {
-	searchTerms := []string{
-		"type " + typeName,
-		"input " + typeName,
-		"enum " + typeName,
-		"interface " + typeName,
-		"union " + typeName,
-		"scalar " + typeName,
-	}
-
-	for _, term := range searchTerms {
-		if lineNum := findLineNumberByText(schemaString, term); lineNum > 0 {
-			return lineNum
-		}
-	}
-
-	return 0
 }
 
 func hasSuspiciousEnumValue(value string) bool {
@@ -292,41 +235,39 @@ func indexSlice(n int) []int {
 	return indices
 }
 
-func getAvailableTypes(builtInScalars, definedTypes map[string]bool) []string {
-	return append(slices.Collect(maps.Keys(builtInScalars)), slices.Collect(maps.Keys(definedTypes))...)
-}
+// builtInScalars are the scalar types every GraphQL schema has without defining them.
+var builtInScalars = map[string]bool{"String": true, "Int": true, "Float": true, "Boolean": true, "ID": true}
 
 func CollectDefinedTypes(doc *ast.Document) map[string]bool {
 	definedTypes := make(map[string]bool)
-
-	for _, obj := range doc.ObjectTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(obj.Name)
-		definedTypes[typeName] = true
+	for _, def := range typeDefinitions(doc) {
+		definedTypes[def.name] = true
 	}
 
-	for _, enum := range doc.EnumTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(enum.Name)
-		definedTypes[typeName] = true
+	// A subgraph may only extend a type another subgraph defines (Federation v1).
+	extended := func(name ast.ByteSliceReference) { definedTypes[doc.Input.ByteSliceString(name)] = true }
+	for _, ext := range doc.ObjectTypeExtensions {
+		extended(ext.Name)
 	}
 
-	for _, input := range doc.InputObjectTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(input.Name)
-		definedTypes[typeName] = true
+	for _, ext := range doc.InterfaceTypeExtensions {
+		extended(ext.Name)
 	}
 
-	for _, iface := range doc.InterfaceTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(iface.Name)
-		definedTypes[typeName] = true
+	for _, ext := range doc.InputObjectTypeExtensions {
+		extended(ext.Name)
 	}
 
-	for _, union := range doc.UnionTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(union.Name)
-		definedTypes[typeName] = true
+	for _, ext := range doc.EnumTypeExtensions {
+		extended(ext.Name)
 	}
 
-	for _, scalar := range doc.ScalarTypeDefinitions {
-		typeName := doc.Input.ByteSliceString(scalar.Name)
-		definedTypes[typeName] = true
+	for _, ext := range doc.UnionTypeExtensions {
+		extended(ext.Name)
+	}
+
+	for _, ext := range doc.ScalarTypeExtensions {
+		extended(ext.Name)
 	}
 
 	return definedTypes
