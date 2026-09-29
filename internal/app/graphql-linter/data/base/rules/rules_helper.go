@@ -59,6 +59,7 @@ func checkSortedOrder(
 		)
 
 		return &models.DescriptionError{
+			Value:       itemName,
 			LineNum:     lineNum,
 			Message:     message,
 			LineContent: lineContent,

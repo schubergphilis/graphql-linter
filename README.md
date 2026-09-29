@@ -233,7 +233,7 @@ suppressions:
 | `file`   | Matches when the schema path ends with this value; omit to match any file.    |
 | `line`   | Matches this line number; omit (or `0`) to match any line.                    |
 | `rule`   | Matches this rule identifier; omit to match any rule.                         |
-| `value`  | Matches a specific symbol (type, field, enum value); omit to match any value. |
+| `value`  | Matches the name of the offending type, field, argument or enum value (e.g. `User`, `firstName`, `PO4_VOLUME`); omit to match any value. |
 | `reason` | Free-form justification for the suppression (recommended, not enforced).      |
 
 ## Pre-commit hook

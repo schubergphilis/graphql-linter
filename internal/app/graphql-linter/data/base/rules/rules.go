@@ -19,7 +19,6 @@ const (
 
 	minEnumValuesForSortCheck = 2
 	minFieldsForSortCheck     = 2
-	splitNParts               = 2
 )
 
 type Rule struct{}
@@ -40,6 +39,7 @@ func (r Rule) TypesAreCapitalized(doc *ast.Document, schemaString string) []mode
 			lineContent := GetLineContent(schemaString, lineNum)
 			message := "types-are-capitalized: The object type '" + typeName + "' should start with a capital letter."
 			errors = append(errors, models.DescriptionError{
+				Value:       typeName,
 				LineNum:     lineNum,
 				Message:     message,
 				LineContent: lineContent,
@@ -76,19 +76,12 @@ func (r Rule) EnumValuesSortedAlphabetically(
 			enumName,
 			"enum-values-sorted-alphabetically",
 		); err != nil {
-			messageParts := strings.SplitN(err.Message, ": ", splitNParts)
-
-			suppressionValue := ""
-			if len(messageParts) > 1 {
-				suppressionValue = messageParts[1]
-			}
-
 			if !pkg_rules.IsSuppressed(
 				schemaPath,
 				err.LineNum,
 				modelsLinterConfig,
 				"enum-values-sorted-alphabetically",
-				suppressionValue,
+				err.Value,
 			) {
 				errors = append(errors, *err)
 			}
@@ -117,6 +110,7 @@ func (r Rule) MissingDeprecationReasons(doc *ast.Document, schemaString string) 
 					message := "deprecations-have-a-reason: Deprecated enum value '" + enumName + "." +
 						valueName + "' is missing a reason."
 					errors = append(errors, models.DescriptionError{
+						Value:       valueName,
 						LineNum:     lineNum,
 						Message:     message,
 						LineContent: lineContent,
@@ -145,6 +139,7 @@ func (r Rule) MissingArgumentDescriptions(doc *ast.Document, schemaString string
 					message := "arguments-have-descriptions: The '" + argName + "' argument of '" + fieldName +
 						"' is missing a description."
 					errors = append(errors, models.DescriptionError{
+						Value:       argName,
 						LineNum:     lineNum,
 						Message:     message,
 						LineContent: lineContent,
@@ -186,6 +181,7 @@ func (r Rule) UnsortedFields(
 				strings.Join(sorted, ", ")
 
 			return []models.DescriptionError{{
+				Value:       typeName,
 				LineNum:     lineNum,
 				Message:     message,
 				LineContent: lineContent,
@@ -216,6 +212,7 @@ func (r Rule) MissingInputObjectValueDescriptions(
 					fieldName,
 				)
 				errors = append(errors, models.DescriptionError{
+					Value:       fieldName,
 					LineNum:     lineNum,
 					Message:     message,
 					LineContent: lineContent,
@@ -273,6 +270,7 @@ func (r Rule) FieldsAreCamelCased(doc *ast.Document, schemaString string) []mode
 				lineContent := GetLineContent(schemaString, lineNum)
 				message := "fields-are-camel-cased: The field '" + typeName + "." + fieldName + "' is not camel cased."
 				errors = append(errors, models.DescriptionError{
+					Value:       fieldName,
 					LineNum:     lineNum,
 					Message:     message,
 					LineContent: lineContent,
@@ -300,6 +298,7 @@ func (r Rule) InputObjectValuesCamelCased(doc *ast.Document, schemaString string
 				message := "input-object-values-are-camel-cased: The input value `" +
 					inputName + "." + fieldName + "` is not camel cased."
 				errors = append(errors, models.DescriptionError{
+					Value:       fieldName,
 					LineNum:     lineNum,
 					Message:     message,
 					LineContent: lineContent,
@@ -323,6 +322,7 @@ func (r Rule) RelayPageInfoSpec(doc *ast.Document, schemaString string) []models
 	message := "relay-page-info-spec: A `PageInfo` object type is required as per the Relay spec."
 
 	return []models.DescriptionError{{
+		Value:       "PageInfo",
 		LineNum:     lineNum,
 		Message:     message,
 		LineContent: lineContent,
@@ -366,6 +366,7 @@ func (r Rule) RelayConnectionArgumentsSpec(
 				"pagination arguments (`first` and `after`), backward pagination arguments (`last` and `before`), or both as" +
 				"per the Relay spec."
 			errors = append(errors, models.DescriptionError{
+				Value:       fieldName,
 				LineNum:     lineNum,
 				Message:     message,
 				LineContent: lineContent,
@@ -410,6 +411,7 @@ func (r Rule) RelayConnectionTypesSpec(doc *ast.Document, schemaString string) [
 				typeName,
 			)
 			errors = append(errors, models.DescriptionError{
+				Value:       typeName,
 				LineNum:     lineNum,
 				Message:     message,
 				LineContent: lineContent,
@@ -422,6 +424,7 @@ func (r Rule) RelayConnectionTypesSpec(doc *ast.Document, schemaString string) [
 				typeName,
 			)
 			errors = append(errors, models.DescriptionError{
+				Value:       typeName,
 				LineNum:     lineNum,
 				Message:     message,
 				LineContent: lineContent,
@@ -444,6 +447,7 @@ func (r Rule) MissingQueryRootType(doc *ast.Document, schemaString string) []mod
 	message := "invalid-graphql-schema: Query root type must be provided."
 
 	return []models.DescriptionError{{
+		Value:       "Query",
 		LineNum:     lineNum,
 		Message:     message,
 		LineContent: lineContent,
@@ -467,6 +471,7 @@ func (r Rule) MissingEnumValueDescriptions(
 				message := "enum-values-have-descriptions: Enum value '" + enumName + "." + valueName +
 					"' is missing a description."
 				errors = append(errors, models.DescriptionError{
+					Value:       valueName,
 					LineNum:     lineNum,
 					Message:     message,
 					LineContent: lineContent,
@@ -488,6 +493,7 @@ func (r Rule) MissingTypeDescriptions(doc *ast.Document, schemaString string) []
 			lineContent := GetLineContent(schemaString, lineNum)
 			message := "types-have-descriptions: Object type '" + name + "' is missing a description"
 			errors = append(errors, models.DescriptionError{
+				Value:       name,
 				LineNum:     lineNum,
 				Message:     message,
 				LineContent: lineContent,
@@ -511,6 +517,7 @@ func (r Rule) MissingFieldDescriptions(doc *ast.Document, schemaString string) [
 				lineContent := GetLineContent(schemaString, lineNum)
 				message := "fields-have-descriptions: Field '" + typeName + "." + fieldName + "' is missing a description."
 				errors = append(errors, models.DescriptionError{
+					Value:       fieldName,
 					LineNum:     lineNum,
 					Message:     message,
 					LineContent: lineContent,
@@ -562,6 +569,7 @@ func (r Rule) ReportUncapitalizedDescription(
 	}
 
 	return &models.DescriptionError{
+		Value:       name,
 		LineNum:     lineNum,
 		Message:     message,
 		LineContent: lineContent,
@@ -594,6 +602,7 @@ func (r Rule) UnusedTypes(doc *ast.Document, schemaString string) []models.Descr
 			typeName,
 		)
 		unusedTypeErrors = append(unusedTypeErrors, models.DescriptionError{
+			Value:       typeName,
 			LineNum:     lineNum,
 			Message:     message,
 			LineContent: lineContent,
@@ -640,6 +649,7 @@ func (r Rule) ValidateEnumTypes(
 				if line > 0 {
 					errorLines = append(errorLines, line)
 					descErrors = append(descErrors, models.DescriptionError{
+						Value:    valueName,
 						FilePath: schemaPath,
 						LineNum:  line,
 						Message: fmt.Sprintf(

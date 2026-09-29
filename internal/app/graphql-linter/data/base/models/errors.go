@@ -5,4 +5,7 @@ type DescriptionError struct {
 	LineNum     int
 	Message     string
 	LineContent string
+	// Value is the name of the offending element, matched against a
+	// suppression's value.
+	Value string
 }
