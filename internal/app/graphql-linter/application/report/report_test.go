@@ -155,3 +155,10 @@ func TestReportContextLines_OutOfBounds(t *testing.T) {
 	lines := []string{"foo"}
 	reportContextLines(lines, 100, 1, 1)
 }
+
+func TestStripControl(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "type [31mQuery\t{", stripControl("type \x1b[31mQuery\t{\r\x07"))
+	assert.Equal(t, "é ü", stripControl("é ü"))
+}

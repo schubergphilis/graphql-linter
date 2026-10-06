@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -18,8 +19,26 @@ const (
 // diagf prints a human readable diagnostic to stderr. It deliberately bypasses
 // slog: the TextHandler quotes msg, which turns multi line diagnostics into
 // literal \n escapes.
-func diagf(format string, a ...any) {
-	fmt.Fprintf(os.Stderr, format+"\n", a...)
+func diagf(format string, args ...any) {
+	for i, arg := range args {
+		if text, ok := arg.(string); ok {
+			args[i] = stripControl(text)
+		}
+	}
+
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
+}
+
+// stripControl drops control characters such as ANSI escapes, so schema
+// content and file names cannot drive the terminal or CI log viewer.
+func stripControl(text string) string {
+	return strings.Map(func(r rune) rune {
+		if r != '\t' && unicode.IsControl(r) {
+			return -1
+		}
+
+		return r
+	}, text)
 }
 
 type Summary struct {
