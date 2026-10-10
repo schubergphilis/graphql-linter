@@ -54,6 +54,10 @@ Additional rules:
 
 - `invalid-graphql-schema`: a `Query` root type must be provided.
 - `suspicious-enum-value`: enum values with digits, e.g. `STRING2`.
+- `extend-has-no-description`: a description on an extension, such as
+  `"Text" extend type User`. The GraphQL grammar has no description on
+  `extend type`, `interface`, `enum`, `input`, `union`, `scalar` or `schema`;
+  the description belongs on the definition that is extended.
 - `invalid-graphql-syntax`: the file does not parse; the other files are still
   linted.
 - `failed-to-read-schema-file`: the file could not be read.

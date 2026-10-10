@@ -216,6 +216,7 @@ func (e Execute) collectDescriptionErrors(
 	rule := rules.Rule{}
 
 	helpers := []func(*ast.Document, string) []models.DescriptionError{
+		rule.DescriptionOnExtensions,
 		rule.EnumValuesAllCaps,
 		rule.FieldsAreCamelCased,
 		rule.InputObjectFieldsSortedAlphabetically,

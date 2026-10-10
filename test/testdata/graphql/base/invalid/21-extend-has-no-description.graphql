@@ -1,0 +1,16 @@
+"A pet."
+type Pet {
+  "The name of the pet."
+  name: String
+}
+
+"Pets have an owner."
+extend type Pet {
+  "The owner of the pet."
+  owner: String
+}
+
+extend type Query {
+  "All pets."
+  pets: [Pet]
+}

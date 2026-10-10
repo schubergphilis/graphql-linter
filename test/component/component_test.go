@@ -85,6 +85,7 @@ func TestOutput(t *testing.T) {
 			"deprecations-have-a-reason: 1",
 			"descriptions-are-capitalized: 2",
 			"enum-values-all-caps: 2",
+			"extend-has-no-description: 1",
 			"enum-values-have-descriptions: 5",
 			"enum-values-sorted-alphabetically: 3",
 			"fields-are-camel-cased: 1",
@@ -109,11 +110,11 @@ func TestOutput(t *testing.T) {
 			"linting summary",
 			"passedFiles=0",
 			"percentPassed=0.00%",
-			"totalFiles=20",
+			"totalFiles=21",
 			"files with at least one error",
-			"filesWithAtLeastOneError=20",
+			"filesWithAtLeastOneError=21",
 			"percentage=100.00%",
-			"totalErrors: 76",
+			"totalErrors: 77",
 			"exit status 1",
 		}
 		allLines := sections["all"]
@@ -258,9 +259,9 @@ func TestSuppressTwoScenarios(t *testing.T) {
 	t.Run("Summary block", func(t *testing.T) {
 		required := []string{
 			"linting summary",
-			"totalFiles=20",
+			"totalFiles=21",
 			"files with at least one error",
-			"totalErrors: 74",
+			"totalErrors: 75",
 			"exit status 1",
 		}
 		allLines := sections["all"]
