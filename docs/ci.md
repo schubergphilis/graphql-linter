@@ -10,11 +10,6 @@ system can use it as a gate. Configuration and suppressions come from
 Use the `graphql-lint` testing-type of
 [schubergphilis/mcvs-general-action](https://github.com/schubergphilis/mcvs-general-action).
 
-> [!NOTE]
-> This testing-type is proposed in
-> [schubergphilis/mcvs-general-action#63](https://github.com/schubergphilis/mcvs-general-action/issues/63)
-> and is not released yet.
-
 ```yaml
 ---
 name: graphql-lint
@@ -25,13 +20,16 @@ jobs:
   graphql-lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@<sha> # vX.Y.Z
-      - uses: schubergphilis/mcvs-general-action@<sha> # vX.Y.Z
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # yamllint disable-line rule:line-length
+      - uses: schubergphilis/mcvs-general-action@4df2739030e57a41331bcf32d413a3c745561979 # v0.9.0
         with:
           testing-type: graphql-lint
 ```
 
-Optional inputs (proposed):
+Optional inputs:
 
 | Input                        | Default                                                      |
 | ---------------------------- | ------------------------------------------------------------ |
