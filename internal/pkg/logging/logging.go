@@ -3,20 +3,37 @@
 package logging
 
 import (
+	"io"
 	"log/slog"
 	"os"
 )
 
 // Setup installs a TextHandler on stderr as the default slog logger. Verbose
-// raises the level to debug and adds the source location.
+// raises the level to debug and adds the time and source location.
 func Setup(verbose bool) {
-	level := slog.LevelInfo
-	if verbose {
-		level = slog.LevelDebug
+	slog.SetDefault(slog.New(newHandler(os.Stderr, verbose)))
+}
+
+func newHandler(writer io.Writer, verbose bool) slog.Handler {
+	options := &slog.HandlerOptions{
+		AddSource: verbose,
+		Level:     slog.LevelInfo,
 	}
 
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		AddSource: verbose,
-		Level:     level,
-	})))
+	if verbose {
+		options.Level = slog.LevelDebug
+	} else {
+		// A run takes milliseconds, so the time is the same on every line.
+		options.ReplaceAttr = dropTime
+	}
+
+	return slog.NewTextHandler(writer, options)
+}
+
+func dropTime(groups []string, attr slog.Attr) slog.Attr {
+	if len(groups) == 0 && attr.Key == slog.TimeKey {
+		return slog.Attr{}
+	}
+
+	return attr
 }
