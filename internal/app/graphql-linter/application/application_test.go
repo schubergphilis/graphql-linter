@@ -223,6 +223,19 @@ func TestFindAndLogGraphQLSchemaFiles(t *testing.T) {
 	}
 }
 
+func TestFindGraphQLFiles_SkipsSymlinks(t *testing.T) {
+	t.Parallel()
+
+	dir := createTestDirectory(t, map[string]string{"test.graphql": "type Query { id: ID }"})
+	secret := filepath.Join(t.TempDir(), "secret")
+	require.NoError(t, os.WriteFile(secret, []byte("token"), 0o600))
+	require.NoError(t, os.Symlink(secret, filepath.Join(dir, "leak.graphql")))
+
+	files, err := findGraphQLFiles(dir)
+	require.NoError(t, err)
+	assert.Equal(t, []string{filepath.Join(dir, "test.graphql")}, files)
+}
+
 func TestLintSchemaFiles(t *testing.T) {
 	t.Parallel()
 
