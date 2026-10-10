@@ -562,7 +562,7 @@ func (r Rule) ValidateEnumTypes(
 
 			valueLine := LineOf(doc, valueDef.EnumValue)
 
-			if errValue, line := checkInvalidEnumValue(enumName, valueName, valueLine); errValue != "" {
+			if errValue, line := checkInvalidEnumValue(enumName, valueName, valueLine, schemaPath); errValue != "" {
 				errors = append(errors, errValue)
 				if line > 0 {
 					errorLines = append(errorLines, line)
@@ -598,16 +598,17 @@ func (r Rule) ValidateEnumTypes(
 	return errors, errorLines, descErrors
 }
 
-func checkInvalidEnumValue(enumName, valueName string, lineNum int) (string, int) {
+func checkInvalidEnumValue(enumName, valueName string, lineNum int, schemaPath string) (string, int) {
 	if isValidEnumValue(valueName) {
 		return "", 0
 	}
 
 	slog.Info(fmt.Sprintf(
-		"invalid-enum-value: Enum '%s' has invalid value '%s' (line %d)",
+		"%s:%d: invalid-enum-value: Enum '%s' has invalid value '%s'",
+		schemaPath,
+		lineNum,
 		enumName,
 		valueName,
-		lineNum,
 	))
 	slog.Info(
 		"  Enum values should be valid GraphQL identifiers (letters, digits, underscores, no leading digits)",
@@ -639,10 +640,11 @@ func checkSuspiciousEnumValue(
 	}
 
 	slog.Error(fmt.Sprintf(
-		"suspicious-enum-value: Enum '%s' has suspicious value '%s' (line %d)",
+		"%s:%d: suspicious-enum-value: Enum '%s' has suspicious value '%s'",
+		schemaPath,
+		lineNum,
 		enumName,
 		valueName,
-		lineNum,
 	))
 
 	if suggestion := suggestCorrectEnumValue(valueName); suggestion != "" {

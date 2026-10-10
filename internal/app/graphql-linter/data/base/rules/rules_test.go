@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"bytes"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -807,4 +809,22 @@ func TestValidateEnumTypes(t *testing.T) {
 	if len(errorLines) == 0 {
 		t.Logf("validateEnumTypes returned no error lines for invalid enum types: %v", errorLines)
 	}
+}
+
+//nolint:paralleltest //swaps the default slog logger
+func TestValidateEnumTypes_LogsFilePath(t *testing.T) {
+	var buf bytes.Buffer
+
+	previous := slog.Default()
+
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	schema := "enum Status {\n  ACTIVE\n  FOO1\n}"
+	doc, _ := astparser.ParseGraphqlDocumentString(schema)
+
+	Rule{}.ValidateEnumTypes(&doc, nil, schema, "schema/status.graphql")
+
+	assert.Contains(t, buf.String(),
+		"schema/status.graphql:3: suspicious-enum-value: Enum 'Status' has suspicious value 'FOO1'")
 }
