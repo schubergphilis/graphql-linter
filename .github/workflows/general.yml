@@ -1,16 +1,11 @@
 ---
 name: General
-"on":
-  pull_request:
-  push:
-    branches:
-      - main
+"on": pull_request
 permissions:
   contents: read
   packages: read
 jobs:
   mcvs-general-action:
-    if: github.event_name == 'pull_request'
     strategy:
       matrix:
         args:
@@ -18,6 +13,7 @@ jobs:
           - testing-type: lint-commit
           - testing-type: lint-git
           - testing-type: lint-links
+          - testing-type: security-file-system
           - testing-type: yamllint
     runs-on: ubuntu-24.04
     steps:
@@ -25,22 +21,6 @@ jobs:
         with:
           persist-credentials: false
       # yamllint disable-line rule:line-length
-      - uses: schubergphilis/mcvs-general-action@4df2739030e57a41331bcf32d413a3c745561979 # v0.9.0
+      - uses: schubergphilis/mcvs-general-action@c367827038743325c7f56a9490b5e3df59060986 # v0.7.1
         with:
           testing-type: ${{ matrix.args.testing-type }}
-  mcvs-general-action-auto-release:
-    if: github.event_name == 'push'
-    concurrency:
-      cancel-in-progress: false
-      group: auto-release
-    permissions:
-      contents: write
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # yamllint disable-line rule:line-length
-      - uses: schubergphilis/mcvs-general-action@4df2739030e57a41331bcf32d413a3c745561979 # v0.9.0
-        with:
-          auto-release: "true"
