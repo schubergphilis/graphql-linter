@@ -120,3 +120,39 @@ func TestLineOf(t *testing.T) {
 	assert.Equal(t, 3, LineOf(&doc, doc.ObjectTypeDefinitions[0].Name))
 	assert.Equal(t, 4, LineOf(&doc, doc.FieldDefinitions[0].Name))
 }
+
+func TestDefinitionLines(t *testing.T) {
+	t.Parallel()
+
+	doc, report := astparser.ParseGraphqlDocumentString(allKindsSchema)
+	assert.False(t, report.HasErrors(), report.Error())
+
+	tests := []struct {
+		typeName, memberName string
+		want                 []int
+	}{
+		{"Item", "", []int{14}},
+		{"Node", "id", []int{3}},
+		{"Item", "items", []int{16}},
+		{"Filter", "id", []int{9}},
+		{"Color", "red", []int{6}},
+		{"Item", "missing", nil},
+		{"Missing", "", nil},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, DefinitionLines(&doc, tt.typeName, tt.memberName),
+			"%s.%s", tt.typeName, tt.memberName)
+	}
+}
+
+func TestReferenceLines(t *testing.T) {
+	t.Parallel()
+
+	doc, report := astparser.ParseGraphqlDocumentString(allKindsSchema)
+	assert.False(t, report.HasErrors(), report.Error())
+
+	// Item is referenced by a field, Int by an argument, which is an input value.
+	assert.Equal(t, []int{16}, ReferenceLines(&doc, "Item"))
+	assert.Equal(t, []int{16}, ReferenceLines(&doc, "Int"))
+	assert.Nil(t, ReferenceLines(&doc, "Missing"))
+}
