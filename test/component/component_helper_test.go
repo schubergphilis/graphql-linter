@@ -588,6 +588,13 @@ func generateSuppressions() []SuppressionEntry {
 			Reason: "suppress for test",
 		},
 		{
+			File:   "test/testdata/graphql/base/invalid/21-extend-has-no-description.graphql",
+			Line:   7,
+			Rule:   "extend-has-no-description",
+			Value:  "Pet",
+			Reason: "suppress for test",
+		},
+		{
 			Rule:   "invalid-federation-schema",
 			Reason: "the fixtures are independent schemas, so their types collide when merged",
 		},

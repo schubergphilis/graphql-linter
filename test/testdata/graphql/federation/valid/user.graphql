@@ -15,3 +15,9 @@ enum Role {
   """A regular member."""
   MEMBER
 }
+
+# An extension carries no description; the description is on the type above.
+extend type User {
+  """The display name."""
+  nickname: String
+}
