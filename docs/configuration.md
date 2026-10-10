@@ -12,7 +12,8 @@ hidden directories (any name starting with `.`, such as `.git`) and symlinks, so
 a schema file cannot point at a file outside the repository. The files of
 each directory are linted together as one schema, so a schema split over
 several files is checked as a whole. The linter exits non-zero when unsuppressed
-findings are detected.
+errors are detected; warnings are reported but do not fail the run, see
+[Severity](rules.md#severity).
 
 ### Flags
 

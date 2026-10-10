@@ -162,3 +162,30 @@ func TestStripControl(t *testing.T) {
 	assert.Equal(t, "type [31mQuery\t{", stripControl("type \x1b[31mQuery\t{\r\x07"))
 	assert.Equal(t, "é ü", stripControl("é ü"))
 }
+
+func TestPrint_WarningsDoNotFail(t *testing.T) {
+	t.Parallel()
+
+	warning := models.DescriptionError{
+		FilePath: "a.graphql",
+		LineNum:  3,
+		Message:  "suspicious-enum-value: Enum 'Citroen' has suspicious value 'C3'",
+		Severity: models.SeverityWarning,
+	}
+	failure := models.DescriptionError{FilePath: "a.graphql", LineNum: 1, Message: "types-have-descriptions: x"}
+
+	assert.False(t, Print([]string{"a.graphql"}, 0, 1, []models.DescriptionError{warning}))
+	assert.True(t, Print([]string{"a.graphql"}, 1, 0, []models.DescriptionError{warning, failure}))
+}
+
+func TestSplitBySeverity(t *testing.T) {
+	t.Parallel()
+
+	warning := models.DescriptionError{Message: "w", Severity: models.SeverityWarning}
+	failure := models.DescriptionError{Message: "e"}
+
+	errs, warnings := splitBySeverity([]models.DescriptionError{warning, failure})
+
+	assert.Equal(t, []models.DescriptionError{failure}, errs)
+	assert.Equal(t, []models.DescriptionError{warning}, warnings)
+}

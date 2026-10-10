@@ -569,28 +569,27 @@ func (r Rule) ValidateEnumTypes(
 				}
 			}
 
+			// A suspicious value is a warning: it is reported, but does not
+			// make the data type validation fail.
 			if errValue, line := checkSuspiciousEnumValue(
 				enumName,
 				valueName,
 				valueLine,
 				schemaPath,
 				modelsLinterConfig,
-			); errValue != "" {
-				errors = append(errors, errValue)
-				if line > 0 {
-					errorLines = append(errorLines, line)
-					descErrors = append(descErrors, models.DescriptionError{
-						Value:    valueName,
-						FilePath: schemaPath,
-						LineNum:  line,
-						Message: fmt.Sprintf(
-							"suspicious-enum-value: Enum '%s' has suspicious value '%s'",
-							enumName,
-							errValue,
-						),
-						LineContent: GetLineContent(schemaContent, line),
-					})
-				}
+			); errValue != "" && line > 0 {
+				descErrors = append(descErrors, models.DescriptionError{
+					Value:    valueName,
+					FilePath: schemaPath,
+					LineNum:  line,
+					Message: fmt.Sprintf(
+						"suspicious-enum-value: Enum '%s' has suspicious value '%s'",
+						enumName,
+						errValue,
+					),
+					LineContent: GetLineContent(schemaContent, line),
+					Severity:    models.SeverityWarning,
+				})
 			}
 		}
 	}
@@ -638,7 +637,7 @@ func checkSuspiciousEnumValue(
 		return "", 0
 	}
 
-	slog.Error(fmt.Sprintf(
+	slog.Warn(fmt.Sprintf(
 		"suspicious-enum-value: Enum '%s' has suspicious value '%s' (line %d)",
 		enumName,
 		valueName,
@@ -646,10 +645,9 @@ func checkSuspiciousEnumValue(
 	))
 
 	if suggestion := suggestCorrectEnumValue(valueName); suggestion != "" {
-		slog.Error(fmt.Sprintf("  Did you mean '%s'?", suggestion))
+		slog.Warn(fmt.Sprintf("  Did you mean '%s'?", suggestion))
 	} else {
-		suggestedValue := removeSuffixDigits(valueName)
-		slog.Error(fmt.Sprintf("  Did you mean '%s'? Enum values typically don't contain numbers.", suggestedValue))
+		slog.Warn("  Enum values typically don't contain digits; suppress this warning if they are intended.")
 	}
 
 	return valueName, lineNum

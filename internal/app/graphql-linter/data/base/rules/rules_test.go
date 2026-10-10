@@ -312,6 +312,8 @@ func TestSuggestCorrectEnumValue(t *testing.T) {
 		{"levenshtein match 4", "FLOT", "FLOAT"},
 		{"levenshtein match 5", "ID", "ID"},
 		{"no match", "CUSTOM", ""},
+		{"short model name", "C3", ""},
+		{"model name with letter suffix", "C5X", ""},
 		{"empty", "", ""},
 	}
 	for _, test := range tests {
@@ -333,42 +335,6 @@ func TestSuggestCorrectEnumValue_ExtraCases(t *testing.T) {
 
 	if suggestCorrectEnumValue("CUSTOM") != "" {
 		t.Errorf("expected empty string for CUSTOM")
-	}
-}
-
-func TestRemoveSuffixDigits(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		value    string
-		expected string
-	}{
-		{"no digits", "FOO", "FOO"},
-		{"trailing digits", "FOO123", "FOO"},
-		{"all digits", "123", ""},
-		{"mixed", "FOO1BAR2", "FOO1BAR"},
-		{"empty", "", ""},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := removeSuffixDigits(test.value)
-			assert.Equal(t, test.expected, got)
-		})
-	}
-}
-
-func TestRemoveSuffixDigits_ExtraCases(t *testing.T) {
-	t.Parallel()
-
-	if removeSuffixDigits("123") != "" {
-		t.Errorf("expected empty string for all digits")
-	}
-
-	if removeSuffixDigits("FOO123") != "FOO" {
-		t.Errorf("expected FOO for FOO123")
 	}
 }
 
