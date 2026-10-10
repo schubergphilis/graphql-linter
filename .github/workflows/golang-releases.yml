@@ -44,3 +44,24 @@ jobs:
           release-os: ${{ matrix.args.release-os }}
           release-type: ${{ matrix.args.release-type }}
           token: ${{ secrets.GITHUB_TOKEN }}
+  # mcvs-golang-action uploads one binary per matrix job and no checksums, so
+  # sum all binaries of the release once they are uploaded.
+  checksums:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    needs: mcvs-golang-action
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - name: upload graphql-linter_SHA256SUMS
+        run: |
+          set -euo pipefail
+          dir=$(mktemp -d)
+          cd "${dir}"
+          gh release download "${TAG}" --pattern "graphql-linter-${TAG}-*"
+          sha256sum "graphql-linter-${TAG}-"* >graphql-linter_SHA256SUMS
+          cat graphql-linter_SHA256SUMS
+          gh release upload "${TAG}" graphql-linter_SHA256SUMS --clobber
