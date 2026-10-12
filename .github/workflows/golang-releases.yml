@@ -1,6 +1,9 @@
 ---
 name: golang-releases
-"on": push
+"on":
+  push:
+  # dispatched by release.yml on an auto-released tag
+  workflow_dispatch:
 permissions:
   contents: write
   packages: read
