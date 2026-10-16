@@ -7,8 +7,9 @@ graphql-linter [flags]
 ```
 
 The linter walks the target path recursively and collects every `.graphql` and
-`.graphqls` file. Below the target path it skips `node_modules`, `vendor` and
-hidden directories (any name starting with `.`, such as `.git`). The files of
+`.graphqls` file. Below the target path it skips `node_modules`, `vendor`,
+hidden directories (any name starting with `.`, such as `.git`) and symlinks, so
+a schema file cannot point at a file outside the repository. The files of
 each directory are linted together as one schema, so a schema split over
 several files is checked as a whole. The linter exits non-zero when unsuppressed
 findings are detected.

@@ -133,6 +133,12 @@ func findGraphQLFiles(rootPath string) ([]string, error) {
 			return filepath.SkipDir
 		}
 
+		// Symlinks below the target are skipped: one could point at any file
+		// on the machine and the lint output would print its content.
+		if path != rootPath && info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+
 		if isGraphQLFile(info) {
 			files = append(files, path)
 		}

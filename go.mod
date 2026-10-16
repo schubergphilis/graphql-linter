@@ -1,10 +1,10 @@
 module github.com/schubergphilis/graphql-linter
 
-go 1.27.1
+go 1.27.2
 
 require (
 	github.com/stretchr/testify v1.12.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.21.1
+	github.com/wundergraph/graphql-go-tools/v2 v2.26.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
