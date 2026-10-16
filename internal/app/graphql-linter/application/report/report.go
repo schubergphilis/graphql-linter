@@ -111,8 +111,11 @@ func Print(
 ) bool {
 	summary := NewSummary(schemaFiles, totalErrors, passedFiles, allErrors)
 
+	errs, warnings := splitBySeverity(summary.AllErrors)
+
 	printDetailedErrors(summary.AllErrors)
-	printErrorTypeSummary(summary.AllErrors)
+	printTypeSummary("Error type summary:", errs)
+	printTypeSummary("Warning type summary:", warnings)
 
 	slog.Info(
 		"linting summary",
@@ -128,13 +131,38 @@ func Print(
 			"percentage", fmt.Sprintf("%.2f%%", summary.PercentageFilesWithErrors),
 		)
 		slog.Error(fmt.Sprintf("totalErrors: %d", summary.TotalErrors))
+		logWarningTotal(warnings)
 
 		return true
 	}
 
 	slog.Info(fmt.Sprintf("All %d schema file(s) passed linting successfully!", summary.TotalFiles))
+	logWarningTotal(warnings)
 
 	return false
+}
+
+// splitBySeverity separates the findings that fail the run from the warnings.
+func splitBySeverity(findings []models.DescriptionError) ([]models.DescriptionError, []models.DescriptionError) {
+	var errs, warnings []models.DescriptionError
+
+	for _, finding := range findings {
+		if finding.Severity == models.SeverityWarning {
+			warnings = append(warnings, finding)
+
+			continue
+		}
+
+		errs = append(errs, finding)
+	}
+
+	return errs, warnings
+}
+
+func logWarningTotal(warnings []models.DescriptionError) {
+	if len(warnings) > 0 {
+		slog.Warn(fmt.Sprintf("totalWarnings: %d", len(warnings)))
+	}
 }
 
 func printDetailedErrors(errors []models.DescriptionError) {
@@ -143,18 +171,23 @@ func printDetailedErrors(errors []models.DescriptionError) {
 	}
 
 	for _, err := range errors {
-		diagf("%s:%d: %s\n  %s", err.FilePath, err.LineNum, err.Message, err.LineContent)
+		severity := ""
+		if err.Severity == models.SeverityWarning {
+			severity = "warning: "
+		}
+
+		diagf("%s:%d: %s%s\n  %s", err.FilePath, err.LineNum, severity, err.Message, err.LineContent)
 	}
 }
 
-func printErrorTypeSummary(errors []models.DescriptionError) {
+func printTypeSummary(title string, errors []models.DescriptionError) {
 	errorTypeCountsMap := ErrorTypeCounts(errors)
 
 	if len(errorTypeCountsMap) == 0 {
 		return
 	}
 
-	diagf("Error type summary:")
+	diagf("%s", title)
 
 	keys := make([]string, 0, len(errorTypeCountsMap))
 	for k := range errorTypeCountsMap {

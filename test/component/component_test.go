@@ -96,12 +96,21 @@ func TestOutput(t *testing.T) {
 			"invalid-federation-schema: 25",
 			"relay-connection-arguments-spec: 2",
 			"relay-connection-types-spec: 1",
-			"suspicious-enum-value: 1",
 			"type-fields-sorted-alphabetically: 9",
 			"types-are-capitalized: 2",
 			"types-have-descriptions: 6",
 		}
 		checkRequiredSubstrings(t, "error type summary", sections["errorTypeSummary"], required)
+	})
+
+	t.Run("Warning type summary block", func(t *testing.T) {
+		required := []string{
+			"20-suspicious-enum-value.graphql:13: warning: suspicious-enum-value:",
+			"Warning type summary:",
+			"  suspicious-enum-value: 1",
+			"level=WARN msg=\"totalWarnings: 1\"",
+		}
+		checkRequiredSubstrings(t, "warning type summary", sections["all"], required)
 	})
 
 	t.Run("Summary block", func(t *testing.T) {
@@ -113,7 +122,7 @@ func TestOutput(t *testing.T) {
 			"files with at least one error",
 			"filesWithAtLeastOneError=20",
 			"percentage=100.00%",
-			"totalErrors: 76",
+			"totalErrors: 75",
 			"exit status 1",
 		}
 		allLines := sections["all"]
@@ -260,7 +269,7 @@ func TestSuppressTwoScenarios(t *testing.T) {
 			"linting summary",
 			"totalFiles=20",
 			"files with at least one error",
-			"totalErrors: 74",
+			"totalErrors: 73",
 			"exit status 1",
 		}
 		allLines := sections["all"]

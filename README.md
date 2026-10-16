@@ -47,7 +47,8 @@ level=ERROR msg="totalErrors: 2"
 
 The files under `-targetPath` (default: the current directory) are linted
 together per directory, and each directory is validated as one subgraph. The
-exit code is non-zero when there are findings.
+exit code is non-zero when there are errors; warnings are reported but do not
+fail the run.
 
 ## Configuration
 

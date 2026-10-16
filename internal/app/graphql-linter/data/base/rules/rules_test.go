@@ -4,7 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
@@ -312,6 +314,8 @@ func TestSuggestCorrectEnumValue(t *testing.T) {
 		{"levenshtein match 4", "FLOT", "FLOAT"},
 		{"levenshtein match 5", "ID", "ID"},
 		{"no match", "CUSTOM", ""},
+		{"short model name", "C3", ""},
+		{"model name with letter suffix", "C5X", ""},
 		{"empty", "", ""},
 	}
 	for _, test := range tests {
@@ -333,42 +337,6 @@ func TestSuggestCorrectEnumValue_ExtraCases(t *testing.T) {
 
 	if suggestCorrectEnumValue("CUSTOM") != "" {
 		t.Errorf("expected empty string for CUSTOM")
-	}
-}
-
-func TestRemoveSuffixDigits(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		value    string
-		expected string
-	}{
-		{"no digits", "FOO", "FOO"},
-		{"trailing digits", "FOO123", "FOO"},
-		{"all digits", "123", ""},
-		{"mixed", "FOO1BAR2", "FOO1BAR"},
-		{"empty", "", ""},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := removeSuffixDigits(test.value)
-			assert.Equal(t, test.expected, got)
-		})
-	}
-}
-
-func TestRemoveSuffixDigits_ExtraCases(t *testing.T) {
-	t.Parallel()
-
-	if removeSuffixDigits("123") != "" {
-		t.Errorf("expected empty string for all digits")
-	}
-
-	if removeSuffixDigits("FOO123") != "FOO" {
-		t.Errorf("expected FOO for FOO123")
 	}
 }
 
@@ -807,4 +775,36 @@ func TestValidateEnumTypes(t *testing.T) {
 	if len(errorLines) == 0 {
 		t.Logf("validateEnumTypes returned no error lines for invalid enum types: %v", errorLines)
 	}
+}
+
+func TestValidateEnumTypes_SuspiciousValues(t *testing.T) {
+	t.Parallel()
+
+	schema := "enum Status { STRING2 C3 }"
+	doc, _ := astparser.ParseGraphqlDocumentString(schema)
+	config := &models.LinterConfig{
+		Suppressions: []models.Suppression{
+			{File: "test.graphql", Rule: "suspicious-enum-value", Value: "C3"},
+		},
+	}
+
+	errs, errorLines, descErrors := Rule{}.ValidateEnumTypes(&doc, config, schema, "test.graphql")
+
+	assert.Empty(t, errs)
+	assert.Empty(t, errorLines)
+	require.Len(t, descErrors, 1)
+	assert.Equal(t, "STRING2", descErrors[0].Value)
+	assert.Equal(t, models.SeverityWarning, descErrors[0].Severity)
+}
+
+func TestCheckInvalidEnumValue(t *testing.T) {
+	t.Parallel()
+
+	value, line := checkInvalidEnumValue("Status", "1NVALID", 3)
+	assert.Equal(t, "1NVALID", value)
+	assert.Equal(t, 3, line)
+
+	value, line = checkInvalidEnumValue("Status", "ACTIVE", 3)
+	assert.Empty(t, value)
+	assert.Zero(t, line)
 }

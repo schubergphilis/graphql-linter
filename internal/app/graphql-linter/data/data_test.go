@@ -155,3 +155,25 @@ func TestCollectUnsuppressedDataTypeErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestCollectUnsuppressedDataTypeErrors_SuspiciousValueIsWarning(t *testing.T) {
+	t.Parallel()
+
+	schema := `enum Citroen { C3 C5X } type Query { model: Citroen }`
+	config := &models.LinterConfig{}
+	doc, _ := astparser.ParseGraphqlDocumentString(schema)
+
+	count, errs := Store{LinterConfig: config}.CollectUnsuppressedDataTypeErrors(
+		&doc,
+		config,
+		schema,
+		"test.graphql",
+	)
+
+	assert.Equal(t, 0, count, "warnings must not count as errors")
+	require.Len(t, errs, 2)
+
+	for _, err := range errs {
+		assert.Equal(t, models.SeverityWarning, err.Severity, err.Message)
+	}
+}

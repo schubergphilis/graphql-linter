@@ -102,8 +102,11 @@ func suggestCorrectEnumValue(value string) string {
 		}
 	}
 
+	// A match must keep at least one character of the value, otherwise a short
+	// value such as the C in C3 would be "corrected" to INT.
 	for _, standardType := range standardTypes {
-		if pkgRules.LevenshteinDistance(cleanValue, standardType) <= pkgRules.LevenshteinThreshold {
+		distance := pkgRules.LevenshteinDistance(cleanValue, standardType)
+		if distance <= pkgRules.LevenshteinThreshold && distance < len(cleanValue) {
 			return standardType
 		}
 	}
@@ -210,20 +213,6 @@ func hasEmbeddedDigits(value string) bool {
 	}
 
 	return false
-}
-
-func removeSuffixDigits(value string) string {
-	result := value
-	for len(result) > 0 {
-		lastChar := result[len(result)-1]
-		if lastChar >= '0' && lastChar <= '9' {
-			result = result[:len(result)-1]
-		} else {
-			break
-		}
-	}
-
-	return result
 }
 
 func indexSlice(n int) []int {

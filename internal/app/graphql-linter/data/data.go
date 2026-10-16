@@ -160,7 +160,10 @@ func (s Store) CollectUnsuppressedDataTypeErrors(
 
 		if !pkg_rules.IsSuppressed(schemaFile, enumErr.LineNum, modelsLinterConfig, rule, enumErr.Value) {
 			allErrors = append(allErrors, enumErr)
-			unsuppressedDataTypeErrors++
+
+			if enumErr.Severity == models.SeverityError {
+				unsuppressedDataTypeErrors++
+			}
 		}
 	}
 

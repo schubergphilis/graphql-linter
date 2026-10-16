@@ -53,7 +53,7 @@ These mirror the `graphql-schema-linter` rule set:
 Additional rules:
 
 - `invalid-graphql-schema`: a `Query` root type must be provided.
-- `suspicious-enum-value`: enum values with digits, e.g. `STRING2`.
+- `suspicious-enum-value` (warning): enum values with digits, e.g. `STRING2`.
 - `invalid-graphql-syntax`: the file does not parse; the other files are still
   linted.
 - `failed-to-read-schema-file`: the file could not be read.
@@ -98,3 +98,11 @@ an entity owned by another subgraph and repeating `@key` or `@tag` are allowed.
 
 This is subgraph validation, not supergraph composition: lint each subgraph
 with its own `-targetPath`.
+
+## Severity
+
+Every rule reports an error, except `suspicious-enum-value`, which reports a
+warning: digits are legitimate in values such as car models (`C3`, `C5X`), so
+the finding is printed as `file:line: warning: ...` and counted under
+`Warning type summary` and `totalWarnings`, but it does not make the linter exit
+non-zero. Suppress a warning like any other finding to silence it.
