@@ -4,7 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/schubergphilis/graphql-linter/internal/app/graphql-linter/data/base/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
@@ -773,4 +775,36 @@ func TestValidateEnumTypes(t *testing.T) {
 	if len(errorLines) == 0 {
 		t.Logf("validateEnumTypes returned no error lines for invalid enum types: %v", errorLines)
 	}
+}
+
+func TestValidateEnumTypes_SuspiciousValues(t *testing.T) {
+	t.Parallel()
+
+	schema := "enum Status { STRING2 C3 }"
+	doc, _ := astparser.ParseGraphqlDocumentString(schema)
+	config := &models.LinterConfig{
+		Suppressions: []models.Suppression{
+			{File: "test.graphql", Rule: "suspicious-enum-value", Value: "C3"},
+		},
+	}
+
+	errs, errorLines, descErrors := Rule{}.ValidateEnumTypes(&doc, config, schema, "test.graphql")
+
+	assert.Empty(t, errs)
+	assert.Empty(t, errorLines)
+	require.Len(t, descErrors, 1)
+	assert.Equal(t, "STRING2", descErrors[0].Value)
+	assert.Equal(t, models.SeverityWarning, descErrors[0].Severity)
+}
+
+func TestCheckInvalidEnumValue(t *testing.T) {
+	t.Parallel()
+
+	value, line := checkInvalidEnumValue("Status", "1NVALID", 3)
+	assert.Equal(t, "1NVALID", value)
+	assert.Equal(t, 3, line)
+
+	value, line = checkInvalidEnumValue("Status", "ACTIVE", 3)
+	assert.Empty(t, value)
+	assert.Zero(t, line)
 }
