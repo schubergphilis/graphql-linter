@@ -20,7 +20,7 @@ findings are detected.
 | ------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `-targetPath` | Directory or file containing the GraphQL schemas to check. Defaults to the current directory.                         |
 | `-configPath` | Path to the configuration file. Defaults to `.graphql-linter.yml` or `.graphql-linter.yaml` in the current directory. |
-| `-verbose`    | Enable verbose output.                                                                                                |
+| `-verbose`    | Enable verbose output: debug logs, with the time and source location on each line.                                    |
 | `-version`    | Print version information and exit.                                                                                   |
 
 ### Examples
