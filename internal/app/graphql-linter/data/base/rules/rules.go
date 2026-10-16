@@ -448,7 +448,8 @@ func (r Rule) UncapitalizedDescriptions(doc *ast.Document, schemaString string) 
 	var errors []models.DescriptionError
 
 	check := func(description ast.Description, kind, parent string, nameRef ast.ByteSliceReference) {
-		if !description.IsDefined || isCapitalized(doc.Input.ByteSliceString(description.Content)) {
+		content := doc.Input.ByteSliceString(description.Content)
+		if !description.IsDefined || isCapitalized(content) {
 			return
 		}
 
@@ -460,7 +461,8 @@ func (r Rule) UncapitalizedDescriptions(doc *ast.Document, schemaString string) 
 		}
 
 		errors = append(errors, newFinding(schemaString, LineOf(doc, nameRef), name,
-			"descriptions-are-capitalized: The description for "+kind+" `"+qualified+"` should be capitalized."))
+			"descriptions-are-capitalized: The description for "+kind+" `"+qualified+"` should be capitalized: "+
+				descriptionSnippet(content)))
 	}
 
 	for _, def := range typeDefinitions(doc) {

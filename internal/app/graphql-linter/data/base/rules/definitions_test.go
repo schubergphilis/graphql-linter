@@ -77,7 +77,7 @@ func TestRulesCoverAllKinds(t *testing.T) {
 	}, findings(rule.EnumValuesAllCaps(&doc, allKindsSchema)))
 
 	assert.Equal(t, []finding{
-		{14, "Item", "descriptions-are-capitalized: The description for type `Item` should be capitalized."},
+		{14, "Item", "descriptions-are-capitalized: The description for type `Item` should be capitalized: \"item.\""},
 	}, findings(rule.UncapitalizedDescriptions(&doc, allKindsSchema)))
 
 	// Node is used through "implements", Item through the union and a field.
@@ -87,6 +87,20 @@ func TestRulesCoverAllKinds(t *testing.T) {
 		{11, "Result", "defined-types-are-used: Type 'Result' is defined but not used"},
 		{12, "Date", "defined-types-are-used: Type 'Date' is defined but not used"},
 	}, findings(rule.UnusedTypes(&doc, allKindsSchema)))
+}
+
+func TestUncapitalizedDescriptions_QuotesFirstLine(t *testing.T) {
+	t.Parallel()
+
+	schema := "type Mutation {\n  syncDataProvider(\n    \"\"\"\n    the data provider.\n" +
+		"    Second line.\n    \"\"\"\n    dataProvider: String!\n  ): String\n}\n"
+	doc, report := astparser.ParseGraphqlDocumentString(schema)
+	assert.False(t, report.HasErrors(), report.Error())
+
+	assert.Equal(t, []finding{
+		{7, "dataProvider", "descriptions-are-capitalized: The description for argument " +
+			"`syncDataProvider.dataProvider` should be capitalized: \"the data provider. ...\""},
+	}, findings(Rule{}.UncapitalizedDescriptions(&doc, schema)))
 }
 
 func TestUndefinedTypes(t *testing.T) {
