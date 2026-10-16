@@ -562,7 +562,7 @@ func (r Rule) ValidateEnumTypes(
 
 			valueLine := LineOf(doc, valueDef.EnumValue)
 
-			if errValue, line := checkInvalidEnumValue(enumName, valueName, valueLine); errValue != "" {
+			if errValue, line := checkInvalidEnumValue(enumName, valueName, valueLine, schemaPath); errValue != "" {
 				errors = append(errors, errValue)
 				if line > 0 {
 					errorLines = append(errorLines, line)
@@ -570,7 +570,6 @@ func (r Rule) ValidateEnumTypes(
 			}
 
 			if errValue, line := checkSuspiciousEnumValue(
-				enumName,
 				valueName,
 				valueLine,
 				schemaPath,
@@ -584,9 +583,10 @@ func (r Rule) ValidateEnumTypes(
 						FilePath: schemaPath,
 						LineNum:  line,
 						Message: fmt.Sprintf(
-							"suspicious-enum-value: Enum '%s' has suspicious value '%s'",
+							"suspicious-enum-value: Enum '%s' has suspicious value '%s'. %s",
 							enumName,
 							errValue,
+							suspiciousEnumValueHint(errValue),
 						),
 						LineContent: GetLineContent(schemaContent, line),
 					})
@@ -598,16 +598,17 @@ func (r Rule) ValidateEnumTypes(
 	return errors, errorLines, descErrors
 }
 
-func checkInvalidEnumValue(enumName, valueName string, lineNum int) (string, int) {
+func checkInvalidEnumValue(enumName, valueName string, lineNum int, schemaPath string) (string, int) {
 	if isValidEnumValue(valueName) {
 		return "", 0
 	}
 
 	slog.Info(fmt.Sprintf(
-		"invalid-enum-value: Enum '%s' has invalid value '%s' (line %d)",
+		"%s:%d: invalid-enum-value: Enum '%s' has invalid value '%s'",
+		schemaPath,
+		lineNum,
 		enumName,
 		valueName,
-		lineNum,
 	))
 	slog.Info(
 		"  Enum values should be valid GraphQL identifiers (letters, digits, underscores, no leading digits)",
@@ -617,7 +618,6 @@ func checkInvalidEnumValue(enumName, valueName string, lineNum int) (string, int
 }
 
 func checkSuspiciousEnumValue(
-	enumName,
 	valueName string,
 	lineNum int,
 	schemaPath string,
@@ -638,21 +638,20 @@ func checkSuspiciousEnumValue(
 		return "", 0
 	}
 
-	slog.Error(fmt.Sprintf(
-		"suspicious-enum-value: Enum '%s' has suspicious value '%s' (line %d)",
-		enumName,
-		valueName,
-		lineNum,
-	))
+	return valueName, lineNum
+}
 
+// suspiciousEnumValueHint is appended to the suspicious-enum-value finding,
+// which is reported once, with its file path, like every other finding.
+func suspiciousEnumValueHint(valueName string) string {
 	if suggestion := suggestCorrectEnumValue(valueName); suggestion != "" {
-		slog.Error(fmt.Sprintf("  Did you mean '%s'?", suggestion))
-	} else {
-		suggestedValue := removeSuffixDigits(valueName)
-		slog.Error(fmt.Sprintf("  Did you mean '%s'? Enum values typically don't contain numbers.", suggestedValue))
+		return fmt.Sprintf("Did you mean '%s'?", suggestion)
 	}
 
-	return valueName, lineNum
+	return fmt.Sprintf(
+		"Did you mean '%s'? Enum values typically don't contain numbers.",
+		removeSuffixDigits(valueName),
+	)
 }
 
 func validateTypeReferences(

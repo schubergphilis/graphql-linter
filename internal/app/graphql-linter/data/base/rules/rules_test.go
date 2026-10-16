@@ -1,10 +1,13 @@
 package rules
 
 import (
+	"bytes"
+	"log/slog"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
@@ -807,4 +810,31 @@ func TestValidateEnumTypes(t *testing.T) {
 	if len(errorLines) == 0 {
 		t.Logf("validateEnumTypes returned no error lines for invalid enum types: %v", errorLines)
 	}
+}
+
+//nolint:paralleltest //swaps the default slog logger
+func TestValidateEnumTypes_ReportsSuspiciousValueOnce(t *testing.T) {
+	var buf bytes.Buffer
+
+	previous := slog.Default()
+
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	schema := "enum Status {\n  ACTIVE\n  CUSTOM1\n  STRING2\n}"
+	doc, _ := astparser.ParseGraphqlDocumentString(schema)
+
+	_, _, descErrors := Rule{}.ValidateEnumTypes(&doc, nil, schema, "schema/status.graphql")
+
+	require.Len(t, descErrors, 2)
+	assert.Equal(t, "schema/status.graphql", descErrors[0].FilePath)
+	assert.Equal(t, 3, descErrors[0].LineNum)
+	assert.Equal(t,
+		"suspicious-enum-value: Enum 'Status' has suspicious value 'CUSTOM1'. "+
+			"Did you mean 'CUSTOM'? Enum values typically don't contain numbers.",
+		descErrors[0].Message)
+	assert.Equal(t,
+		"suspicious-enum-value: Enum 'Status' has suspicious value 'STRING2'. Did you mean 'STRING'?",
+		descErrors[1].Message)
+	assert.NotContains(t, buf.String(), "suspicious-enum-value")
 }
