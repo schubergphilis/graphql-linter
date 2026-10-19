@@ -25,7 +25,7 @@ chmod +x graphql-linter
 ./graphql-linter -version | grep "${VERSION}"
 ```
 
-Releases after `v0.2.5` also ship `graphql-linter_SHA256SUMS`, the SHA-256 of
+Releases after `v0.4.1` also ship `graphql-linter_SHA256SUMS`, the SHA-256 of
 every binary in `sha256sum` format. To verify a binary, download it under its
 release name and check it:
 

@@ -5,10 +5,13 @@ name: golang-releases
   # dispatched by release.yml on an auto-released tag
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
   packages: read
 jobs:
   mcvs-golang-action:
+    permissions:
+      contents: write
+      packages: read
     strategy:
       matrix:
         args:
@@ -47,8 +50,11 @@ jobs:
   # mcvs-golang-action uploads one binary per matrix job and no checksums, so
   # sum all binaries of the release once they are uploaded.
   checksums:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    # a pushed tag, or a tag dispatched by release.yml
+    if: startsWith(github.ref, 'refs/tags/')
     needs: mcvs-golang-action
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
