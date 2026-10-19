@@ -25,6 +25,21 @@ chmod +x graphql-linter
 ./graphql-linter -version | grep "${VERSION}"
 ```
 
+Releases after `v0.4.1` also ship `graphql-linter_SHA256SUMS`, the SHA-256 of
+every binary in `sha256sum` format. To verify a binary, download it under its
+release name and check it:
+
+```zsh
+ASSET="graphql-linter-${VERSION}-${OS}-${ARCH}"
+RELEASE="https://github.com/schubergphilis/graphql-linter/releases/download/${VERSION}"
+curl --fail -LO "${RELEASE}/${ASSET}"
+curl --fail -LO "${RELEASE}/graphql-linter_SHA256SUMS"
+sha256sum -c --ignore-missing graphql-linter_SHA256SUMS
+```
+
+On macOS without `sha256sum`, use
+`grep " ${ASSET}$" graphql-linter_SHA256SUMS | shasum -a 256 -c -`.
+
 Or with Go:
 
 ```zsh
