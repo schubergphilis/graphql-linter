@@ -69,6 +69,19 @@ func isCapitalized(desc string) bool {
 	return unicode.IsUpper(r)
 }
 
+// descriptionSnippet quotes the first line of a description, so a finding
+// shows which text to change without putting line breaks in the output.
+func descriptionSnippet(desc string) string {
+	first, rest, _ := strings.Cut(strings.TrimSpace(desc), "\n")
+
+	snippet := strings.TrimSpace(first)
+	if strings.TrimSpace(rest) != "" {
+		snippet += " ..."
+	}
+
+	return `"` + snippet + `"`
+}
+
 func suggestCorrectEnumValue(value string) string {
 	if len(value) == 0 {
 		return ""
