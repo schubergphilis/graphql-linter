@@ -1,6 +1,9 @@
 ---
 name: golang-releases
-"on": push
+"on":
+  push:
+  # dispatched by release.yml on an auto-released tag
+  workflow_dispatch:
 permissions:
   contents: write
   packages: read
@@ -32,7 +35,7 @@ jobs:
         with:
           persist-credentials: false
       # yamllint disable-line rule:line-length
-      - uses: schubergphilis/mcvs-golang-action@b4889d53cfc1728ebcb8a551173456e76a2451f6 # v3.12.14
+      - uses: schubergphilis/mcvs-golang-action@00ab2d14c61f68fd0187112817822c3734707348 # v3.13.1
         with:
           release-application-name: ${{ matrix.args.release-application-name }}
           release-architecture: ${{ matrix.args.release-architecture }}
