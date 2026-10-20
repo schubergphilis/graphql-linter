@@ -73,7 +73,7 @@ func TestIntegrationLoadConfig(t *testing.T) {
 	}
 }
 
-//nolint:cyclop,paralleltest //t.Chdir cannot run in parallel
+//nolint:cyclop //complex table-driven test
 func TestLoadConfig(t *testing.T) {
 	projectRoot := t.TempDir()
 
