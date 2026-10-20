@@ -288,7 +288,6 @@ func TestLogSchemaParseErrors_Errors(t *testing.T) {
 	LogSchemaParseErrors("type Query { id: ID } ...", &report)
 }
 
-//nolint:paralleltest //t.Chdir cannot run in parallel
 func TestRun_OutsideGoModule(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
@@ -322,7 +321,6 @@ func TestGetUnsuppressedDescriptionErrors_CheckDescriptions(t *testing.T) {
 	assert.Equal(t, errs[1:], got)
 }
 
-//nolint:paralleltest //t.Chdir cannot run in parallel
 func TestRun_ValidateFederationDisabled(t *testing.T) {
 	t.Chdir(t.TempDir())
 

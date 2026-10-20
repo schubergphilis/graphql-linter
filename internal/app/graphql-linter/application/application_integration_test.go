@@ -77,7 +77,6 @@ func TestFindGraphQLFiles(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest //t.Chdir cannot run in parallel
 func TestFindGraphQLFiles_RelativeRoot(t *testing.T) {
 	tmpDir := t.TempDir()
 	createTestFile(t, tmpDir, "sub/a.graphql")
