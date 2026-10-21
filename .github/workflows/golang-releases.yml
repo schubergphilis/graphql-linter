@@ -55,7 +55,7 @@ jobs:
     needs: mcvs-golang-action
     permissions:
       contents: write
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     timeout-minutes: 10
     env:
       GH_REPO: ${{ github.repository }}
